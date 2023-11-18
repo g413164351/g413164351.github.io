@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <!-- SEO相关 -->
   
-  <link rel="canonical" href="https://g413164351.github.io/2023/11/16/python面向对象01_初始化和方法/"/>
+  <link rel="canonical" href="https://g413164351.github.io/2023/11/18/python面向对象05继承标准库中的类/"/>
   <!-- 渲染优化 -->
     <meta http-equiv='x-dns-prefetch-control' content='on' />
       <link rel='dns-prefetch' href='https://unpkg.com'>
@@ -33,19 +33,19 @@
 
   <!-- feed -->
   <!-- 页面元数据 -->
-  <title>python面向对象01 - Haolan</title>
+  <title>'python面向对象05继承标准库中的类' - Haolan</title>
   <meta name="keywords" content="python基础,面向对象,null">
   <meta desc name="description" content="浩岚的博客 - holar - Haolan">
   
 <meta property="og:type" content="article">
-<meta property="og:title" content="python面向对象01">
-<meta property="og:url" content="https://g413164351.github.io/2023/11/16/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A101_%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E6%96%B9%E6%B3%95/index.html">
+<meta property="og:title" content="&#39;python面向对象05继承标准库中的类&#39;">
+<meta property="og:url" content="https://g413164351.github.io/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A105%E7%BB%A7%E6%89%BF%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E7%B1%BB/index.html">
 <meta property="og:site_name" content="Haolan">
-<meta property="og:description" content="12345678910class Dog:    def __init__(self,name,height,power):  # 1.魔方方法与普通方法的区别在于触发     # 2.self就是一个代词,因为还没有被实例化,所以用这个代词        self.name&#x3D;name        self.height&#x3D;height        self.power&#x3D;power">
+<meta property="og:description" content="1import turtle as t   12345class MyTurtle(t.Turtle):    def big_circle(self):        self.color(&#x27;red&#x27;)        self.circle(100)   1234s&#x3D;t.Screen()t&#x3D;MyTurtle()t.big_circle()s.mainloop     &lt;">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png">
-<meta property="article:published_time" content="2023-11-16T12:38:37.000Z">
-<meta property="article:modified_time" content="2023-11-18T14:28:22.452Z">
+<meta property="article:published_time" content="2023-11-18T14:33:25.000Z">
+<meta property="article:modified_time" content="2023-11-18T14:36:04.789Z">
 <meta property="article:author" content="holar">
 <meta property="article:tag" content="python基础">
 <meta property="article:tag" content="面向对象">
@@ -2619,7 +2619,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
           
 <div id="l_main" class=''>
   <article itemscope itemtype="http://schema.org/Article" class="article post white-box reveal md shadow floatable blur article-type-post" id="post" itemscope itemprop="blogPost">
-  <link itemprop="mainEntityOfPage" href="https://g413164351.github.io/2023/11/16/python面向对象01_初始化和方法/">
+  <link itemprop="mainEntityOfPage" href="https://g413164351.github.io/2023/11/18/python面向对象05继承标准库中的类/">
   <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
     <meta itemprop="name" content="Haolan">
   </span>
@@ -2640,7 +2640,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
     
     
       <h1 class="title" itemprop="name headline">
-        python面向对象01
+        'python面向对象05继承标准库中的类'
       </h1>
       <div class='new-meta-box'>
         
@@ -2671,10 +2671,10 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
           
         
           
-            <div class="new-meta-item date" itemprop="dateCreated datePublished" datetime="2023-11-16T20:38:37+08:00">
+            <div class="new-meta-item date" itemprop="dateCreated datePublished" datetime="2023-11-18T22:33:25+08:00">
   <a class='notlink'>
     <i class="fa-solid fa-calendar-alt fa-fw" aria-hidden="true"></i>
-    <p>发布于：Nov 16, 2023</p>
+    <p>发布于：Nov 18, 2023</p>
   </a>
 </div>
 
@@ -2697,14 +2697,20 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 
   <div id="layoutHelper-page-plugins"></div>
   <div id="post-body" itemprop="articleBody">
-    <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Dog</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self,name,height,power</span>):  <span class="comment"># 1.魔方方法与普通方法的区别在于触发     # 2.self就是一个代词,因为还没有被实例化,所以用这个代词</span></span><br><span class="line">        self.name=name</span><br><span class="line">        self.height=height</span><br><span class="line">        self.power=power</span><br><span class="line">        self.blood=<span class="number">10</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">bark</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">f&#x27;name:<span class="subst">&#123;self.name&#125;</span>,blood:<span class="subst">&#123;self.blood&#125;</span>&#x27;</span>)</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">attack</span>(<span class="params">self,dog2</span>):</span><br><span class="line">        dog2.blood=dog2.blood-self.power</span><br></pre></td></tr></table></figure>
+    <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> turtle <span class="keyword">as</span> t</span><br></pre></td></tr></table></figure>
 
 
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dog1=Dog(<span class="string">&#x27;大黄&#x27;</span>,<span class="number">0.5</span>,<span class="number">4</span>)</span><br><span class="line">dog2=Dog(<span class="string">&#x27;大黑&#x27;</span>,<span class="number">0.4</span>,<span class="number">3</span>)</span><br><span class="line">dog2.bark()</span><br><span class="line">dog1.attack(dog2)</span><br><span class="line">dog2.bark()</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">MyTurtle</span>(t.Turtle):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">big_circle</span>(<span class="params">self</span>):</span><br><span class="line">        self.color(<span class="string">&#x27;red&#x27;</span>)</span><br><span class="line">        self.circle(<span class="number">100</span>)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 
-<pre><code>name:大黑,blood:10
-name:大黑,blood:6
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">s=t.Screen()</span><br><span class="line">t=MyTurtle()</span><br><span class="line">t.big_circle()</span><br><span class="line">s.mainloop</span><br></pre></td></tr></table></figure>
+
+
+
+
+<pre><code>&lt;bound method TurtleScreenBase.mainloop of &lt;turtle._Screen object at 0x000001D653CF0B50&gt;&gt;
 </code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#可以学一下走迷宫</span></span><br></pre></td></tr></table></figure>
 
   </div>
   
@@ -2729,7 +2735,7 @@ name:大黑,blood:6
     <div class='new-meta-box'>
       
         
-          <div class="new-meta-item date" itemprop="dateModified" datetime="2023-11-18T22:28:22+08:00">
+          <div class="new-meta-item date" itemprop="dateModified" datetime="2023-11-18T22:36:04+08:00">
   <a class='notlink'>
     <i class="fa-solid fa-edit fa-fw" aria-hidden="true"></i>
     <p>更新于：Nov 18, 2023</p>
@@ -2755,7 +2761,7 @@ name:大黑,blood:6
       
         <a class="-mob-share-qq" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=https://g413164351.github.io/2023/11/16/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A101_%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E6%96%B9%E6%B3%95/&title=python面向对象01 - Haolan&summary="
+          target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=https://g413164351.github.io/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A105%E7%BB%A7%E6%89%BF%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E7%B1%BB/&title='python面向对象05继承标准库中的类' - Haolan&summary="
           
           >
           
@@ -2767,7 +2773,7 @@ name:大黑,blood:6
       
         <a class="-mob-share-qzone" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://g413164351.github.io/2023/11/16/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A101_%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E6%96%B9%E6%B3%95/&title=python面向对象01 - Haolan&summary="
+          target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://g413164351.github.io/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A105%E7%BB%A7%E6%89%BF%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E7%B1%BB/&title='python面向对象05继承标准库中的类' - Haolan&summary="
           
           >
           
@@ -2779,7 +2785,7 @@ name:大黑,blood:6
       
         <a class="-mob-share-weibo" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="http://service.weibo.com/share/share.php?url=https://g413164351.github.io/2023/11/16/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A101_%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E6%96%B9%E6%B3%95/&title=python面向对象01 - Haolan&summary="
+          target="_blank" href="http://service.weibo.com/share/share.php?url=https://g413164351.github.io/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A105%E7%BB%A7%E6%89%BF%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E7%B1%BB/&title='python面向对象05继承标准库中的类' - Haolan&summary="
           
           >
           
@@ -2812,21 +2818,21 @@ name:大黑,blood:6
   
     <div class="prev-next">
       
-        <a class='prev' href='/2023/11/17/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A102-%E7%B1%BB%E5%B1%9E%E6%80%A7-%E7%B1%BB%E6%96%B9%E6%B3%95-%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95/'>
-          <p class='title'><i class="fa-solid fa-chevron-left" aria-hidden="true"></i>python面向对象02_类属性&类方法&静态方法</p>
-          <p class='content'>123#类方法,为了使用类属性#可以用过类名调用,也可以通过实例名调用#类方法为了访问类变量
-
-
-1#静态方法,不需要传入实例或者类作为第一个参数
-
-
-123456789101112131415...</p>
+        <a class='prev' href='/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A106%E5%85%B6%E4%BB%96%E5%AE%9E%E4%BE%8B%E4%BD%9C%E4%B8%BA%E5%B1%9E%E6%80%A7/'>
+          <p class='title'><i class="fa-solid fa-chevron-left" aria-hidden="true"></i>'python面向对象06其他实例作为属性'</p>
+          <p class='content'>123456789class Dog:    def __init__(self,name,height,power):          self.name=name        self....</p>
         </a>
       
       
-        <a class='next' href='/2023/11/13/hello-world/'>
-          <p class='title'>Hello World<i class="fa-solid fa-chevron-right" aria-hidden="true"></i></p>
-          <p class='content'>Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any ...</p>
+        <a class='next' href='/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A104%E5%91%BD%E5%90%8D%E8%A7%84%E5%88%99-%E6%A8%A1%E5%9D%97-%E7%B1%BB%E5%92%8C%E5%BC%95%E5%85%A5/'>
+          <p class='title'>'python面向对象04命名规则-模块,类和引入'<i class="fa-solid fa-chevron-right" aria-hidden="true"></i></p>
+          <p class='content'>1234#命名规则#文件名是全小写,因为可以用作模块来被import#私有属性前面加_#魔法方法是解释器认识的,触发
+
+
+1
+
+
+12import dog    #用import 一个文件名进来...</p>
         </a>
       
     </div>
@@ -2842,7 +2848,7 @@ name:大黑,blood:6
 
   <article class="post white-box shadow floatable blur" id="comments">
     <span hidden>
-      <meta itemprop="discussionUrl" content="/2023/11/16/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A101_%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E6%96%B9%E6%B3%95/index.html#comments">
+      <meta itemprop="discussionUrl" content="/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A105%E7%BB%A7%E6%89%BF%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E7%B1%BB/index.html#comments">
     </span>
     <p ct><i class='fa-solid fa-comments'></i> 评论</p>
     
@@ -3672,7 +3678,7 @@ window.matchMedia('(prefers-color-scheme: light)').addListener(darkModelListener
 </script>
 
 
-  <script type="application/ld+json">[{"@context":"http://schema.org","@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},{"@context":"http://schema.org","@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","sameAs":["https://github.com/volantis-x"],"description":"浩岚的博客"},{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https://g413164351.github.io/","name":"Haolan"}},{"@type":"ListItem","position":2,"item":{"@id":"https://g413164351.github.io/categories/学习笔记/","name":"学习笔记"}},{"@type":"ListItem","position":3,"item":{"@id":"https://g413164351.github.io/2023/11/16/python面向对象01_初始化和方法/","name":"python面向对象01"}}]},{"@context":"http://schema.org","@type":"WebSite","name":"Haolan","url":"https://g413164351.github.io/","keywords":null,"description":"浩岚的博客","author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","description":"浩岚的博客"},"publisher":{"@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"potentialAction":{"@type":"SearchAction","name":"Site Search","target":{"@type":"EntryPoint","urlTemplate":"https://g413164351.github.io?s={search_term_string}"},"query-input":"required name=search_term_string"}},{"@context":"http://schema.org","@type":"BlogPosting","headline":"python面向对象01","description":"浩岚的博客","inLanguage":"en","mainEntityOfPage":{"@type":"WebPage","@id":"https://g413164351.github.io/2023/11/16/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A101_%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E6%96%B9%E6%B3%95/"},"author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/"},"publisher":{"@type":"Organization","name":"Haolan","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"url":"https://g413164351.github.io/2023/11/16/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A101_%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E6%96%B9%E6%B3%95/","wordCount":0,"datePublished":"2023-11-16T12:38:37.000Z","dateModified":"2023-11-18T14:28:22.452Z","articleSection":"学习笔记","keywords":"python基础,面向对象","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}}]</script>
+  <script type="application/ld+json">[{"@context":"http://schema.org","@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},{"@context":"http://schema.org","@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","sameAs":["https://github.com/volantis-x"],"description":"浩岚的博客"},{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https://g413164351.github.io/","name":"Haolan"}},{"@type":"ListItem","position":2,"item":{"@id":"https://g413164351.github.io/categories/学习笔记/","name":"学习笔记"}},{"@type":"ListItem","position":3,"item":{"@id":"https://g413164351.github.io/2023/11/18/python面向对象05继承标准库中的类/","name":"'python面向对象05继承标准库中的类'"}}]},{"@context":"http://schema.org","@type":"WebSite","name":"Haolan","url":"https://g413164351.github.io/","keywords":null,"description":"浩岚的博客","author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","description":"浩岚的博客"},"publisher":{"@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"potentialAction":{"@type":"SearchAction","name":"Site Search","target":{"@type":"EntryPoint","urlTemplate":"https://g413164351.github.io?s={search_term_string}"},"query-input":"required name=search_term_string"}},{"@context":"http://schema.org","@type":"BlogPosting","headline":"'python面向对象05继承标准库中的类'","description":"浩岚的博客","inLanguage":"en","mainEntityOfPage":{"@type":"WebPage","@id":"https://g413164351.github.io/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A105%E7%BB%A7%E6%89%BF%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E7%B1%BB/"},"author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/"},"publisher":{"@type":"Organization","name":"Haolan","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"url":"https://g413164351.github.io/2023/11/18/python%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A105%E7%BB%A7%E6%89%BF%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E7%B1%BB/","wordCount":0,"datePublished":"2023-11-18T14:33:25.000Z","dateModified":"2023-11-18T14:36:04.789Z","articleSection":"学习笔记","keywords":"python基础,面向对象","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}}]</script>
 
 
 
