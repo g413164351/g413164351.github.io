@@ -1,0 +1,437 @@
+data: [
+        {
+          name: '绪论',
+          value: 2,
+          children: [
+            {
+              name: '交通管理与控制的产生，基本概念',
+              value: 1
+            },
+            {
+              name: '交通管理与控制的主要原则',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '交通运行管理',
+          value: 14,
+          children: [
+            {
+              name: '停车管理的类型和技术',
+              value: 1
+            },
+            {
+              name: '单向交通的分类',
+              value: 1
+            },
+            {
+              name: '交叉口复杂理论',
+              value: 1
+            },
+            {
+              name: '单向交通优缺点',
+              value: 1
+            },
+            {
+              name: '单向交通的实施条件',
+              value: 1
+            },
+            {
+              name: '变向交通的特点、优缺点',
+              value: 1
+            },
+            {
+              name: '变相交通的适用条件',
+              value: 1
+            },
+            {
+              name: '车速管理的依据',
+              value: 1
+            },
+            {
+              name: '机动车视距',
+              value: 1
+            },
+            {
+              name: '车速管理的措施',
+              value: 1
+            },
+            {
+              name: '公交优先出行的管理',
+              value: 1
+            },
+            {
+              name: '道路交通标志标线的分类',
+              value: 1
+            },
+            {
+              name: '道路交通标志标线的设计原则',
+              value: 1
+            },
+            {
+              name: '道路交通标志标线的设置要点',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '道路出入口管理',
+          value: 2,
+          children: [
+            {
+              name: '出入口管理的目的和原则',
+              value: 1
+            },
+            {
+              name: '出入口管理的方法策略',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '道路交叉口管理',
+          value: 8,
+          children: [
+            {
+              name: '交叉口的分类',
+              value: 1
+            },
+            {
+              name: '交叉口的管制形式',
+              value: 1
+            },
+            {
+              name: '交叉口的适用条件',
+              value: 1
+            },
+            {
+              name: '视距三角形理论',
+              value: 1
+            },
+            {
+              name: '渠化交通的定义，分类',
+              value: 1
+            },
+            {
+              name: '渠化交通的作用',
+              value: 1
+            },
+            {
+              name: '渠化交通的基本方式和手段',
+              value: 1
+            },
+            {
+              name: '交叉口主要渠化措施',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '交通需求管理',
+          value: 7,
+          children: [
+            {
+              name: '交通管理需求的含义',
+              value: 1
+            },
+            {
+              name: '交通管理需求的目的',
+              value: 1
+            },
+            {
+              name: '交通管理需求的基本思想',
+              value: 1
+            },
+            {
+              name: '交通管理需求具体策略',
+              value: 1
+            },
+            {
+              name: '交通需求管理评价的分类',
+              value: 1
+            },
+            {
+              name: '交通需求管理评价的方法',
+              value: 1
+            },
+            {
+              name: '交通需求管理案例研究',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '交通影响分析',
+          value: 10,
+          children: [
+            {
+              name: '交通影响分析产生的背景',
+              value: 1
+            },
+            {
+              name: '交通影响分析的内容',
+              value: 1
+            },
+            {
+              name: '交通影响分析的技术流程',
+              value: 1
+            },
+            {
+              name: '启动阀值的确定',
+              value: 1
+            },
+            {
+              name: '研究时空的确定',
+              value: 1
+            },
+            {
+              name: '背景交通量预测',
+              value: 1
+            },
+            {
+              name: '项目交通量预测',
+              value: 1
+            },
+            {
+              name: '交通影响显著评价',
+              value: 1
+            },
+            {
+              name: '各种交通设施评价',
+              value: 1
+            },
+            {
+              name: '交通影响分析案例研究',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '交通控制基础',
+          value: 9,
+          children: [
+            {
+              name: '交通控制的概念',
+              value: 1
+            },
+            {
+              name: '交通控制的发展过程',
+              value: 1
+            },
+            {
+              name: '交通控制的思想与方法',
+              value: 1
+            },
+            {
+              name: '交叉口控制的类型',
+              value: 1
+            },
+            {
+              name: '交叉口控制方式选择依据',
+              value: 1
+            },
+            {
+              name: '交通信号控制概念',
+              value: 1
+            },
+            {
+              name: '交通信号控制方式分类',
+              value: 1
+            },
+            {
+              name: '交通信号控制的设备和利弊',
+              value: 1
+            },
+            {
+              name: '交通信号控制参数',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '车流运动机理',
+          value: 9,
+          children: [
+            {
+              name: '信号交叉口车流通行图',
+              value: 1
+            },
+            {
+              name: '有效绿灯时间',
+              value: 1
+            },
+            {
+              name: '损失时间',
+              value: 1
+            },
+            {
+              name: '欠饱和状态延误计算',
+              value: 1
+            },
+            {
+              name: '饱和状态延误计算',
+              value: 1
+            },
+            {
+              name: '过饱和状态延误计算',
+              value: 1
+            },
+            {
+              name: '韦伯斯特延误',
+              value: 1
+            },
+            {
+              name: '综合延误模型',
+              value: 1
+            },
+            {
+              name: '饱和流量概念',
+              value: 1
+            },
+            {
+              name: '影响饱和流量的因素',
+              value: 1
+            },
+            {
+              name: '饱和流量计算',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '单交叉口信号控制',
+          value: 7,
+          children: [
+            {
+              name: '韦伯斯特信号配时方法',
+              value: 1
+            },
+            {
+              name: '行人交通信号控制',
+              value: 1
+            },
+            {
+              name: '环形交叉口信号控制',
+              value: 1
+            },
+            {
+              name: '感应控制分类',
+              value: 1
+            },
+            {
+              name: '感应控制的原理',
+              value: 1
+            },
+            {
+              name: '感应控制的参数',
+              value: 1
+            },
+            {
+              name: '感应控制的流程',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '干线交叉口信号协调控制',
+          value: 8,
+          children: [
+            {
+              name: '干线协调控制的概念',
+              value: 1
+            },
+            {
+              name: '干线协调控制的基本参数',
+              value: 1
+            },
+            {
+              name: '干线协调控制的分类',
+              value: 1
+            },
+            {
+              name: '干线协调控制的设计流程',
+              value: 1
+            },
+            {
+              name: '单向绿波基本设计方法',
+              value: 1
+            },
+            {
+              name: '考虑排队车辆的单向绿波设计',
+              value: 1
+            },
+            {
+              name: '单向绿波闭回路约束',
+              value: 1
+            },
+            {
+              name: '单向绿波闭回路分析',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '区域交叉口信号控制',
+          value: 5,
+          children: [
+            {
+              name: '区域交通信号控制概念',
+              value: 1
+            },
+            {
+              name: '区域交通信号控制类型',
+              value: 1
+            },
+            {
+              name: 'TRANSYT控制系统',
+              value: 1
+            },
+            {
+              name: 'SCATS系统',
+              value: 1
+            },
+            {
+              name: 'SCOOT系统',
+              value: 1
+            }
+          ]
+        },
+
+        {
+          name: '交通智能控制智能化与一体化',
+          value: 5,
+          children: [
+            {
+              name: '智能交通概念',
+              value: 1
+            },
+            {
+              name: '前沿智能交通技术',
+              value: 1
+            },
+            {
+              name: '智能交通应用',
+              value: 1
+            },
+            {
+              name: '智能交通发展',
+              value: 1
+            },
+            {
+              name: '未来交通技术',
+              value: 1
+            }
+          ]
+        }
+      ]
