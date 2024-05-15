@@ -1,0 +1,1 @@
+比如上面的data.txt用https://www.holar.love/data/data.txt就能访问,先用hexo g,再用hexo d就好
