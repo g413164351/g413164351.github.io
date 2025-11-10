@@ -33,19 +33,19 @@
 
   <!-- feed -->
   <!-- 页面元数据 -->
-  <title>paste - Haolan</title>
+  <title>粘贴板 - Haolan</title>
   <meta name="keywords" content="null">
   <meta desc name="description" content="浩岚的博客 - holar - Haolan">
   
 <meta property="og:type" content="website">
-<meta property="og:title" content="paste">
+<meta property="og:title" content="粘贴板">
 <meta property="og:url" content="https://g413164351.github.io/paste/index.html">
 <meta property="og:site_name" content="Haolan">
-<meta property="og:description" content="title: 粘贴板layout: page   把内容粘贴到这里           复制到剪贴板     0 字符       预览       (function () {   var input &#x3D; document.getElementById(&#39;paste-input&#39;);   var preview &#x3D; document.getElementById(&#39;preview&#39;);   v">
+<meta property="og:description" content="共享粘贴板           复制到剪贴板     清空     未修改     0 字符       预览             (function () {   &#x2F;&#x2F; 1) 填上你的 Supabase 项目信息   const SUPABASE_URL &#x3D; &#39;https:&#x2F;&#x2F;YOUR-PROJECT.supabase.co&#39;;   const SUPABASE_ANON_KEY &#x3D;">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png">
-<meta property="article:published_time" content="2025-11-07T09:39:44.000Z">
-<meta property="article:modified_time" content="2025-11-07T09:40:17.961Z">
+<meta property="article:published_time" content="2025-11-07T14:00:23.771Z">
+<meta property="article:modified_time" content="2025-11-07T14:00:23.771Z">
 <meta property="article:author" content="holar">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png">
@@ -714,6 +714,158 @@ button {
   -webkit-opacity: 1;
   -moz-opacity: 1;
   border-bottom: 2px solid var(--color-site-inner);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-mode: 'dark';
+  }
+  :root:not([color-scheme]) {
+    --color-site-body: #121212;
+    --color-read-bkg: #1f1f1f;
+    --color-read-post: #262626;
+    --color-site-bg: #1f1f1f;
+    --color-site-inner: rgba(238,238,238,0.871);
+    --color-site-footer: rgba(170,170,170,0.871);
+    --color-card: #262626;
+    --color-text: rgba(238,238,238,0.871);
+    --color-block: #434343;
+    --color-codeblock: #1f1f1f;
+    --color-inlinecode: #d56d28;
+    --color-h1: rgba(255,255,255,0.871);
+    --color-h2: rgba(255,255,255,0.871);
+    --color-h3: rgba(255,255,255,0.6);
+    --color-h4: rgba(255,255,255,0.6);
+    --color-h5: rgba(255,255,255,0.6);
+    --color-h6: rgba(255,255,255,0.6);
+    --color-p: rgba(217,217,217,0.871);
+    --color-list: rgba(217,217,217,0.871);
+    --color-list-hl: #63e0c4;
+    --color-meta: rgba(191,191,191,0.871);
+    --color-link: rgba(191,191,191,0.871);
+    --color-copyright-bkg: #21252b;
+  }
+  :root:not([color-scheme]) img {
+    filter: brightness(70%) !important;
+  }
+  :root:not([color-scheme]) .blur {
+    background: rgba(31,31,31,0.9) !important;
+  }
+  :root:not([color-scheme]) .white-box.blur {
+    background: rgba(38,38,38,0.9) !important;
+  }
+  :root:not([color-scheme]) .nav-main .u-search-input {
+    background: var(--color-card) !important;
+  }
+  :root:not([color-scheme]) #l_main .article .prev-next>a {
+    background: var(--color-block) !important;
+  }
+  :root:not([color-scheme]) #l_main .article .prev-next>a:hover {
+    background: var(--color-site-bg) !important;
+  }
+  :root:not([color-scheme]) .article blockquote {
+    background: var(--color-block) !important;
+  }
+  :root:not([color-scheme]) .article-title a {
+    color: var(--color-h1) !important;
+  }
+  :root:not([color-scheme]) details>summary {
+    color: var(--color-p) !important;
+    background: var(--color-site-bg) !important;
+  }
+  :root:not([color-scheme]) details {
+    border: 1px solid var(--color-site-bg) !important;
+    background: var(--color-site-bg) !important;
+  }
+  :root:not([color-scheme]) #u-search .modal,
+  :root:not([color-scheme]) #u-search .modal-header,
+  :root:not([color-scheme]) #u-search .modal-body {
+    background: var(--color-card) !important;
+  }
+  :root:not([color-scheme]) #u-search .modal-body .modal-results .result:hover {
+    background: var(--color-block) !important;
+  }
+  :root:not([color-scheme]) .u-search-input:hover {
+    background: var(--color-block) !important;
+  }
+  :root:not([color-scheme]) .u-search-input:focus {
+    background: var(--color-site-body) !important;
+  }
+}
+[color-scheme='dark'] {
+  --color-site-body: #121212;
+  --color-read-bkg: #1f1f1f;
+  --color-read-post: #262626;
+  --color-site-bg: #1f1f1f;
+  --color-site-inner: rgba(238,238,238,0.871);
+  --color-site-footer: rgba(170,170,170,0.871);
+  --color-card: #262626;
+  --color-text: rgba(238,238,238,0.871);
+  --color-block: #434343;
+  --color-codeblock: #1f1f1f;
+  --color-inlinecode: #d56d28;
+  --color-h1: rgba(255,255,255,0.871);
+  --color-h2: rgba(255,255,255,0.871);
+  --color-h3: rgba(255,255,255,0.6);
+  --color-h4: rgba(255,255,255,0.6);
+  --color-h5: rgba(255,255,255,0.6);
+  --color-h6: rgba(255,255,255,0.6);
+  --color-p: rgba(217,217,217,0.871);
+  --color-list: rgba(217,217,217,0.871);
+  --color-list-hl: #63e0c4;
+  --color-meta: rgba(191,191,191,0.871);
+  --color-link: rgba(191,191,191,0.871);
+  --color-copyright-bkg: #21252b;
+}
+[color-scheme='dark'] img {
+  filter: brightness(70%) !important;
+}
+[color-scheme='dark'] .blur {
+  background: rgba(31,31,31,0.9) !important;
+}
+[color-scheme='dark'] .white-box.blur {
+  background: rgba(38,38,38,0.9) !important;
+}
+[color-scheme='dark'] .nav-main .u-search-input {
+  background: var(--color-card) !important;
+}
+[color-scheme='dark'] #l_main .article .prev-next>a {
+  background: var(--color-block) !important;
+}
+[color-scheme='dark'] #l_main .article .prev-next>a:hover {
+  background: var(--color-site-bg) !important;
+}
+[color-scheme='dark'] .article blockquote {
+  background: var(--color-block) !important;
+}
+[color-scheme='dark'] .article-title a {
+  color: var(--color-h1) !important;
+}
+[color-scheme='dark'] details>summary {
+  color: var(--color-p) !important;
+  background: var(--color-site-bg) !important;
+}
+[color-scheme='dark'] details {
+  border: 1px solid var(--color-site-bg) !important;
+  background: var(--color-site-bg) !important;
+}
+[color-scheme='dark'] #u-search .modal,
+[color-scheme='dark'] #u-search .modal-header,
+[color-scheme='dark'] #u-search .modal-body {
+  background: var(--color-card) !important;
+}
+[color-scheme='dark'] #u-search .modal-body .modal-results .result:hover {
+  background: var(--color-block) !important;
+}
+[color-scheme='dark'] .u-search-input:hover {
+  background: var(--color-block) !important;
+}
+[color-scheme='dark'] .u-search-input:focus {
+  background: var(--color-site-body) !important;
+}
+@media screen and (max-width: 500px) {
+  [color-scheme='dark'] .l_header .m_search {
+    background: var(--color-site-bg) !important;
+  }
 }
 @font-face {
   font-family: 'UbuntuMono';
@@ -1551,10 +1703,38 @@ ul.list-v >li>a:hover {
     padding: 0px;
   }
 }
+@media screen and (prefers-color-scheme: dark) and (max-width: 500px) {
+  .l_header .m_search {
+    background: var(--color-site-bg) !important;
+  }
+}
+/* 让导航栏里指向 paste/ 的这个菜单项（“组报”）变成红色 */
+.nav-main a[href$="/paste/"],
+.nav-main a[href="paste/"] {
+  color: #e53935 !important; /* 红色文字 */
+}
+/* 可选：确保图标也跟随变红（如果图标颜色未继承文字颜色） */
+.nav-main a[href$="/paste/"] i,
+.nav-main a[href="paste/"] i {
+  color: #e53935 !important;
+}
+/* 可选：悬停和当前激活时也保持红色 */
+.nav-main a[href$="/paste/"]:hover,
+.nav-main a[href="paste/"]:hover,
+.nav-main a[href$="/paste/"].active,
+.nav-main a[href="paste/"].active {
+  color: #e53935 !important;
+}
 
   </style>
   <link rel="stylesheet" href="/css/style.css" media="print" onload="this.media='all';this.onload=null">
   <noscript><link rel="stylesheet" href="/css/style.css"></noscript>
+    <script>
+      let userColorScheme=localStorage.getItem("color-scheme")
+      if(userColorScheme){
+        document.documentElement.setAttribute("color-scheme", userColorScheme);
+      }
+    </script>
   
 <script>
 if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMode))
@@ -1628,7 +1808,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
     debug: "env",
     cdn: {"js":{"app":"/js/app.js","parallax":"/js/plugins/parallax.js","rightMenu":"/js/plugins/rightMenu.js","rightMenus":"/js/plugins/rightMenus.js","sites":"/js/plugins/tags/sites.js","friends":"/js/plugins/tags/friends.js","contributors":"/js/plugins/tags/contributors.js","search":"/js/search/hexo.js"},"css":{"style":"/css/style.css"}},
     default: {"avatar":"https://unpkg.com/volantis-static@0.0.1654736714924/media/placeholder/avatar/round/3442075.svg","link":"https://unpkg.com/volantis-static@0.0.1654736714924/media/placeholder/link/8f277b4ee0ecd.svg","cover":"https://unpkg.com/volantis-static@0.0.1654736714924/media/placeholder/cover/76b86c0226ffd.svg","image":"https://unpkg.com/volantis-static@0.0.1654736714924/media/placeholder/image/2659360.svg"},
-    lastupdate: new Date(1762519658832),
+    lastupdate: new Date(1762746730707),
     sidebar: {
       for_page: ["blogger","category","tagcloud","donate"],
       for_post: ["toc"],
@@ -2048,19 +2228,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
   <!-- import head_end begin -->
   <!-- import head_end end -->
   <!-- Custom Files headEnd begin-->
-  <style>
-/* 始终让菜单里的“组报”文字变红 */
-.navbar .menu a[title="组报"] {
-  color: #e53935 !important; /* 红色，可改成别的 */
-  font-weight: bold;
-}
-
-/* 鼠标悬停时更亮一点 */
-.navbar .menu a[title="组报"]:hover {
-  color: #ff1744 !important;
-}
-</style>
-<script>console.log('headEnd loaded');</script>
+  
   <!-- Custom Files headEnd end-->
   <!-- front-matter head_end begin -->
   <!-- front-matter head_end end -->
@@ -2521,7 +2689,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
     
     
       <h1 class="title" itemprop="name headline">
-        paste
+        粘贴板
       </h1>
       <div class='new-meta-box'>
         
@@ -2542,7 +2710,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
           
         
           
-            <div class="new-meta-item date" itemprop="dateCreated datePublished" datetime="2025-11-07T17:39:44+08:00">
+            <div class="new-meta-item date" itemprop="dateCreated datePublished" datetime="2025-11-07T22:00:23+08:00">
   <a class='notlink'>
     <i class="fa-solid fa-calendar-alt fa-fw" aria-hidden="true"></i>
     <p>发布于：Nov 7, 2025</p>
@@ -2568,58 +2736,143 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 
   <div id="layoutHelper-page-plugins"></div>
   <div id="post-body" itemprop="articleBody">
-    <hr>
-<h2 id="title-粘贴板layout-page"><a href="#title-粘贴板layout-page" class="headerlink" title="title: 粘贴板layout: page"></a>title: 粘贴板<br>layout: page</h2><div id="paste-app" style="max-width:800px;margin:2rem auto;">
-  <h2>把内容粘贴到这里</h2>
-  <textarea id="paste-input" placeholder="Ctrl/⌘+V 粘贴…" 
-            style="width:100%;height:220px;padding:12px;box-sizing:border-box;"></textarea>
-  <div style="margin-top:8px;">
+    <div id="paste-app" style="max-width:800px;margin:2rem auto;">
+  <h2>共享粘贴板</h2>
+  <textarea id="paste-input" placeholder="在此 Ctrl/⌘+V 粘贴…" 
+    style="width:100%;height:220px;padding:12px;box-sizing:border-box;"></textarea>
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <button id="copy-btn">复制到剪贴板</button>
-    <span id="count-tip" style="margin-left:12px;color:#888;">0 字符</span>
+    <button id="clear-btn">清空</button>
+    <span id="save-tip" style="color:#888;">未修改</span>
+    <span id="count-tip" style="color:#888;margin-left:auto;">0 字符</span>
   </div>
 
   <h3 style="margin-top:24px;">预览</h3>
   <pre id="preview" style="white-space:pre-wrap;border:1px solid #eee;padding:12px;"></pre>
+  <p id="updated-info" style="color:#888;margin-top:8px;"></p>
 </div>
+
+<!-- Supabase 浏览器 SDK -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <script>
 (function () {
-  var input = document.getElementById('paste-input');
-  var preview = document.getElementById('preview');
-  var countTip = document.getElementById('count-tip');
-  var copyBtn = document.getElementById('copy-btn');
+  // 1) 填上你的 Supabase 项目信息
+  const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // 自动聚焦，方便用户直接 Ctrl/⌘+V
-  input && input.focus();
-
-  function render() {
-    var text = input.value || '';
-    preview.textContent = text;
-    countTip.textContent = text.length + ' 字符';
-    // 可选：本地持久化，刷新不丢
-    try { localStorage.setItem('paste_text', text); } catch (e) {}
+  // 简单昵称（用于显示“谁更新了”）
+  const nickKey = 'paste_nick';
+  let nickname = localStorage.getItem(nickKey);
+  if (!nickname) {
+    nickname = '访客' + Math.floor(Math.random()*10000);
+    localStorage.setItem(nickKey, nickname);
   }
 
-  // 粘贴与输入时更新
-  input.addEventListener('input', render);
-  input.addEventListener('paste', function(){ setTimeout(render, 0); });
+  // 绑定 DOM
+  const input = document.getElementById('paste-input');
+  const preview = document.getElementById('preview');
+  const countTip = document.getElementById('count-tip');
+  const saveTip  = document.getElementById('save-tip');
+  const copyBtn  = document.getElementById('copy-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const updatedInfo = document.getElementById('updated-info');
 
-  // 从本地恢复
-  try {
-    var cached = localStorage.getItem('paste_text');
-    if (cached) { input.value = cached; render(); }
-  } catch (e) {}
+  input && input.focus();
 
-  // 一键复制
+  function render(text) {
+    const t = (typeof text === 'string') ? text : (input.value || '');
+    preview.textContent = t;
+    countTip.textContent = t.length + ' 字符';
+  }
+
+  // 2) 先加载服务器上的共享内容
+  async function load() {
+    const { data, error } = await supabase
+      .from('pasteboard')
+      .select('content, updated_at, updated_by')
+      .eq('id', 1)
+      .single();
+
+    if (!error && data) {
+      input.value = data.content || '';
+      render(data.content || '');
+      updatedInfo.textContent = '最后更新：' + (data.updated_at ? new Date(data.updated_at).toLocaleString() : '-') +
+                                (data.updated_by ? (' · by ' + data.updated_by) : '');
+      saveTip.textContent = '已同步';
+    } else {
+      saveTip.textContent = '加载失败';
+      console.error(error);
+    }
+  }
+
+  // 3) 本地编辑 → 防抖保存到服务器（多人实时共享，最后保存者生效）
+  let saveTimer = null;
+  let lastOwnSaveAt = 0;
+  async function saveNow() {
+    const text = (input.value || '').slice(0, 20000); // 简单长度限制
+    saveTip.textContent = '保存中…';
+    const { error } = await supabase.from('pasteboard').upsert({
+      id: 1,
+      content: text,
+      updated_by: nickname,
+      updated_at: new Date().toISOString()
+    });
+    if (!error) {
+      lastOwnSaveAt = Date.now();
+      saveTip.textContent = '已保存';
+    } else {
+      saveTip.textContent = '保存失败';
+      console.error(error);
+    }
+  }
+  function scheduleSave() {
+    saveTip.textContent = '有改动（待保存）';
+    clearTimeout(saveTimer);
+    // 防抖 600ms，避免疯狂请求
+    saveTimer = setTimeout(saveNow, 600);
+  }
+
+  input.addEventListener('input', function(){
+    render();
+    scheduleSave();
+  });
+  input.addEventListener('paste', function(){ setTimeout(function(){ render(); scheduleSave(); }, 0); });
+
+  // 4) 订阅实时更新（别人更新时自动刷新）
+  supabase
+    .channel('pasteboard-ch')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pasteboard', filter: 'id=eq.1' }, payload => {
+      // 避免收到自己刚刚的回响（1 秒内忽略）
+      if (Date.now() - lastOwnSaveAt < 1000) return;
+      const row = payload.new || {};
+      input.value = row.content || '';
+      render();
+      updatedInfo.textContent = '最后更新：' + (row.updated_at ? new Date(row.updated_at).toLocaleString() : '-') +
+                                (row.updated_by ? (' · by ' + row.updated_by) : '');
+      saveTip.textContent = '已同步（有他人更新）';
+    })
+    .subscribe();
+
+  // 5) 复制 & 清空
   copyBtn.addEventListener('click', async function(){
     try {
       await navigator.clipboard.writeText(input.value || '');
       copyBtn.textContent = '已复制！';
-      setTimeout(function(){ copyBtn.textContent = '复制到剪贴板'; }, 1500);
-    } catch (e) {
-      alert('复制失败，请手动全选复制。');
+      setTimeout(() => copyBtn.textContent = '复制到剪贴板', 1500);
+    } catch (e) { alert('复制失败，请手动全选复制。'); }
+  });
+  clearBtn.addEventListener('click', function(){
+    if (confirm('确定要清空共享粘贴板吗？（所有人都会看到被清空）')) {
+      input.value = '';
+      render('');
+      scheduleSave();
     }
   });
+
+  // 初始化
+  load();
 })();
 </script>
 
@@ -2634,7 +2887,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
     <div class='new-meta-box'>
       
         
-          <div class="new-meta-item date" itemprop="dateModified" datetime="2025-11-07T17:40:17+08:00">
+          <div class="new-meta-item date" itemprop="dateModified" datetime="2025-11-07T22:00:23+08:00">
   <a class='notlink'>
     <i class="fa-solid fa-edit fa-fw" aria-hidden="true"></i>
     <p>更新于：Nov 7, 2025</p>
@@ -2656,7 +2909,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
       
         <a class="-mob-share-qq" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=https://g413164351.github.io/paste/index.html&title=paste - Haolan&summary="
+          target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=https://g413164351.github.io/paste/index.html&title=粘贴板 - Haolan&summary="
           
           >
           
@@ -2668,7 +2921,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
       
         <a class="-mob-share-qzone" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://g413164351.github.io/paste/index.html&title=paste - Haolan&summary="
+          target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://g413164351.github.io/paste/index.html&title=粘贴板 - Haolan&summary="
           
           >
           
@@ -2680,7 +2933,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
       
         <a class="-mob-share-weibo" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="http://service.weibo.com/share/share.php?url=https://g413164351.github.io/paste/index.html&title=paste - Haolan&summary="
+          target="_blank" href="http://service.weibo.com/share/share.php?url=https://g413164351.github.io/paste/index.html&title=粘贴板 - Haolan&summary="
           
           >
           
@@ -2764,7 +3017,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 
 
     <div class='content'>
-        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#title-%E7%B2%98%E8%B4%B4%E6%9D%BFlayout-page"><span class="toc-text">title: 粘贴板layout: page</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#paste-app"><span class="toc-text">把内容粘贴到这里</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#paste-app"><span class="toc-text">预览</span></a></li></ol></li></ol>
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#paste-app"><span class="toc-text">共享粘贴板</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#paste-app"><span class="toc-text">预览</span></a></li></ol></li></ol>
     </div>
   </section>
 
@@ -2977,6 +3230,122 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 
 
 <!-- rightmenu要在darkmode之前（ToggleButton） darkmode要在comments之前（volantis.dark.push）-->
+
+  <script>
+const rootElement = document.documentElement;
+const darkModeStorageKey = "color-scheme";
+const rootElementDarkModeAttributeName = "color-scheme";
+const setLS = (k, v) => {
+    localStorage.setItem(k, v);
+};
+const removeLS = (k) => {
+    localStorage.removeItem(k);
+};
+const getLS = (k) => {
+    return localStorage.getItem(k);
+};
+const getModeFromCSSMediaQuery = () => {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+};
+const resetRootDarkModeAttributeAndLS = () => {
+  rootElement.removeAttribute(rootElementDarkModeAttributeName);
+  removeLS(darkModeStorageKey);
+};
+const validColorModeKeys = {
+  dark: true,
+  light: true,
+};
+const applyCustomDarkModeSettings = (mode) => {
+  const currentSetting = mode || getLS(darkModeStorageKey);
+  getCustomDarkMode();
+  if (currentSetting === getModeFromCSSMediaQuery()) {
+    resetRootDarkModeAttributeAndLS();
+  } else if (validColorModeKeys[currentSetting]) {
+    rootElement.setAttribute(rootElementDarkModeAttributeName, currentSetting);
+  } else {
+    resetRootDarkModeAttributeAndLS();
+  }
+};
+const invertDarkModeObj = {
+  dark: "light",
+  light: "dark",
+};
+/**
+ * get target mode
+ */
+ const getCustomDarkMode = () => {
+  let currentSetting = getLS(darkModeStorageKey);
+  if (validColorModeKeys[currentSetting]) {
+    currentSetting = invertDarkModeObj[currentSetting];
+  } else if (currentSetting === null) {
+    currentSetting = invertDarkModeObj[getModeFromCSSMediaQuery()];
+  } else {
+    return;
+  }
+  if(currentSetting=="dark"){
+    volantis.dark.mode="light";
+  }else{
+    volantis.dark.mode="dark";
+  }
+  // console.log(volantis.dark.mode)
+};
+const toggleCustomDarkMode = () => {
+  let currentSetting = getLS(darkModeStorageKey);
+  if (validColorModeKeys[currentSetting]) {
+    currentSetting = invertDarkModeObj[currentSetting];
+  } else if (currentSetting === null) {
+    currentSetting = invertDarkModeObj[getModeFromCSSMediaQuery()];
+  } else {
+    return;
+  }
+  setLS(darkModeStorageKey, currentSetting);
+  return currentSetting;
+};
+/**
+ * 暗黑模式触发器
+ */
+volantis.dark.toggle=()=>{
+  const mode = toggleCustomDarkMode();
+  applyCustomDarkModeSettings(mode);
+  // 使用 volantis.dark.push 方法传入volantis.dark.toggle回调函数 参见layout/_partial/scripts/global.ejs
+  volantis.dark.method.toggle.start();
+}
+/**
+ * bind event for toggle button
+ */
+
+function bindToggleButton() {
+  var btn= document.querySelectorAll("#wrapper .toggle-mode-btn,#rightmenu-wrapper .toggle-mode-btn")
+  btn.forEach(function (e) {
+    volantis.dom.$(e).on('click',volantis.dark.toggle);
+  })
+}
+applyCustomDarkModeSettings();
+document.addEventListener("DOMContentLoaded", ()=>{
+  volantis.requestAnimationFrame(bindToggleButton)
+});
+volantis.pjax.push(bindToggleButton);
+
+const darkModelListeners={
+  dark:(mediaQueryList )=>{
+    if(mediaQueryList.matches){
+      volantis.dark.mode = "dark";
+    }
+    volantis.dark.method.toggle.start();
+  },
+  light:(mediaQueryList)=>{
+    if(mediaQueryList.matches){
+      volantis.dark.mode = "light";
+    }
+    volantis.dark.method.toggle.start();
+  }
+}
+window.matchMedia('(prefers-color-scheme: dark)').addListener(darkModelListeners.dark)
+window.matchMedia('(prefers-color-scheme: light)').addListener(darkModelListeners.light)
+</script>
+
 
 
 
@@ -3446,7 +3815,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 </script>
 
 
-  <script type="application/ld+json">[{"@context":"http://schema.org","@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},{"@context":"http://schema.org","@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","sameAs":["https://github.com/volantis-x"],"description":"浩岚的博客"},{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https://g413164351.github.io/","name":"Haolan"}}]},{"@context":"http://schema.org","@type":"WebSite","name":"Haolan","url":"https://g413164351.github.io/","keywords":null,"description":"浩岚的博客","author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","description":"浩岚的博客"},"publisher":{"@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"potentialAction":{"@type":"SearchAction","name":"Site Search","target":{"@type":"EntryPoint","urlTemplate":"https://g413164351.github.io?s={search_term_string}"},"query-input":"required name=search_term_string"}},{"@context":"http://schema.org","@type":"BlogPosting","headline":"paste","description":"浩岚的博客","inLanguage":"en","mainEntityOfPage":{"@type":"WebPage","@id":"https://g413164351.github.io/paste/index.html"},"author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/"},"publisher":{"@type":"Organization","name":"Haolan","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"url":"https://g413164351.github.io/paste/index.html","wordCount":0,"datePublished":"2025-11-07T09:39:44.000Z","dateModified":"2025-11-07T09:40:17.961Z","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}}]</script>
+  <script type="application/ld+json">[{"@context":"http://schema.org","@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},{"@context":"http://schema.org","@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","sameAs":["https://github.com/volantis-x"],"description":"浩岚的博客"},{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https://g413164351.github.io/","name":"Haolan"}}]},{"@context":"http://schema.org","@type":"WebSite","name":"Haolan","url":"https://g413164351.github.io/","keywords":null,"description":"浩岚的博客","author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/","description":"浩岚的博客"},"publisher":{"@type":"Organization","name":"Haolan","url":"https://g413164351.github.io/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"potentialAction":{"@type":"SearchAction","name":"Site Search","target":{"@type":"EntryPoint","urlTemplate":"https://g413164351.github.io?s={search_term_string}"},"query-input":"required name=search_term_string"}},{"@context":"http://schema.org","@type":"BlogPosting","headline":"粘贴板","description":"浩岚的博客","inLanguage":"en","mainEntityOfPage":{"@type":"WebPage","@id":"https://g413164351.github.io/paste/index.html"},"author":{"@type":"Person","name":"holar","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"https://g413164351.github.io/"},"publisher":{"@type":"Organization","name":"Haolan","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"url":"https://g413164351.github.io/paste/index.html","wordCount":0,"datePublished":"2025-11-07T14:00:23.771Z","dateModified":"2025-11-07T14:00:23.771Z","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1654736714924/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}}]</script>
 
 
 

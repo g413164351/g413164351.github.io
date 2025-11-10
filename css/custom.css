@@ -1,0 +1,12 @@
+/*
+  通过位置来定位导航栏的第二个菜单项（组报）
+  这种方法比通过 url 地址更稳定
+*/
+#nav .menu-list > .menu-item:nth-child(2) a {
+  color: red !important;
+}
+
+/* （可选）同时设置鼠标悬停时的颜色 */
+#nav .menu-list > .menu-item:nth-child(2) a:hover {
+  color: #ff5757 !important; /* 一个稍亮的红色 */
+}
