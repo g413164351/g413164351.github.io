@@ -1,0 +1,144 @@
+---
+title: 粘贴板
+layout: page
+---
+
+<div id="paste-app" style="max-width:800px;margin:2rem auto;">
+  <h2>共享粘贴板</h2>
+  <textarea id="paste-input" placeholder="在此 Ctrl/⌘+V 粘贴…" 
+    style="width:100%;height:220px;padding:12px;box-sizing:border-box;"></textarea>
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <button id="copy-btn">复制到剪贴板</button>
+    <button id="clear-btn">清空</button>
+    <span id="save-tip" style="color:#888;">未修改</span>
+    <span id="count-tip" style="color:#888;margin-left:auto;">0 字符</span>
+  </div>
+
+  <h3 style="margin-top:24px;">预览</h3>
+  <pre id="preview" style="white-space:pre-wrap;border:1px solid #eee;padding:12px;"></pre>
+  <p id="updated-info" style="color:#888;margin-top:8px;"></p>
+</div>
+
+<!-- Supabase 浏览器 SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+(function () {
+  // 1) 填上你的 Supabase 项目信息
+  const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // 简单昵称（用于显示“谁更新了”）
+  const nickKey = 'paste_nick';
+  let nickname = localStorage.getItem(nickKey);
+  if (!nickname) {
+    nickname = '访客' + Math.floor(Math.random()*10000);
+    localStorage.setItem(nickKey, nickname);
+  }
+
+  // 绑定 DOM
+  const input = document.getElementById('paste-input');
+  const preview = document.getElementById('preview');
+  const countTip = document.getElementById('count-tip');
+  const saveTip  = document.getElementById('save-tip');
+  const copyBtn  = document.getElementById('copy-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const updatedInfo = document.getElementById('updated-info');
+
+  input && input.focus();
+
+  function render(text) {
+    const t = (typeof text === 'string') ? text : (input.value || '');
+    preview.textContent = t;
+    countTip.textContent = t.length + ' 字符';
+  }
+
+  // 2) 先加载服务器上的共享内容
+  async function load() {
+    const { data, error } = await supabase
+      .from('pasteboard')
+      .select('content, updated_at, updated_by')
+      .eq('id', 1)
+      .single();
+
+    if (!error && data) {
+      input.value = data.content || '';
+      render(data.content || '');
+      updatedInfo.textContent = '最后更新：' + (data.updated_at ? new Date(data.updated_at).toLocaleString() : '-') +
+                                (data.updated_by ? (' · by ' + data.updated_by) : '');
+      saveTip.textContent = '已同步';
+    } else {
+      saveTip.textContent = '加载失败';
+      console.error(error);
+    }
+  }
+
+  // 3) 本地编辑 → 防抖保存到服务器（多人实时共享，最后保存者生效）
+  let saveTimer = null;
+  let lastOwnSaveAt = 0;
+  async function saveNow() {
+    const text = (input.value || '').slice(0, 20000); // 简单长度限制
+    saveTip.textContent = '保存中…';
+    const { error } = await supabase.from('pasteboard').upsert({
+      id: 1,
+      content: text,
+      updated_by: nickname,
+      updated_at: new Date().toISOString()
+    });
+    if (!error) {
+      lastOwnSaveAt = Date.now();
+      saveTip.textContent = '已保存';
+    } else {
+      saveTip.textContent = '保存失败';
+      console.error(error);
+    }
+  }
+  function scheduleSave() {
+    saveTip.textContent = '有改动（待保存）';
+    clearTimeout(saveTimer);
+    // 防抖 600ms，避免疯狂请求
+    saveTimer = setTimeout(saveNow, 600);
+  }
+
+  input.addEventListener('input', function(){
+    render();
+    scheduleSave();
+  });
+  input.addEventListener('paste', function(){ setTimeout(function(){ render(); scheduleSave(); }, 0); });
+
+  // 4) 订阅实时更新（别人更新时自动刷新）
+  supabase
+    .channel('pasteboard-ch')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pasteboard', filter: 'id=eq.1' }, payload => {
+      // 避免收到自己刚刚的回响（1 秒内忽略）
+      if (Date.now() - lastOwnSaveAt < 1000) return;
+      const row = payload.new || {};
+      input.value = row.content || '';
+      render();
+      updatedInfo.textContent = '最后更新：' + (row.updated_at ? new Date(row.updated_at).toLocaleString() : '-') +
+                                (row.updated_by ? (' · by ' + row.updated_by) : '');
+      saveTip.textContent = '已同步（有他人更新）';
+    })
+    .subscribe();
+
+  // 5) 复制 & 清空
+  copyBtn.addEventListener('click', async function(){
+    try {
+      await navigator.clipboard.writeText(input.value || '');
+      copyBtn.textContent = '已复制！';
+      setTimeout(() => copyBtn.textContent = '复制到剪贴板', 1500);
+    } catch (e) { alert('复制失败，请手动全选复制。'); }
+  });
+  clearBtn.addEventListener('click', function(){
+    if (confirm('确定要清空共享粘贴板吗？（所有人都会看到被清空）')) {
+      input.value = '';
+      render('');
+      scheduleSave();
+    }
+  });
+
+  // 初始化
+  load();
+})();
+</script>
