@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PX4 混控器详解 — 从原理到实践</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: #151d2e;
+    --bg-card-alt: #1a2438;
+    --bg-code: #0d1321;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-cyan: #22d3ee;
+    --accent-blue: #3b82f6;
+    --accent-purple: #a78bfa;
+    --accent-green: #34d399;
+    --accent-orange: #fb923c;
+    --accent-red: #f87171;
+    --accent-pink: #f472b6;
+    --accent-yellow: #fbbf24;
+    --border-subtle: rgba(148, 163, 184, 0.1);
+    --border-accent: rgba(34, 211, 238, 0.3);
+    --glow-cyan: 0 0 20px rgba(34, 211, 238, 0.15);
+    --glow-blue: 0 0 20px rgba(59, 130, 246, 0.15);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.8;
+    font-size: 16px;
+    overflow-x: hidden;
+  }
+
+  /* ========== HERO ========== */
+  .hero {
+    position: relative;
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 40%, rgba(34, 211, 238, 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 20% 80%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(167, 139, 250, 0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent);
+  }
+
+  .hero-content { position: relative; z-index: 1; max-width: 900px; }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 18px;
+    border: 1px solid var(--border-accent);
+    border-radius: 100px;
+    font-size: 0.8rem;
+    color: var(--accent-cyan);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    background: rgba(34, 211, 238, 0.05);
+    animation: fadeDown 0.8s ease;
+  }
+
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 5vw, 4.2rem);
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+    animation: fadeDown 0.8s ease 0.1s both;
+  }
+
+  .hero h1 .gradient-text {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    max-width: 650px;
+    margin: 0 auto 2.5rem;
+    animation: fadeDown 0.8s ease 0.2s both;
+  }
+
+  .hero-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    animation: fadeDown 0.8s ease 0.3s both;
+  }
+
+  .hero-nav a {
+    padding: 10px 22px;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .hero-nav a:hover {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    background: rgba(34, 211, 238, 0.05);
+    box-shadow: var(--glow-cyan);
+  }
+
+  .hero-nav a.primary {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    color: var(--bg-primary);
+    border-color: transparent;
+    font-weight: 700;
+  }
+
+  .hero-nav a.primary:hover {
+    box-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
+    transform: translateY(-2px);
+  }
+
+  /* ========== LAYOUT ========== */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  section {
+    padding: 5rem 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .section-header {
+    margin-bottom: 3rem;
+  }
+
+  .section-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent-cyan);
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .section-header h2 {
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.3;
+    margin-bottom: 1rem;
+  }
+
+  .section-header p {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    max-width: 700px;
+  }
+
+  /* ========== CARDS ========== */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 2rem;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--glow-cyan);
+  }
+
+  .card h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card h3 .icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* ========== CODE BLOCKS ========== */
+  .code-block {
+    background: var(--bg-code);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border-subtle);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .code-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .code-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .code-dots span:nth-child(1) { background: #ef4444; }
+  .code-dots span:nth-child(2) { background: #fbbf24; }
+  .code-dots span:nth-child(3) { background: #22c55e; }
+
+  pre {
+    padding: 1.5rem;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  pre .comment { color: #4a5568; font-style: italic; }
+  pre .keyword { color: var(--accent-purple); }
+  pre .value { color: var(--accent-cyan); }
+  pre .type { color: var(--accent-orange); }
+  pre .string { color: var(--accent-green); }
+  pre .highlight { color: var(--accent-yellow); font-weight: 700; }
+
+  /* ========== FLOW DIAGRAM ========== */
+  .flow-diagram {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    min-width: 700px;
+  }
+
+  .flow-box {
+    padding: 14px 22px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    border: 1px solid;
+    min-width: 120px;
+    position: relative;
+  }
+
+  .flow-arrow {
+    width: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .flow-box.controller {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: var(--accent-blue);
+  }
+
+  .flow-box.mixer {
+    background: rgba(34, 211, 238, 0.1);
+    border-color: rgba(34, 211, 238, 0.3);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 25px rgba(34, 211, 238, 0.1);
+  }
+
+  .flow-box.actuator {
+    background: rgba(52, 211, 153, 0.1);
+    border-color: rgba(52, 211, 153, 0.3);
+    color: var(--accent-green);
+  }
+
+  .flow-box.input {
+    background: rgba(167, 139, 250, 0.1);
+    border-color: rgba(167, 139, 250, 0.3);
+    color: var(--accent-purple);
+  }
+
+  .flow-label {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    min-width: 700px;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .flow-label span {
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .flow-label .spacer { width: 50px; flex-shrink: 0; }
+
+  /* ========== MATRIX TABLE ========== */
+  .matrix-wrapper {
+    overflow-x: auto;
+    margin: 2rem 0;
+  }
+
+  .matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    font-family: 'JetBrains Mono', monospace;
+    min-width: 600px;
+  }
+
+  .matrix-table th,
+  .matrix-table td {
+    padding: 12px 16px;
+    text-align: center;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .matrix-table thead th {
+    background: rgba(34, 211, 238, 0.08);
+    color: var(--accent-cyan);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+  }
+
+  .matrix-table tbody td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.02);
+    white-space: nowrap;
+  }
+
+  .matrix-table tbody td {
+    color: var(--text-secondary);
+    transition: all 0.2s;
+  }
+
+  .matrix-table tbody tr:hover td {
+    background: rgba(34, 211, 238, 0.03);
+  }
+
+  .val-pos { color: var(--accent-green) !important; font-weight: 700; }
+  .val-neg { color: var(--accent-red) !important; font-weight: 700; }
+  .val-zero { color: var(--text-muted) !important; }
+  .val-thrust { color: var(--accent-yellow) !important; font-weight: 700; }
+
+  /* ========== DRONE SVG DIAGRAMS ========== */
+  .drone-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2.5rem 0;
+  }
+
+  @media (max-width: 768px) {
+    .drone-compare { grid-template-columns: 1fr; }
+  }
+
+  .drone-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .drone-card h3 {
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .drone-card svg {
+    max-width: 300px;
+    margin: 0 auto 1.5rem;
+    display: block;
+  }
+
+  .drone-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    text-align: left;
+    margin-top: 1rem;
+  }
+
+  .drone-spec {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.02);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+  }
+
+  .drone-spec .label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .drone-spec .value {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ========== CALLOUTS ========== */
+  .callout {
+    border-left: 3px solid;
+    padding: 1.2rem 1.5rem;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin: 1.5rem 0;
+    font-size: 0.92rem;
+  }
+
+  .callout-info {
+    border-color: var(--accent-blue);
+    background: rgba(59, 130, 246, 0.06);
+  }
+
+  .callout-warn {
+    border-color: var(--accent-orange);
+    background: rgba(251, 146, 60, 0.06);
+  }
+
+  .callout-tip {
+    border-color: var(--accent-green);
+    background: rgba(52, 211, 153, 0.06);
+  }
+
+  .callout-title {
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    font-size: 0.85rem;
+  }
+
+  .callout-info .callout-title { color: var(--accent-blue); }
+  .callout-warn .callout-title { color: var(--accent-orange); }
+  .callout-tip .callout-title { color: var(--accent-green); }
+
+  /* ========== COMPARISON TABLE ========== */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-size: 0.88rem;
+  }
+
+  .compare-table th,
+  .compare-table td {
+    padding: 14px 18px;
+    border: 1px solid var(--border-subtle);
+    text-align: left;
+  }
+
+  .compare-table thead th {
+    background: rgba(34, 211, 238, 0.06);
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+  }
+
+  .compare-table thead th:first-child {
+    color: var(--text-secondary);
+  }
+
+  .compare-table thead th:nth-child(2) {
+    color: var(--accent-blue);
+  }
+
+  .compare-table thead th:nth-child(3) {
+    color: var(--accent-green);
+  }
+
+  .compare-table tbody tr:hover td {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .compare-table td:first-child {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 100px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .tag-blue { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+  .tag-green { background: rgba(52, 211, 153, 0.15); color: var(--accent-green); }
+  .tag-orange { background: rgba(251, 146, 60, 0.15); color: var(--accent-orange); }
+  .tag-red { background: rgba(248, 113, 113, 0.15); color: var(--accent-red); }
+
+  /* ========== FORMULA ========== */
+  .formula-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+
+  .formula-block .katex-display {
+    margin: 0.8em 0;
+  }
+
+  .formula-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 0.8rem;
+  }
+
+  /* ========== INTERACTIVE MIXER ========== */
+  .interactive-mixer {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    margin: 2rem 0;
+  }
+
+  .slider-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .slider-item label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+  }
+
+  .slider-item label span {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent-cyan);
+  }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    background: rgba(255,255,255,0.05);
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-cyan);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+  }
+
+  .motor-output-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 1.5rem;
+  }
+
+  .motor-bar {
+    text-align: center;
+  }
+
+  .motor-bar .bar-container {
+    height: 120px;
+    background: rgba(255,255,255,0.03);
+    border-radius: var(--radius-sm);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .motor-bar .bar-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--accent-cyan), var(--accent-blue));
+    border-radius: var(--radius-sm);
+    transition: height 0.3s ease;
+  }
+
+  .motor-bar .bar-value {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    z-index: 1;
+  }
+
+  .motor-bar .motor-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ========== TABS ========== */
+  .tab-container {
+    margin: 2rem 0;
+  }
+
+  .tab-buttons {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 0;
+  }
+
+  .tab-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-family: 'Noto Sans SC', sans-serif;
+  }
+
+  .tab-btn.active {
+    color: var(--accent-cyan);
+    border-bottom-color: var(--accent-cyan);
+  }
+
+  .tab-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .tab-panel {
+    display: none;
+    padding: 2rem 0;
+  }
+
+  .tab-panel.active { display: block; }
+
+  /* ========== FOOTER ========== */
+  footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+
+  footer a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+  }
+
+  /* ========== TOC ========== */
+  .toc {
+    position: fixed;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .toc a {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    opacity: 0.3;
+    transition: all 0.3s;
+    display: block;
+  }
+
+  .toc a:hover, .toc a.active {
+    opacity: 1;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+    transform: scale(1.4);
+  }
+
+  @media (max-width: 1200px) { .toc { display: none; } }
+
+  /* ========== ANIMATIONS ========== */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ========== MISC ========== */
+  a { color: var(--accent-cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  strong { color: var(--text-primary); }
+
+  .text-cyan { color: var(--accent-cyan); }
+  .text-blue { color: var(--accent-blue); }
+  .text-purple { color: var(--accent-purple); }
+  .text-green { color: var(--accent-green); }
+  .text-orange { color: var(--accent-orange); }
+  .text-red { color: var(--accent-red); }
+  .text-yellow { color: var(--accent-yellow); }
+
+  .mt-1 { margin-top: 1rem; }
+  .mt-2 { margin-top: 2rem; }
+  .mb-1 { margin-bottom: 1rem; }
+  .mb-2 { margin-bottom: 2rem; }
+
+  p + p { margin-top: 1rem; }
+
+  .katex { font-size: 1em; }
+</style>
+</head>
+<body>
+
+<!-- ===== TOC DOTS ===== -->
+<nav class="toc" id="toc">
+  <a href="#hero" title="顶部"></a>
+  <a href="#overview" title="概述"></a>
+  <a href="#architecture" title="架构"></a>
+  <a href="#types" title="混控类型"></a>
+  <a href="#matrix" title="混控矩阵"></a>
+  <a href="#compare" title="四 vs 六旋翼"></a>
+  <a href="#interactive" title="交互模拟"></a>
+  <a href="#config" title="配置文件"></a>
+</nav>
+
+<!-- ===== HERO ===== -->
+<header class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge">PX4 Autopilot · 深度教程</div>
+    <h1>理解 <span class="gradient-text">PX4 混控器</span><br>Mixer 原理与实践</h1>
+    <p>混控器是连接飞行控制器与执行器的桥梁。本教程将带你从数学原理出发，对比四旋翼与六旋翼的混控差异，建立直觉理解。</p>
+    <div class="hero-nav">
+      <a href="#overview" class="primary">开始学习</a>
+      <a href="#compare">四旋翼 vs 六旋翼</a>
+      <a href="#interactive">交互模拟器</a>
+      <a href="#config">配置文件</a>
+    </div>
+  </div>
+</header>
+
+<!-- ===== SECTION 1: OVERVIEW ===== -->
+<section id="overview">
+<div class="container">
+  <div class="section-header fade-in">
+    <span class="section-number">01 — 概述</span>
+    <h2>什么是混控器？</h2>
+    <p>PX4 的混控器（Mixer）负责将上层控制指令转换为每一个执行器的具体输出值，是飞控系统中不可或缺的核心模块。</p>
+  </div>
+
+  <div class="card-grid fade-in">
+    <div class="card">
+      <h3><span class="icon" style="background:rgba(59,130,246,0.15);color:var(--accent-blue);">📥</span> 输入：控制量</h3>
+      <p>控制器输出的是<strong>归一化的控制指令</strong>，包含滚转（Roll）、俯仰（Pitch）、偏航（Yaw）和油门（Throttle）四个分量，取值范围为 \([-1, 1]\)（油门为 \([0, 1]\)）。</p>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:rgba(34,211,238,0.15);color:var(--accent-cyan);">⚙️</span> 处理：混控逻辑</h3>
+      <p>混控器根据<strong>预定义的混控矩阵</strong>，对每个控制量加权求和。不同的机型（四旋翼、六旋翼、固定翼等）有不同的权重矩阵。</p>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:rgba(52,211,153,0.15);color:var(--accent-green);">📤</span> 输出：执行器</h3>
+      <p>混控结果是每个电机/舵机的 <strong>PWM 输出值</strong>。对于多旋翼，这就是每个电机的转速指令；对于固定翼，则包含舵面偏转量。</p>
+    </div>
+  </div>
+
+  <div class="callout callout-info fade-in mt-2">
+    <div class="callout-title">💡 核心思想</div>
+    <p>混控器本质上就是一个<strong>线性映射</strong>：将少数几个控制量（通常4维）映射到多个执行器输出（4~8维甚至更多）。这个映射可以用矩阵乘法来表达。</p>
+  </div>
+</div>
+</section>
+
+<!-- ===== SECTION 2: ARCHITECTURE ===== -->
+<section id="architecture">
+<div class="container">
+  <div class="section-header fade-in">
+    <span class="section-number">02 — 系统架构</span>
+    <h2>混控器在系统中的位置</h2>
+    <p>理解混控器的上下游关系，是正确配置飞控的基础。</p>
+  </div>
+
+  <div class="flow-diagram fade-in">
+    <div class="flow-row">
+      <div class="flow-box input">遥控器/任务</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box controller">姿态控制器</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box mixer" style="font-size:1rem;">🔀 混控器</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box actuator">PWM 驱动</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box actuator">电机/舵机</div>
+    </div>
+    <div class="flow-label">
+      <span>设定值</span>
+      <span class="spacer"></span>
+      <span>控制量 (R/P/Y/T)</span>
+      <span class="spacer"></span>
+      <span>加权映射</span>
+      <span class="spacer"></span>
+      <span>PWM 信号</span>
+      <span class="spacer"></span>
+      <span>物理执行</span>
+    </div>
+  </div>
+
+  <div class="fade-in">
+    <h3 class="mb-1">控制组（Control Groups）</h3>
+    <p>PX4 使用<strong>控制组</strong>来组织不同来源的控制量。混控器从控制组中读取输入：</p>
+  </div>
+
+  <div class="card-grid mt-1 fade-in">
+    <div class="card">
+      <h3 style="font-size:1rem;"><span class="text-cyan">Group 0</span> — 飞行控制</h3>
+      <p>来自姿态/速率控制器的输出。通道 0~3 分别为 Roll、Pitch、Yaw、Throttle。<strong>这是多旋翼最主要的控制来源。</strong></p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:1rem;"><span class="text-purple">Group 1</span> — 载荷/云台</h3>
+      <p>云台控制、相机触发等辅助功能通道。用于挂载设备的控制。</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:1rem;"><span class="text-orange">Group 3</span> — 手动透传</h3>
+      <p>将遥控器通道直接透传到执行器，不经过控制器处理。常用于辅助开关、灯光控制等。</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ===== SECTION 3: MIXER TYPES ===== -->
+<section id="types">
+<div class="container">
+  <div class="section-header fade-in">
+    <span class="section-number">03 — 混控类型</span>
+    <h2>PX4 支持的混控器类型</h2>
+    <p>不同机型和应用场景使用不同类型的混控器。</p>
+  </div>
+
+  <div class="card-grid fade-in">
+    <div class="card">
+      <h3><span class="icon" style="background:rgba(34,211,238,0.15);color:var(--accent-cyan);">M</span> 多旋翼混控器</h3>
+      <p>专为多旋翼设计。将 Roll/Pitch/Yaw/Thrust 映射到 N 个电机输出。内置<strong>推力饱和保护</strong>：当某个电机计算值超出 \([0,1]\) 时，会自动缩放所有输出以保持姿态优先。</p>
+      <div class="callout callout-tip" style="margin-top:1rem;">
+        <div class="callout-title">关键特性</div>
+        <p>多旋翼混控器优先保证<strong>姿态控制</strong>（Roll/Pitch/Yaw），在饱和时会牺牲总推力来确保机体姿态稳定。</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:rgba(167,139,250,0.15);color:var(--accent-purple);">S</span> 简单混控器</h3>
+      <p>单输入到单输出的线性映射。将一个控制组通道映射到一个执行器输出。常用于舵机控制等简单场景：</p>
+      <p style="margin-top:0.5rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--accent-green);">
+        output = k × input + offset
+      </p>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:rgba(251,146,60,0.15);color:var(--accent-orange);">N</span> Null 混控器</h3>
+      <p>输出恒定值（通常为 0），用于占位或禁用某个输出通道。确保执行器输出数量与硬件通道一一对应。</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ===== SECTION 4: MIXING MATRIX ===== -->
+<section id="matrix">
+<div class="container">
+  <div class="section-header fade-in">
+    <span class="section-number">04 — 混控矩阵</span>
+    <h2>混控矩阵的数学本质</h2>
+    <p>混控器的核心就是一次矩阵乘法运算。</p>
+  </div>
+
+  <div class="formula-block fade-in">
+    <div class="formula-label">通用混控公式</div>
+    <p>对于一个 \(N\) 旋翼飞行器，混控过程可以表示为：</p>
+    <p style="margin:1.5rem 0;text-align:center;font-size:1.1rem;">
+      \[
+      \begin{bmatrix} m_1 \\ m_2 \\ \vdots \\ m_N \end{bmatrix}
+      =
+      \mathbf{M}_{N \times 4}
+      \cdot
+      \begin{bmatrix} \text{Roll} \\ \text{Pitch} \\ \text{Yaw} \\ \text{Thrust} \end{bmatrix}
+      \]
+    </p>
+    <p>其中 \(\mathbf{M}\) 就是<strong>混控矩阵</strong>，每一行对应一个电机，每一列对应一个控制量。矩阵中的元素决定了各控制量对每个电机的贡献方向和大小。</p>
+  </div>
+
+  <div class="formula-block fade-in">
+    <div class="formula-label">单个电机的输出公式</div>
+    <p>第 \(i\) 个电机的输出：</p>
+    <p style="margin:1rem 0;text-align:center;">
+      \[
+      m_i = k_{i,\text{roll}} \cdot u_{\text{roll}} + k_{i,\text{pitch}} \cdot u_{\text{pitch}} + k_{i,\text{yaw}} \cdot u_{\text{yaw}} + k_{i,\text{thrust}} \cdot u_{\text{thrust}}
+      \]
+    </p>
+    <p>其中 \(k_{i,j}\) 是混控矩阵第 \(i\) 行第 \(j\) 列的系数。正值表示正向贡献，负值表示反向贡献。</p>
+  </div>
+
+  <div class="callout callout-warn fade-in">
+    <div class="callout-title">⚠ 饱和处理（Saturation）</div>
+    <p>当计算得到的某个电机输出 \(m_i\) 超出 \([0,1]\) 范围时，PX4 会执行饱和逻辑：首先尝试通过整体偏移（offset shifting）使所有电机落在合法范围内；如果不行，则等比缩放 Roll/Pitch/Yaw 分量，<strong>最后缩放 Thrust</strong>，始终优先保证姿态稳定。</p>
+  </div>
+</div>
+</section>
+
+<!-- ===== SECTION 5: QUAD vs HEX ===== -->
+<section id="compare">
+<div class="container">
+  <div class="section-header fade-in">
+    <span class="section-number">05 — 对比实例</span>
+    <h2>四旋翼 vs 六旋翼混控</h2>
+    <p>通过对比两种常见机型的混控矩阵，深入理解混控器的工作原理。</p>
+  </div>
+
+  <!-- Drone Diagrams -->
+  <div class="drone-compare fade-in">
+    <!-- QUAD -->
+    <div class="drone-card">
+      <h3><span class="text-blue">◆</span> 四旋翼 · QUAD X</h3>
+      <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+        <!-- Arms -->
+        <line x1="140" y1="140" x2="60" y2="60" stroke="#3b82f6" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="220" y2="60" stroke="#3b82f6" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="60" y2="220" stroke="#3b82f6" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="220" y2="220" stroke="#3b82f6" stroke-width="3" opacity="0.5"/>
+        <!-- Center -->
+        <circle cx="140" cy="140" r="18" fill="#111827" stroke="#3b82f6" stroke-width="2"/>
+        <text x="140" y="144" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="bold">CG</text>
+        <!-- Front arrow -->
+        <polygon points="140,100 134,112 146,112" fill="#22d3ee" opacity="0.8"/>
+        <text x="140" y="94" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="bold">FRONT</text>
+        <!-- Motor 1 (front-right) CCW -->
+        <circle cx="220" cy="60" r="28" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,3"/>
+        <circle cx="220" cy="60" r="6" fill="#f87171"/>
+        <text x="220" y="25" text-anchor="middle" fill="#f87171" font-size="11" font-weight="bold">M1</text>
+        <text x="220" y="100" text-anchor="middle" fill="#64748b" font-size="8">CCW ↺</text>
+        <!-- Motor 2 (back-left) CCW -->
+        <circle cx="60" cy="220" r="28" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,3"/>
+        <circle cx="60" cy="220" r="6" fill="#f87171"/>
+        <text x="60" y="260" text-anchor="middle" fill="#f87171" font-size="11" font-weight="bold">M2</text>
+        <text x="60" y="195" text-anchor="middle" fill="#64748b" font-size="8">CCW ↺</text>
+        <!-- Motor 3 (front-left) CW -->
+        <circle cx="60" cy="60" r="28" fill="none" stroke="#34d399" stroke-width="2"/>
+        <circle cx="60" cy="60" r="6" fill="#34d399"/>
+        <text x="60" y="25" text-anchor="middle" fill="#34d399" font-size="11" font-weight="bold">M3</text>
+        <text x="60" y="100" text-anchor="middle" fill="#64748b" font-size="8">CW ↻</text>
+        <!-- Motor 4 (back-right) CW -->
+        <circle cx="220" cy="220" r="28" fill="none" stroke="#34d399" stroke-width="2"/>
+        <circle cx="220" cy="220" r="6" fill="#34d399"/>
+        <text x="220" y="260" text-anchor="middle" fill="#34d399" font-size="11" font-weight="bold">M4</text>
+        <text x="220" y="195" text-anchor="middle" fill="#64748b" font-size="8">CW ↻</text>
+      </svg>
+      <div class="drone-specs">
+        <div class="drone-spec"><span class="label">电机数量</span><span class="value">4</span></div>
+        <div class="drone-spec"><span class="label">混控矩阵</span><span class="value">4 × 4</span></div>
+        <div class="drone-spec"><span class="label">冗余度</span><span class="value text-red">无</span></div>
+        <div class="drone-spec"><span class="label">常见用途</span><span class="value" style="font-family:'Noto Sans SC';font-size:0.72rem;">消费级、竞速</span></div>
+      </div>
+    </div>
+
+    <!-- HEX -->
+    <div class="drone-card">
+      <h3><span class="text-green">◆</span> 六旋翼 · HEX X</h3>
+      <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+        <!-- Arms -->
+        <line x1="140" y1="140" x2="75" y2="50" stroke="#34d399" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="205" y2="50" stroke="#34d399" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="40" y2="140" stroke="#34d399" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="240" y2="140" stroke="#34d399" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="75" y2="230" stroke="#34d399" stroke-width="3" opacity="0.5"/>
+        <line x1="140" y1="140" x2="205" y2="230" stroke="#34d399" stroke-width="3" opacity="0.5"/>
+        <!-- Center -->
+        <circle cx="140" cy="140" r="18" fill="#111827" stroke="#34d399" stroke-width="2"/>
+        <text x="140" y="144" text-anchor="middle" fill="#34d399" font-size="10" font-weight="bold">CG</text>
+        <!-- Front arrow -->
+        <polygon points="140,100 134,112 146,112" fill="#22d3ee" opacity="0.8"/>
+        <text x="140" y="94" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="bold">FRONT</text>
+        <!-- Motor 1 (front-right) CW -->
+        <circle cx="205" cy="50" r="24" fill="none" stroke="#34d399" stroke-width="2"/>
+        <circle cx="205" cy="50" r="5" fill="#34d399"/>
+        <text x="205" y="20" text-anchor="middle" fill="#34d399" font-size="10" font-weight="bold">M1</text>
+        <text x="232" y="42" fill="#64748b" font-size="7">CW</text>
+        <!-- Motor 2 (right) CCW -->
+        <circle cx="240" cy="140" r="24" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,3"/>
+        <circle cx="240" cy="140" r="5" fill="#f87171"/>
+        <text x="269" y="144" text-anchor="middle" fill="#f87171" font-size="10" font-weight="bold">M2</text>
+        <text x="269" y="156" text-anchor="middle" fill="#64748b" font-size="7">CCW</text>
+        <!-- Motor 3 (back-right) CW -->
+        <circle cx="205" cy="230" r="24" fill="none" stroke="#34d399" stroke-width="2"/>
+        <circle cx="205" cy="230" r="5" fill="#34d399"/>
+        <text x="205" y="265" text-anchor="middle" fill="#34d399" font-size="10" font-weight="bold">M3</text>
+        <text x="232" y="238" fill="#64748b" font-size="7">CW</text>
+        <!-- Motor 4 (back-left) CCW -->
+        <circle cx="75" cy="230" r="24" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,3"/>
+        <circle cx="75" cy="230" r="5" fill="#f87171"/>
+        <text x="75" y="265" text-anchor="middle" fill="#f87171" font-size="10" font-weight="bold">M4</text>
+        <text x="48" y="238" fill="#64748b" font-size="7">CCW</text>
+        <!-- Motor 5 (left) CW -->
+        <circle cx="40" cy="140" r="24" fill="none" stroke="#34d399" stroke-width="2"/>
+        <circle cx="40" cy="140" r="5" fill="#34d399"/>
+        <text x="11" y="144" text-anchor="middle" fill="#34d399" font-size="10" font-weight="bold">M5</text>
+        <text x="11" y="156" text-anchor="middle" fill="#64748b" font-size="7">CW</text>
+        <!-- Motor 6 (front-left) CCW -->
+        <circle cx="75" cy="50" r="24" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,3"/>
+        <circle cx="75" cy="50" r="5" fill="#f87171"/>
+        <text x="75" y="20" text-anchor="middle" fill="#f87171" font-size="10" font-weight="bold">M6</text>
+        <text x="48" y="42" fill="#64748b" font-size="7">CCW</text>
+      </svg>
+      <div class="drone-specs">
+        <div class="drone-spec"><span class="label">电机数量</span><span class="value">6</span></div>
+        <div class="drone-spec"><span class="label">混控矩阵</span><span class="value">6 × 4</span></div>
+        <div class="drone-spec"><span class="label">冗余度</span><span class="value text-green">有</span></div>
+        <div class="drone-spec"><span class="label">常见用途</span><span class="value" style="font-family:'Noto Sans SC';font-size:0.72rem;">航拍、工业</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Matrices -->
+  <div class="tab-container fade-in">
+    <div class="tab-buttons">
+      <button class="tab-btn active" onclick="switchTab('quad')">四旋翼矩阵</button>
+      <button class="tab-btn" onclick="switchTab('hex')">六旋翼矩阵</button>
+    </div>
+
+    <!-- QUAD Matrix -->
+    <div class="tab-panel active" id="tab-quad">
+      <div class="formula-block">
+        <div class="formula-label">QUAD X 混控矩阵（标准 PX4 编号）</div>
+        <p style="margin:1rem 0;text-align:center;">
+          \[
+          \mathbf{M}_{\text{quad}} =
+          \begin{bmatrix}
+          -1 & +1 & -1 & +1 \\
+          +1 & -1 & -1 & +1 \\
+          -1 & -1 & +1 & +1 \\
+          +1 & +1 & +1 & +1
+          \end{bmatrix}
+          \]
+        </p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);">列顺序：Roll, Pitch, Yaw, Thrust。行顺序：M1, M2, M3, M4。</p>
+      </div>
+
+      <div class="matrix-wrapper">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>电机</th>
+              <th>Roll</th>
+              <th>Pitch</th>
+              <th>Yaw</th>
+              <th>Thrust</th>
+              <th>位置</th>
+              <th>旋向</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>M1</td><td class="val-neg">−1</td><td class="val-pos">+1</td><td class="val-neg">−1</td><td class="val-thrust">+1</td><td>前右</td><td>CCW ↺</td></tr>
+            <tr><td>M2</td><td class="val-pos">+1</td><td class="val-neg">−1</td><td class="val-neg">−1</td><td class="val-thrust">+1</td><td>后左</td><td>CCW ↺</td></tr>
+            <tr><td>M3</td><td class="val-neg">−1</td><td class="val-neg">−1</td><td class="val-pos">+1</td><td class="val-thrust">+1</td><td>前左</td><td>CW ↻</td></tr>
+            <tr><td>M4</td><td class="val-pos">+1</td><td class="val-pos">+1</td><td class="val-pos">+1</td><td class="val-thrust">+1</td><td>后右</td><td>CW ↻</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-title">📖 解读示例</div>
+        <p>以 <strong>M1（前右电机）</strong> 为例：Roll 系数为 \(-1\)，意味着当飞控请求正向横滚（向右倾斜）时，右侧的 M1 <strong>减速</strong>，配合左侧电机加速产生横滚力矩。Pitch 系数为 \(+1\)，说明前倾（向前俯仰）时前方电机 <strong>加速</strong>。Yaw 系数为 \(-1\)，因为 M1 是 CCW 旋转，产生的反扭矩方向与正 Yaw 相反。</p>
+      </div>
+    </div>
+
+    <!-- HEX Matrix -->
+    <div class="tab-panel" id="tab-hex">
+      <div class="formula-block">
+        <div class="formula-label">HEX X 混控矩阵（标准 PX4 编号）</div>
+        <p style="margin:1rem 0;text-align:center;">
+          \[
+          \mathbf{M}_{\text{hex}} =
+          \begin{bmatrix}
+          -1 & +0.50 & -1 & +1 \\
+           0 & -1    & +1 & +1 \\
+          +1 & +0.50 & -1 & +1 \\
+          -1 & -0.50 & +1 & +1 \\
+           0 & +1    & +1 & +1 \\
+          +1 & -0.50 & +1 & +1
+          \end{bmatrix}
+          \]
+        </p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);">六旋翼的 Pitch 列出现了 ±0.5 分数值——因为前后电机并非正前/正后方，而是与纵轴成 30° 夹角，力臂投影为 \(\sin(30°)=0.5\)。</p>
+      </div>
+
+      <div class="matrix-wrapper">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>电机</th>
+              <th>Roll</th>
+              <th>Pitch</th>
+              <th>Yaw</th>
+              <th>Thrust</th>
+              <th>位置</th>
+              <th>旋向</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>M1</td><td class="val-neg">−1</td><td class="val-pos">+0.50</td><td class="val-neg">−1</td><td class="val-thrust">+1</td><td>前右（60°）</td><td>CW ↻</td></tr>
+            <tr><td>M2</td><td class="val-zero">0</td><td class="val-neg">−1</td><td class="val-pos">+1</td><td class="val-thrust">+1</td><td>正右（0°）</td><td>CCW ↺</td></tr>
+            <tr><td>M3</td><td class="val-pos">+1</td><td class="val-pos">+0.50</td><td class="val-neg">−1</td><td class="val-thrust">+1</td><td>后右（−60°）</td><td>CW ↻</td></tr>
+            <tr><td>M4</td><td class="val-neg">−1</td><td class="val-neg">−0.50</td><td class="val-pos">+1</td><td class="val-thrust">+1</td><td>后左（−120°）</td><td>CCW ↺</td></tr>
+            <tr><td>M5</td><td class="val-zero">0</td><td class="val-pos">+1</td><td class="val-pos">+1</td><td class="val-thrust">+1</td><td>正左（180°）</td><td>CW ↻</td></tr>
+            <tr><td>M6</td><td class="val-pos">+1</td><td class="val-neg">−0.50</td><td class="val-pos">+1</td><td class="val-thrust">+1</td><td>前左（120°）</td><td>CCW ↺</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-title">📖 为什么出现 0.5？</div>
+        <p>HEX X 布局中，电机以 60° 间隔排列。M1 位于前右 60° 位置，其到俯仰轴的距离投影为 \(\cos(60°) = 0.5\)（归一化后）。而正左/正右位置的 M2 和 M5 与俯仰轴的距离最大（投影 = 1），因此 Pitch 系数为 ±1。正左/正右电机的 Roll 系数为 0，因为它们恰好在横滚轴上，无法产生横滚力矩。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Table -->
+  <h3 class="fade-in mt-2 mb-1">综合对比</h3>
+  <div class="matrix-wrapper fade-in">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>特性</th>
+          <th>四旋翼 Quad X</th>
+          <th>六旋翼 Hex X</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>电机数</td>
+          <td>4</td>
+          <td>6</td>
+        </tr>
+        <tr>
+          <td>混控矩阵维度</td>
+          <td>4 × 4（方阵）</td>
+          <td>6 × 4（超定系统）</td>
+        </tr>
+        <tr>
+          <td>自由度 vs 执行器</td>
+          <td>4 = 4 → 刚好确定</td>
+          <td>6 > 4 → 有冗余</td>
+        </tr>
+        <tr>
+          <td>电机失效容错</td>
+          <td><span class="tag tag-red">不可容错</span><br>任一电机失效则失控</td>
+          <td><span class="tag tag-green">单电机可容错</span><br>失去一个仍可保持飞行</td>
+        </tr>
+        <tr>
+          <td>混控系数特点</td>
+          <td>所有系数为 ±1（对称45°）</td>
+          <td>出现 0, ±0.5, ±1（60° 间隔投影）</td>
+        </tr>
+        <tr>
+          <td>偏航效率</td>
+          <td>4个电机均参与偏航</td>
+          <td>6个电机均参与偏航，力矩更大</td>
+        </tr>
+        <tr>
+          <td>载重能力</td>
+          <td><span class="tag tag-blue">标准</span></td>
+          <td><span class="tag tag-green">更高</span>（50% 更多推力源）</td>
+        </tr>
+        <tr>
+          <td>能效</td>
+          <td><span class="tag tag-green">较高</span>（更少电机损耗）</td>
+          <td><span class="tag tag-orange">稍低</span>（更多电机，更大重量）</td>
+        </tr>
+        <tr>
+          <td>典型应用</td>
+          <td>消费级、竞速、室内</td>
+          <td>航拍、测绘、工业巡检</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<!-- ===== SECTION 6: INTERACTIVE ===== -->
+<section id="interactive">
+<div class="container">
+  <div class="section-header fade-in">
+    <span class="section-number">06 — 交互模拟</span>
+    <h2>混控器模拟器</h2>
+    <p>拖动滑块调节控制输入，实时观察各电机的输出变化。</p>
+  </div>
+
+  <div class="interactive-mixer fade-in">
+    <div style="display:flex;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap;">
+      <button class="tab-btn active" id="sim-quad-btn" onclick="switchSim('quad')" style="border:1px solid var(--border-subtle);border-radius:8px;">四旋翼 Quad X</button>
+      <button class="tab-btn" id="sim-hex-btn" onclick="switchSim('hex')" style="border:1px solid var(--border-subtle);border-radius:8px;">六旋翼 Hex X</button>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-item">
+        <label>Roll（横滚）<span id="val-roll">0.00</span></label>
+        <input type="range" id="sl-roll" min="-100" max="100" value="0" oninput="updateMixer()">
+      </div>
+      <div class="slider-item">
+        <label>Pitch（俯仰）<span id="val-pitch">0.00</span></label>
+        <input type="range" id="sl-pitch" min="-100" max="100" value="0" oninput="updateMixer()">
+      </div>
+      <div class="slider-item">
+        <label>Yaw（偏航）<span id="val-yaw">0.00</span></label>
+        <input type="range" id="sl-yaw" min="-100" max="100" value="0" oninput="updateMixer()">
+      </div>
+      <div class="slider-item">
+        <label>Thrust（油门）<span id="val-thrust">0.50</span></label>
+        <input type="range" id="sl-thrust" min="0" max="100" value="50" oninput="updateMixer()">
+      </div>
+    </div>
+
+    <div id="motor-output" class="motor-output-grid"></div>
+
+    <div class="callout callout-tip" style="margin-top:1.5rem;">
+      <div class="callout-title">💡 试试看</div>
+      <p>将油门设为 50%，然后单独拉动 Roll 滑块 → 观察左右电机的差异变化。再切换到六旋翼模式，对比两者的响应模式差异。</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ===== SECTION 7: CONFIG FILES ===== -->
+<section id="config">
+<div class="container">
+  <div class="section-header fade-in">
+    <span class="section-number">07 — 配置文件</span>
+    <h2>PX4 混控配置文件格式</h2>
+    <p>了解 .mix 文件的语法，学会阅读和编写自定义混控。</p>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span>quad_x.main.mix — 四旋翼混控</span>
+    </div>
+<pre>
+<span class="comment"># 四旋翼 X 布局混控文件</span>
+<span class="comment"># Multirotor mixer for Quad X</span>
+
+<span class="keyword">R:</span> <span class="type">4x</span>           <span class="comment"># R = Multirotor mixer, 4x = 四旋翼X布局</span>
+
+<span class="comment"># 最大/最小输出限制, 空闲速度</span>
+<span class="value">10000 10000 10000</span>  <span class="comment"># roll_scale, pitch_scale, yaw_scale (×0.0001)</span>
+<span class="value">0</span>                  <span class="comment"># idle_speed (0 ~ 1, 这里是0%)</span>
+
+<span class="comment"># ┌───────────────────────────────────────┐</span>
+<span class="comment"># │ PX4 会根据 "4x" 自动加载内置矩阵     │</span>
+<span class="comment"># │ 无需手动写出每个电机的混控系数        │</span>
+<span class="comment"># └───────────────────────────────────────┘</span>
+</pre>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span>hex_x.main.mix — 六旋翼混控</span>
+    </div>
+<pre>
+<span class="comment"># 六旋翼 X 布局混控文件</span>
+<span class="comment"># Multirotor mixer for Hex X</span>
+
+<span class="keyword">R:</span> <span class="type">6x</span>           <span class="comment"># R = Multirotor mixer, 6x = 六旋翼X布局</span>
+
+<span class="value">10000 10000 10000</span>  <span class="comment"># roll_scale, pitch_scale, yaw_scale</span>
+<span class="value">0</span>                  <span class="comment"># idle_speed</span>
+
+<span class="comment"># 6x 自动加载 6 电机混控矩阵</span>
+<span class="comment"># 比 4x 多出 2 个电机通道，提供冗余</span>
+</pre>
+  </div>
+
+  <div class="code-block fade-in">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span>自定义混控示例 — 手动定义每个电机</span>
+    </div>
+<pre>
+<span class="comment"># 自定义四旋翼混控 (如果需要非标准布局)</span>
+<span class="comment"># 每个电机用一个 M: (Simple mixer) 定义</span>
+
+<span class="keyword">M:</span> <span class="value">1</span>                 <span class="comment"># Motor 1: 1个输入组</span>
+<span class="keyword">S:</span> <span class="type">0 0</span> <span class="highlight">-10000</span> <span class="highlight">-10000</span> <span class="value">0 -10000 10000</span>   <span class="comment"># Roll:  -1.0</span>
+<span class="keyword">S:</span> <span class="type">0 1</span> <span class="highlight"> 10000</span> <span class="highlight"> 10000</span> <span class="value">0 -10000 10000</span>   <span class="comment"># Pitch: +1.0</span>
+<span class="keyword">S:</span> <span class="type">0 2</span> <span class="highlight">-10000</span> <span class="highlight">-10000</span> <span class="value">0 -10000 10000</span>   <span class="comment"># Yaw:   -1.0</span>
+<span class="keyword">S:</span> <span class="type">0 3</span> <span class="highlight"> 10000</span> <span class="highlight"> 10000</span> <span class="value">0 -10000 10000</span>   <span class="comment"># Thrust:+1.0</span>
+
+<span class="comment"># S: 语法说明</span>
+<span class="comment"># S: &lt;group&gt; &lt;channel&gt; &lt;neg_scale&gt; &lt;pos_scale&gt; &lt;offset&gt; &lt;min&gt; &lt;max&gt;</span>
+<span class="comment"># scale 值 = 实际比例 × 10000, 如 10000 = 1.0, 5000 = 0.5</span>
+</pre>
+  </div>
+
+  <div class="callout callout-warn fade-in">
+    <div class="callout-title">⚠ PX4 v1.14+ 注意事项</div>
+    <p>从 PX4 v1.14 开始，动态混控逐渐成为默认方案，混控配置从 .mix 文件迁移到了<strong>参数驱动</strong>的方式（通过 SYS_AUTOSTART 和 Actuator 参数配置）。但理解 .mix 文件的原理对于掌握混控逻辑仍然非常重要。</p>
+  </div>
+</div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <p>PX4 混控器教程 · 基于 PX4 开源飞控系统</p>
+  <p style="margin-top:0.5rem;">参考文档：<a href="https://docs.px4.io/main/en/concept/mixing.html" target="_blank">PX4 Official — Mixing & Actuators</a></p>
+</footer>
+
+<script>
+// ===== MIXER SIMULATION =====
+const QUAD_MATRIX = [
+  [-1,  1, -1, 1], // M1 front-right CCW
+  [ 1, -1, -1, 1], // M2 back-left   CCW
+  [-1, -1,  1, 1], // M3 front-left  CW
+  [ 1,  1,  1, 1], // M4 back-right  CW
+];
+
+const HEX_MATRIX = [
+  [-1.0,  0.5, -1, 1], // M1 front-right CW
+  [ 0.0, -1.0,  1, 1], // M2 right       CCW
+  [ 1.0,  0.5, -1, 1], // M3 back-right  CW
+  [-1.0, -0.5,  1, 1], // M4 back-left   CCW
+  [ 0.0,  1.0,  1, 1], // M5 left        CW
+  [ 1.0, -0.5,  1, 1], // M6 front-left  CCW
+];
+
+const MOTOR_COLORS_QUAD = ['#f87171','#f87171','#34d399','#34d399'];
+const MOTOR_COLORS_HEX  = ['#34d399','#f87171','#34d399','#f87171','#34d399','#f87171'];
+
+let currentSim = 'quad';
+
+function switchSim(type) {
+  currentSim = type;
+  document.getElementById('sim-quad-btn').classList.toggle('active', type === 'quad');
+  document.getElementById('sim-hex-btn').classList.toggle('active', type === 'hex');
+  updateMixer();
+}
+
+function updateMixer() {
+  const roll    = parseInt(document.getElementById('sl-roll').value) / 100;
+  const pitch   = parseInt(document.getElementById('sl-pitch').value) / 100;
+  const yaw     = parseInt(document.getElementById('sl-yaw').value) / 100;
+  const thrust  = parseInt(document.getElementById('sl-thrust').value) / 100;
+
+  document.getElementById('val-roll').textContent    = roll.toFixed(2);
+  document.getElementById('val-pitch').textContent   = pitch.toFixed(2);
+  document.getElementById('val-yaw').textContent     = yaw.toFixed(2);
+  document.getElementById('val-thrust').textContent  = thrust.toFixed(2);
+
+  const input = [roll, pitch, yaw, thrust];
+  const matrix = currentSim === 'quad' ? QUAD_MATRIX : HEX_MATRIX;
+  const colors = currentSim === 'quad' ? MOTOR_COLORS_QUAD : MOTOR_COLORS_HEX;
+  const rotDirs = currentSim === 'quad'
+    ? ['CCW','CCW','CW','CW']
+    : ['CW','CCW','CW','CCW','CW','CCW'];
+
+  // Compute raw outputs
+  let outputs = matrix.map(row =>
+    row[0]*input[0] + row[1]*input[1] + row[2]*input[2] + row[3]*input[3]
+  );
+
+  // Clamp [0, 1]
+  outputs = outputs.map(v => Math.max(0, Math.min(1, v)));
+
+  // Render
+  const container = document.getElementById('motor-output');
+  container.innerHTML = '';
+
+  outputs.forEach((val, i) => {
+    const pct = (val * 100).toFixed(1);
+    const h = val * 100;
+    const div = document.createElement('div');
+    div.className = 'motor-bar';
+    div.innerHTML = `
+      <div class="bar-container">
+        <div class="bar-fill" style="height:${h}%;background:linear-gradient(to top, ${colors[i]}, ${colors[i]}88);"></div>
+        <div class="bar-value">${pct}%</div>
+      </div>
+      <div class="motor-label">M${i+1} <span style="font-size:0.65rem;color:#64748b">${rotDirs[i]}</span></div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ===== TABS =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ===== SCROLL ANIMATIONS =====
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.classList.add('visible');
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ===== TOC ACTIVE =====
+const sections = document.querySelectorAll('section, .hero');
+const tocLinks = document.querySelectorAll('.toc a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 200) current = s.id;
+  });
+  tocLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+
+// ===== INIT =====
+updateMixer();
+
+// ===== KaTeX =====
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false},
+    ],
+    throwOnError: false
+  });
+});
+</script>
+
+</body>
+</html>
