@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>无人机多传感器数据融合 — 交互式教学案例</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-card: #1a2236;
+  --bg-card-hover: #1f2a42;
+  --border: #2a3654;
+  --border-accent: #3b82f6;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-purple: #8b5cf6;
+  --accent-pink: #ec4899;
+  --glow-blue: rgba(59, 130, 246, 0.15);
+  --glow-cyan: rgba(6, 182, 212, 0.1);
+  --chart-grid: rgba(148, 163, 184, 0.08);
+  --font-serif: 'Noto Serif SC', serif;
+  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
+
+/* ===== HERO SECTION ===== */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(59,130,246,0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 60%, rgba(6,182,212,0.06) 0%, transparent 50%);
+  animation: heroGlow 12s ease-in-out infinite alternate;
+}
+
+@keyframes heroGlow {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(-2%, 1%) rotate(3deg); }
+}
+
+.hero-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-blue);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+
+.hero-badge .dot {
+  width: 6px; height: 6px;
+  background: var(--accent-blue);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(59,130,246,0); }
+}
+
+.hero h1 {
+  position: relative;
+  font-family: var(--font-serif);
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 50%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero .subtitle {
+  position: relative;
+  font-size: clamp(15px, 2vw, 18px);
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin-bottom: 48px;
+  font-weight: 300;
+}
+
+.hero-nav {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.hero-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.hero-nav a:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(59,130,246,0.15);
+}
+
+.hero-nav a .num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-blue);
+  opacity: 0.7;
+}
+
+/* ===== MAIN CONTAINER ===== */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ===== SECTION STYLES ===== */
+section {
+  margin-bottom: 80px;
+  scroll-margin-top: 40px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-blue);
+  background: rgba(59,130,246,0.1);
+  padding: 4px 12px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.section-header h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ===== CARD STYLES ===== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+  transition: border-color 0.3s;
+}
+
+.card:hover {
+  border-color: rgba(59,130,246,0.3);
+}
+
+.card h3 {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.card h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 10px;
+  color: var(--text-primary);
+}
+
+.card p, .card li {
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+.card ul, .card ol {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+.card li { margin-bottom: 6px; }
+
+/* ===== FORMULA BOX ===== */
+.formula-box {
+  background: rgba(59,130,246,0.05);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 16px 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent-cyan);
+  overflow-x: auto;
+}
+
+.formula-box .label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* ===== MATH STYLES ===== */
+.math-block {
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 16px 0;
+  text-align: center;
+  font-size: 16px;
+  color: var(--text-primary);
+  overflow-x: auto;
+}
+
+.math-inline {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  font-size: 0.95em;
+}
+
+/* ===== HIGHLIGHT BOX ===== */
+.highlight-box {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 16px 0;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.highlight-box.info {
+  background: rgba(6,182,212,0.06);
+  border: 1px solid rgba(6,182,212,0.2);
+}
+
+.highlight-box.warn {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+.highlight-box.success {
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.2);
+}
+
+.highlight-box .icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.highlight-box .content {
+  flex: 1;
+}
+
+.highlight-box .content strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+/* ===== INTERACTIVE CHART AREA ===== */
+.chart-area {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.chart-area .chart-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 16px;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 320px;
+}
+
+.chart-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ===== CONTROLS ===== */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 16px 0;
+  padding: 20px;
+  background: rgba(59,130,246,0.04);
+  border: 1px solid rgba(59,130,246,0.12);
+  border-radius: 12px;
+}
+
+.control-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.control-group label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.control-group label .value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-cyan);
+  background: rgba(6,182,212,0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+  transition: background 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--accent-blue);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(59,130,246,0.4);
+  transition: transform 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--accent-blue);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* ===== BUTTON ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--accent-blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+
+.btn.secondary {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn.secondary:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+/* ===== TWO COLUMNS ===== */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+
+/* ===== COMPARISON TABLE ===== */
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.comp-table th, .comp-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.comp-table th {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  background: rgba(59,130,246,0.05);
+}
+
+.comp-table td {
+  color: var(--text-secondary);
+}
+
+.comp-table tr:hover td {
+  background: rgba(59,130,246,0.03);
+}
+
+/* ===== TAG ===== */
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.tag.accel { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.tag.gyro { background: rgba(236,72,153,0.15); color: var(--accent-pink); }
+.tag.fused { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+.tag.true { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+
+/* ===== LEGEND ===== */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* ===== STEP INDICATOR ===== */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 24px 0;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.step-item:hover, .step-item.active {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  background: rgba(59,130,246,0.08);
+}
+
+.step-arrow {
+  color: var(--border);
+  font-size: 18px;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* ===== CODE BLOCK ===== */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: #c9d1d9;
+}
+
+.code-block .comment { color: #8b949e; }
+.code-block .keyword { color: #ff7b72; }
+.code-block .string { color: #a5d6ff; }
+.code-block .func { color: #d2a8ff; }
+.code-block .num { color: #79c0ff; }
+
+/* ===== METRIC DISPLAY ===== */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.metric {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.metric .metric-value {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.metric .metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ===== ANIMATION ===== */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== FREQ RESPONSE DIAGRAM ===== */
+.freq-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 20px 0;
+  padding: 20px;
+}
+
+.freq-block {
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  position: relative;
+}
+
+.freq-block.low {
+  background: rgba(59,130,246,0.12);
+  border: 1px solid rgba(59,130,246,0.3);
+  color: var(--accent-blue);
+}
+
+.freq-block.high {
+  background: rgba(236,72,153,0.12);
+  border: 1px solid rgba(236,72,153,0.3);
+  color: var(--accent-pink);
+}
+
+.freq-block.band {
+  background: rgba(16,185,129,0.12);
+  border: 1px solid rgba(16,185,129,0.3);
+  color: var(--accent-green);
+}
+
+.freq-plus {
+  font-size: 28px;
+  color: var(--text-muted);
+  margin: 0 16px;
+}
+
+.freq-equals {
+  font-size: 28px;
+  color: var(--accent-green);
+  margin: 0 16px;
+}
+
+/* ===== DRONE ANIMATION ===== */
+.drone-scene {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(180deg, rgba(59,130,246,0.03) 0%, rgba(6,182,212,0.02) 100%);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.drone-body {
+  position: absolute;
+  width: 60px;
+  height: 20px;
+  background: var(--accent-blue);
+  border-radius: 10px;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  transition: transform 0.1s;
+}
+
+.drone-arm {
+  position: absolute;
+  width: 40px;
+  height: 3px;
+  background: var(--text-muted);
+  top: 50%;
+}
+
+.drone-arm.left { right: 100%; }
+.drone-arm.right { left: 100%; }
+
+.angle-display {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 24px;
+  color: var(--accent-cyan);
+}
+
+.angle-label {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ===== FOOTER ===== */
+footer {
+  text-align: center;
+  padding: 40px 24px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ===== TABS ===== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.tab-btn:hover:not(.active) {
+  color: var(--text-secondary);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 1000;
+  background: rgba(10,14,23,0.8);
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  width: 0%;
+  transition: width 0.1s;
+}
+
+/* ===== SMALL CHART ===== */
+.small-chart {
+  height: 220px;
+}
+</style>
+</head>
+<body>
+
+<!-- Progress Bar -->
+<div class="progress-bar-container">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<!-- ==================== HERO ==================== -->
+<div class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    交互式教学案例
+  </div>
+  <h1>无人机多传感器数据融合</h1>
+  <p class="subtitle">
+    深入理解加速度计与陀螺仪的信号特性，掌握互补滤波与卡尔曼滤波的核心原理
+  </p>
+  <nav class="hero-nav">
+    <a href="#sec1"><span class="num">01</span> 传感器原理</a>
+    <a href="#sec2"><span class="num">02</span> 信号特性</a>
+    <a href="#sec3"><span class="num">03</span> 低通滤波</a>
+    <a href="#sec4"><span class="num">04</span> 高通滤波</a>
+    <a href="#sec5"><span class="num">05</span> 互补滤波</a>
+    <a href="#sec6"><span class="num">06</span> 卡尔曼滤波</a>
+    <a href="#sec7"><span class="num">07</span> 综合对比</a>
+  </nav>
+</div>
+
+<!-- ==================== MAIN CONTENT ==================== -->
+<div class="container">
+
+<!-- ==================== SECTION 1: 传感器原理 ==================== -->
+<section id="sec1">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>传感器基本原理</h2>
+  </div>
+
+  <div class="card">
+    <h3>为什么需要数据融合？</h3>
+    <p>在无人机飞行控制中，精确的姿态估计（俯仰角 Pitch、横滚角 Roll、偏航角 Yaw）是实现稳定飞行的基础。单一传感器都存在固有缺陷，因此需要将多个传感器的数据进行融合，取长补短。</p>
+
+    <div class="drone-scene" id="droneScene">
+      <div class="angle-label">拖动鼠标改变无人机姿态</div>
+      <canvas id="droneCanvas" width="800" height="200"></canvas>
+      <div class="angle-display" id="droneAngle">θ = 0.0°</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <h3><span class="tag accel">加速度计</span> Accelerometer</h3>
+      <h4>工作原理</h4>
+      <p>基于 MEMS 技术，测量微小质量块在各轴方向上受到的惯性力（包括重力）。静止时测量重力加速度分量，从而计算出倾斜角度。</p>
+      <h4>角度计算</h4>
+      <div class="math-block">
+        θ<sub>acc</sub> = atan2(a<sub>y</sub>, a<sub>z</sub>) × 180 / π
+      </div>
+      <h4>优势</h4>
+      <p>长期稳定、无累积漂移，能提供绝对角度参考。</p>
+      <h4>劣势</h4>
+      <p>对振动和线性加速度非常敏感，短期噪声大，动态响应慢。</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag gyro">陀螺仪</span> Gyroscope</h3>
+      <h4>工作原理</h4>
+      <p>基于科里奥利效应，测量角速度（°/s）。通过对角速度进行积分可以得到角度变化量。</p>
+      <h4>角度计算</h4>
+      <div class="math-block">
+        θ<sub>gyro</sub>(t) = θ<sub>gyro</sub>(t−1) + ω(t) × Δt
+      </div>
+      <h4>优势</h4>
+      <p>响应迅速、短期精度高，不受外力干扰。</p>
+      <h4>劣势</h4>
+      <p>积分累积误差（漂移），长期不可靠，存在零偏（bias）。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>频域特性互补</h3>
+    <p>这两个传感器的噪声特性恰好在频域上互补——这是数据融合的理论基础：</p>
+
+    <div class="freq-diagram">
+      <div class="freq-block low">
+        加速度计<br><small>低频可靠</small>
+      </div>
+      <span class="freq-plus">+</span>
+      <div class="freq-block high">
+        陀螺仪<br><small>高频可靠</small>
+      </div>
+      <span class="freq-equals">=</span>
+      <div class="freq-block band">
+        融合结果<br><small>全频段可靠</small>
+      </div>
+    </div>
+
+    <div class="highlight-box info">
+      <span class="icon">💡</span>
+      <div class="content">
+        <strong>核心直觉</strong>
+        <p>加速度计像一个"长期记忆者"——慢慢变化的真实角度它记得很准，但容易被短期振动干扰；陀螺仪像一个"短期反应者"——快速运动它跟得很紧，但时间长了就会"忘记"起始位置（漂移）。融合就是让两者互相弥补。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 2: 信号特性 ==================== -->
+<section id="sec2">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>信号与噪声特性</h2>
+  </div>
+
+  <div class="card">
+    <h3>🔬 交互实验：观察原始传感器信号</h3>
+    <p>下面的仿真展示了真实角度信号、加速度计测量值和陀螺仪积分值。调节参数观察不同噪声条件下的传感器表现。</p>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>加速度计噪声强度 <span class="value" id="accNoiseVal">0.50</span></label>
+        <input type="range" id="accNoise" min="0" max="2" step="0.05" value="0.5">
+      </div>
+      <div class="control-group">
+        <label>陀螺仪漂移率 (°/s) <span class="value" id="gyroDriftVal">0.10</span></label>
+        <input type="range" id="gyroDrift" min="0" max="0.5" step="0.01" value="0.1">
+      </div>
+      <div class="control-group">
+        <label>信号频率 (Hz) <span class="value" id="sigFreqVal">0.20</span></label>
+        <input type="range" id="sigFreq" min="0.05" max="1" step="0.05" value="0.2">
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" onclick="generateSignals()">🔄 重新生成信号</button>
+      <button class="btn secondary" onclick="togglePlay()">▶ 实时动画</button>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-title">传感器原始信号对比</div>
+      <div class="chart-wrapper">
+        <canvas id="rawSignalChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> 真实角度</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> 加速度计测量</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div> 陀螺仪积分</div>
+      </div>
+    </div>
+
+    <div class="metrics" id="rawMetrics">
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-blue)" id="accRMSE">—</div>
+        <div class="metric-label">加速度计 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-pink)" id="gyroRMSE">—</div>
+        <div class="metric-label">陀螺仪 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-pink)" id="gyroDriftDisplay">—</div>
+        <div class="metric-label">最终漂移量</div>
+      </div>
+    </div>
+
+    <div class="highlight-box warn">
+      <span class="icon">⚠️</span>
+      <div class="content">
+        <strong>观察要点</strong>
+        <p>注意加速度计信号（蓝色）围绕真实值上下剧烈抖动但不偏离——这是高频噪声；陀螺仪（粉色）短期平滑但逐渐偏离真实值——这是低频漂移。增大漂移率参数可以看到更明显的漂移效果。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 3: 低通滤波 ==================== -->
+<section id="sec3">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>低通滤波器与加速度计</h2>
+  </div>
+
+  <div class="card">
+    <h3>为什么加速度计需要低通滤波？</h3>
+    <p>加速度计的有用信息（重力方向 → 真实倾角）变化缓慢，属于低频分量。而振动、电机转动、空气扰动等引入的噪声主要是高频分量。低通滤波器可以保留低频有用信号，滤除高频噪声。</p>
+
+    <h4>一阶低通滤波器（指数移动平均）</h4>
+    <div class="math-block">
+      y(t) = α · x(t) + (1 − α) · y(t−1)
+    </div>
+    <p>其中 α 是滤波系数，取值范围 [0, 1]。α 越小，滤波越强（越平滑），但延迟越大。</p>
+
+    <div class="formula-box">
+      <div class="label">等效关系</div>
+      α = Δt / (τ + Δt)，其中 τ = 1/(2π·f<sub>c</sub>) 是时间常数，f<sub>c</sub> 是截止频率
+    </div>
+
+    <div class="highlight-box info">
+      <span class="icon">📐</span>
+      <div class="content">
+        <strong>物理直觉</strong>
+        <p>可以把低通滤波器想象成一个"惰性系统"——它不愿意跟随快速变化，只愿意缓慢地跟踪信号。α越小，它就越"懒"，越不容易被高频噪声带偏，但也越跟不上真实的快速变化。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎛️ 交互实验：调节低通滤波器参数</h3>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>滤波系数 α <span class="value" id="lpAlphaVal">0.10</span></label>
+        <input type="range" id="lpAlpha" min="0.01" max="1" step="0.01" value="0.1" oninput="updateLPF()">
+      </div>
+      <div class="control-group">
+        <label>加速度计噪声 <span class="value" id="lpNoiseVal">0.80</span></label>
+        <input type="range" id="lpNoise" min="0" max="3" step="0.1" value="0.8" oninput="updateLPF()">
+      </div>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-title">低通滤波效果</div>
+      <div class="chart-wrapper">
+        <canvas id="lpfChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> 真实角度</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.3)"></div> 加速度计原始（含噪声）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> 低通滤波后</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-blue)" id="lpRawRMSE">—</div>
+        <div class="metric-label">原始 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-green)" id="lpFilteredRMSE">—</div>
+        <div class="metric-label">滤波后 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-amber)" id="lpDelay">—</div>
+        <div class="metric-label">估计延迟 (采样)</div>
+      </div>
+    </div>
+
+    <div class="highlight-box warn">
+      <span class="icon">🔍</span>
+      <div class="content">
+        <strong>实验任务</strong>
+        <p>① 将 α 从 0.01 逐步调到 1.0，观察滤波曲线如何从极度平滑变为完全跟随原始信号；② 找到一个使 RMSE 最小的 α 值——这就是噪声抑制与延迟之间的最优平衡点。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>频率响应</h3>
+    <p>低通滤波器的频率响应展示了不同频率分量的衰减程度。截止频率以下的信号基本通过，以上的信号被逐步抑制。</p>
+    <div class="chart-area">
+      <div class="chart-title">低通滤波器频率响应（幅度 vs 频率）</div>
+      <div class="chart-wrapper small-chart">
+        <canvas id="lpfFreqChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 4: 高通滤波 ==================== -->
+<section id="sec4">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>高通滤波器与陀螺仪</h2>
+  </div>
+
+  <div class="card">
+    <h3>为什么陀螺仪需要高通滤波？</h3>
+    <p>陀螺仪积分后的角度信号在短期内非常准确（高频分量可靠），但会累积低频漂移误差。高通滤波器可以保留高频有用信号，滤除低频漂移。</p>
+
+    <h4>一阶高通滤波器</h4>
+    <div class="math-block">
+      y(t) = (1 − α) · [y(t−1) + x(t) − x(t−1)]
+    </div>
+    <p>高通滤波器是低通滤波器的"镜像"——它让快速变化通过，阻止缓慢漂移。</p>
+
+    <div class="highlight-box info">
+      <span class="icon">📐</span>
+      <div class="content">
+        <strong>物理直觉</strong>
+        <p>高通滤波器像一个"只关注变化"的观察者——它只对信号的快速变化感兴趣，对缓慢的偏移视而不见。这恰好能消除陀螺仪的积分漂移。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎛️ 交互实验：调节高通滤波器参数</h3>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>滤波系数 (1−α) <span class="value" id="hpAlphaVal">0.95</span></label>
+        <input type="range" id="hpAlpha" min="0.5" max="0.999" step="0.001" value="0.95" oninput="updateHPF()">
+      </div>
+      <div class="control-group">
+        <label>陀螺仪漂移率 <span class="value" id="hpDriftVal">0.20</span></label>
+        <input type="range" id="hpDrift" min="0" max="0.5" step="0.01" value="0.2" oninput="updateHPF()">
+      </div>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-title">高通滤波效果</div>
+      <div class="chart-wrapper">
+        <canvas id="hpfChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> 真实角度</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(236,72,153,0.3)"></div> 陀螺仪积分（含漂移）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> 高通滤波后</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-pink)" id="hpRawRMSE">—</div>
+        <div class="metric-label">原始 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-purple)" id="hpFilteredRMSE">—</div>
+        <div class="metric-label">滤波后 RMSE</div>
+      </div>
+    </div>
+
+    <div class="highlight-box warn">
+      <span class="icon">🔍</span>
+      <div class="content">
+        <strong>观察要点</strong>
+        <p>注意高通滤波能有效消除漂移，但会丢失直流分量（绝对角度参考）。滤波后的信号围绕零值波动而非围绕真实角度——这就是为什么单独使用高通滤波的陀螺仪无法给出准确的绝对角度。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 5: 互补滤波 ==================== -->
+<section id="sec5">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>互补滤波器</h2>
+  </div>
+
+  <div class="card">
+    <h3>互补滤波的核心思想</h3>
+    <p>既然加速度计在低频段可靠、陀螺仪在高频段可靠，我们能不能用一个低通滤波器处理加速度计数据，用一个高通滤波器处理陀螺仪数据，然后把两者加在一起？答案是：可以！这就是互补滤波。</p>
+
+    <div class="math-block">
+      θ<sub>fused</sub>(t) = α · θ<sub>acc</sub>(t) + (1 − α) · [θ<sub>fused</sub>(t−1) + ω(t) · Δt]
+    </div>
+
+    <div class="formula-box">
+      <div class="label">展开理解</div>
+      低通部分：α · θ_acc(t)  ← 加速度计提供长期参考<br>
+      高通部分：(1−α) · [θ_prev + ω·Δt]  ← 陀螺仪提供短期动态<br>
+      权重之和：α + (1−α) = 1  ← 这就是"互补"的含义
+    </div>
+
+    <div class="steps">
+      <div class="step-item active" onclick="showCFStep(0)">① 读取传感器</div>
+      <span class="step-arrow">→</span>
+      <div class="step-item" onclick="showCFStep(1)">② 陀螺仪积分</div>
+      <span class="step-arrow">→</span>
+      <div class="step-item" onclick="showCFStep(2)">③ 加权融合</div>
+      <span class="step-arrow">→</span>
+      <div class="step-item" onclick="showCFStep(3)">④ 输出角度</div>
+    </div>
+
+    <div id="cfStepContent">
+      <div class="highlight-box success">
+        <span class="icon">📖</span>
+        <div class="content" id="cfStepText">
+          <strong>步骤 ①：读取传感器数据</strong>
+          <p>每个采样周期，从加速度计获取当前加速度值 (a<sub>x</sub>, a<sub>y</sub>, a<sub>z</sub>)，从陀螺仪获取当前角速度 ω(t)。加速度计数据通过 atan2 计算出角度 θ<sub>acc</sub>。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎛️ 交互实验：互补滤波参数调节</h3>
+    <p>调节 α 值观察融合效果。α 越大，越信任加速度计（抗漂移好，但噪声大）；α 越小，越信任陀螺仪（平滑好，但漂移大）。</p>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>互补滤波系数 α <span class="value" id="cfAlphaVal">0.05</span></label>
+        <input type="range" id="cfAlpha" min="0.001" max="0.5" step="0.001" value="0.05" oninput="updateCF()">
+      </div>
+      <div class="control-group">
+        <label>加速度计噪声 <span class="value" id="cfAccNoiseVal">0.80</span></label>
+        <input type="range" id="cfAccNoise" min="0" max="3" step="0.1" value="0.8" oninput="updateCF()">
+      </div>
+      <div class="control-group">
+        <label>陀螺仪漂移率 <span class="value" id="cfDriftVal">0.15</span></label>
+        <input type="range" id="cfDrift" min="0" max="0.5" step="0.01" value="0.15" oninput="updateCF()">
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" onclick="regenCF()">🔄 重新生成</button>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-title">互补滤波融合结果</div>
+      <div class="chart-wrapper">
+        <canvas id="cfChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> 真实角度</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.3)"></div> 加速度计</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(236,72,153,0.3)"></div> 陀螺仪积分</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> 互补滤波结果</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-blue)" id="cfAccRMSE">—</div>
+        <div class="metric-label">加速度计 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-pink)" id="cfGyroRMSE">—</div>
+        <div class="metric-label">陀螺仪 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-green)" id="cfFusedRMSE">—</div>
+        <div class="metric-label">融合 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-amber)" id="cfImprove">—</div>
+        <div class="metric-label">RMSE 改善率</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>伪代码实现</h3>
+    <div class="code-block">
+<span class="comment">// 互补滤波器 — 每个采样周期执行一次</span>
+<span class="keyword">const</span> alpha = <span class="num">0.05</span>;  <span class="comment">// 典型值 0.02~0.1</span>
+<span class="keyword">let</span> angle = <span class="num">0</span>;
+
+<span class="keyword">function</span> <span class="func">complementaryFilter</span>(acc_angle, gyro_rate, dt) {
+  <span class="comment">// 高通：陀螺仪积分提供短期动态</span>
+  <span class="keyword">const</span> gyro_part = (<span class="num">1</span> - alpha) * (angle + gyro_rate * dt);
+  <span class="comment">// 低通：加速度计提供长期参考</span>
+  <span class="keyword">const</span> acc_part = alpha * acc_angle;
+  <span class="comment">// 互补融合</span>
+  angle = gyro_part + acc_part;
+  <span class="keyword">return</span> angle;
+}
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 6: 卡尔曼滤波 ==================== -->
+<section id="sec6">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2>卡尔曼滤波器</h2>
+  </div>
+
+  <div class="card">
+    <h3>卡尔曼滤波的核心思想</h3>
+    <p>卡尔曼滤波是一种最优状态估计器，它通过以下两步迭代过程来融合传感器数据：</p>
+
+    <div class="tabs" id="kfTabs">
+      <button class="tab-btn active" onclick="switchKFTab(0)">预测步骤</button>
+      <button class="tab-btn" onclick="switchKFTab(1)">更新步骤</button>
+      <button class="tab-btn" onclick="switchKFTab(2)">完整流程</button>
+    </div>
+
+    <div class="tab-content active" id="kfTab0">
+      <h4>预测（Predict）— 基于陀螺仪</h4>
+      <p>利用系统动力学模型（陀螺仪数据）预测下一时刻的状态和不确定性。</p>
+      <div class="math-block">
+        状态预测：x̂⁻(t) = A · x̂(t−1) + B · u(t)<br><br>
+        协方差预测：P⁻(t) = A · P(t−1) · Aᵀ + Q
+      </div>
+      <p>其中 Q 是过程噪声协方差，表示对模型预测的不确定程度。Q 越大，表示越不信任陀螺仪的预测。</p>
+    </div>
+
+    <div class="tab-content" id="kfTab1">
+      <h4>更新（Update）— 基于加速度计</h4>
+      <p>利用观测数据（加速度计）修正预测值，根据噪声特性自动计算最优权重（卡尔曼增益）。</p>
+      <div class="math-block">
+        卡尔曼增益：K(t) = P⁻(t) · Hᵀ · (H · P⁻(t) · Hᵀ + R)⁻¹<br><br>
+        状态更新：x̂(t) = x̂⁻(t) + K(t) · [z(t) − H · x̂⁻(t)]<br><br>
+        协方差更新：P(t) = (I − K·H) · P⁻(t)
+      </div>
+      <p>其中 R 是测量噪声协方差，表示加速度计测量的不确定程度。R 越大，越不信任加速度计。</p>
+    </div>
+
+    <div class="tab-content" id="kfTab2">
+      <h4>完整迭代流程</h4>
+      <div class="steps">
+        <div class="step-item active">初始化 x̂, P</div>
+        <span class="step-arrow">→</span>
+        <div class="step-item active">预测 x̂⁻, P⁻</div>
+        <span class="step-arrow">→</span>
+        <div class="step-item active">计算 K</div>
+        <span class="step-arrow">→</span>
+        <div class="step-item active">更新 x̂, P</div>
+        <span class="step-arrow">→</span>
+        <div class="step-item active">循环 ↩</div>
+      </div>
+
+      <div class="highlight-box info">
+        <span class="icon">🎯</span>
+        <div class="content">
+          <strong>与互补滤波的关系</strong>
+          <p>卡尔曼滤波可以看作"自适应的互补滤波"——互补滤波的 α 是手动固定的，而卡尔曼滤波的增益 K 是根据噪声统计特性自动最优计算的。当噪声参数恒定时，卡尔曼增益会收敛到一个常值，此时它等价于一个特定 α 值的互补滤波。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎛️ 交互实验：卡尔曼滤波参数调节</h3>
+    <p>Q 和 R 是卡尔曼滤波最关键的调参。理解它们的物理含义是掌握卡尔曼滤波的关键。</p>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>过程噪声 Q <span class="value" id="kfQVal">0.010</span></label>
+        <input type="range" id="kfQ" min="0.001" max="1" step="0.001" value="0.01" oninput="updateKF()">
+      </div>
+      <div class="control-group">
+        <label>测量噪声 R <span class="value" id="kfRVal">0.500</span></label>
+        <input type="range" id="kfR" min="0.01" max="5" step="0.01" value="0.5" oninput="updateKF()">
+      </div>
+      <div class="control-group">
+        <label>加速度计噪声 <span class="value" id="kfAccNoiseVal">0.80</span></label>
+        <input type="range" id="kfAccNoise" min="0" max="3" step="0.1" value="0.8" oninput="updateKF()">
+      </div>
+      <div class="control-group">
+        <label>陀螺仪漂移 <span class="value" id="kfDriftVal2">0.15</span></label>
+        <input type="range" id="kfDrift" min="0" max="0.5" step="0.01" value="0.15" oninput="updateKF()">
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" onclick="regenKF()">🔄 重新生成</button>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-title">卡尔曼滤波融合结果</div>
+      <div class="chart-wrapper">
+        <canvas id="kfChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> 真实角度</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.3)"></div> 加速度计</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(236,72,153,0.3)"></div> 陀螺仪积分</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> 卡尔曼滤波</div>
+      </div>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-title">卡尔曼增益收敛过程</div>
+      <div class="chart-wrapper small-chart">
+        <canvas id="kfGainChart"></canvas>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-blue)" id="kfAccRMSE">—</div>
+        <div class="metric-label">加速度计 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-pink)" id="kfGyroRMSE">—</div>
+        <div class="metric-label">陀螺仪 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-red)" id="kfFusedRMSE">—</div>
+        <div class="metric-label">卡尔曼 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-cyan)" id="kfSteadyGain">—</div>
+        <div class="metric-label">稳态增益 K∞</div>
+      </div>
+    </div>
+
+    <div class="highlight-box warn">
+      <span class="icon">🔍</span>
+      <div class="content">
+        <strong>实验任务</strong>
+        <p>① 固定 R，增大 Q：观察卡尔曼增益升高，滤波器更信任测量值（加速度计），结果更跟随加速度计但更noisy。② 固定 Q，增大 R：增益降低，更信任预测（陀螺仪），结果更平滑但响应慢。③ 观察增益收敛曲线——卡尔曼增益从初始值逐步收敛到稳态值。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>伪代码实现</h3>
+    <div class="code-block">
+<span class="comment">// 简化一维卡尔曼滤波器</span>
+<span class="keyword">let</span> x_hat = <span class="num">0</span>;   <span class="comment">// 状态估计（角度）</span>
+<span class="keyword">let</span> P = <span class="num">1</span>;       <span class="comment">// 估计协方差</span>
+<span class="keyword">const</span> Q = <span class="num">0.01</span>;  <span class="comment">// 过程噪声协方差</span>
+<span class="keyword">const</span> R = <span class="num">0.5</span>;   <span class="comment">// 测量噪声协方差</span>
+
+<span class="keyword">function</span> <span class="func">kalmanFilter</span>(acc_angle, gyro_rate, dt) {
+  <span class="comment">// === 预测步骤 ===</span>
+  x_hat = x_hat + gyro_rate * dt;  <span class="comment">// 状态预测</span>
+  P = P + Q;                        <span class="comment">// 协方差预测</span>
+
+  <span class="comment">// === 更新步骤 ===</span>
+  <span class="keyword">const</span> K = P / (P + R);   <span class="comment">// 卡尔曼增益</span>
+  x_hat = x_hat + K * (acc_angle - x_hat);  <span class="comment">// 状态更新</span>
+  P = (<span class="num">1</span> - K) * P;        <span class="comment">// 协方差更新</span>
+
+  <span class="keyword">return</span> { angle: x_hat, gain: K };
+}
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 7: 综合对比 ==================== -->
+<section id="sec7">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <h2>综合对比与总结</h2>
+  </div>
+
+  <div class="card">
+    <h3>🏆 四种方法同台对比</h3>
+    <p>在相同的噪声条件下，对比原始传感器数据、互补滤波和卡尔曼滤波的效果。</p>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>加速度计噪声 <span class="value" id="cmpAccNoiseVal">0.80</span></label>
+        <input type="range" id="cmpAccNoise" min="0" max="3" step="0.1" value="0.8" oninput="updateComparison()">
+      </div>
+      <div class="control-group">
+        <label>陀螺仪漂移率 <span class="value" id="cmpDriftVal">0.15</span></label>
+        <input type="range" id="cmpDrift" min="0" max="0.5" step="0.01" value="0.15" oninput="updateComparison()">
+      </div>
+      <div class="control-group">
+        <label>互补滤波 α <span class="value" id="cmpCfAlphaVal">0.05</span></label>
+        <input type="range" id="cmpCfAlpha" min="0.001" max="0.5" step="0.001" value="0.05" oninput="updateComparison()">
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" onclick="regenComparison()">🔄 重新生成</button>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-title">所有方法融合结果对比</div>
+      <div class="chart-wrapper" style="height:380px">
+        <canvas id="compChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> 真实角度</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.25)"></div> 加速度计</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(236,72,153,0.25)"></div> 陀螺仪</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> 互补滤波</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> 卡尔曼滤波</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-blue)" id="cmpAccRMSE">—</div>
+        <div class="metric-label">加速度计 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-pink)" id="cmpGyroRMSE">—</div>
+        <div class="metric-label">陀螺仪 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-green)" id="cmpCfRMSE">—</div>
+        <div class="metric-label">互补滤波 RMSE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="color:var(--accent-red)" id="cmpKfRMSE">—</div>
+        <div class="metric-label">卡尔曼 RMSE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>方法对比总结</h3>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>特性</th>
+          <th>互补滤波</th>
+          <th>卡尔曼滤波</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>计算复杂度</td>
+          <td>极低（一行公式）</td>
+          <td>较高（矩阵运算）</td>
+        </tr>
+        <tr>
+          <td>参数调节</td>
+          <td>1 个参数（α）</td>
+          <td>2 个参数（Q, R）</td>
+        </tr>
+        <tr>
+          <td>最优性</td>
+          <td>非最优，但实用</td>
+          <td>在高斯噪声下最优</td>
+        </tr>
+        <tr>
+          <td>自适应性</td>
+          <td>固定权重</td>
+          <td>增益自动收敛</td>
+        </tr>
+        <tr>
+          <td>适用场景</td>
+          <td>嵌入式、资源受限</td>
+          <td>精度要求高的系统</td>
+        </tr>
+        <tr>
+          <td>实现难度</td>
+          <td>⭐ 简单</td>
+          <td>⭐⭐⭐ 中等</td>
+        </tr>
+        <tr>
+          <td>实际无人机应用</td>
+          <td>入门级飞控</td>
+          <td>专业级飞控（PX4/ArduPilot）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="highlight-box success">
+      <span class="icon">🎓</span>
+      <div class="content">
+        <strong>关键总结</strong>
+        <p>
+          ① 加速度计 = 低通特性（低频可靠，高频噪声大）；陀螺仪 = 高通特性（高频可靠，低频漂移）。<br>
+          ② 互补滤波 = 低通（加速度计）+ 高通（陀螺仪），简单高效。<br>
+          ③ 卡尔曼滤波 = 最优版的互补滤波，能自动计算最佳融合权重。<br>
+          ④ 在噪声为高斯分布且参数已知的理想条件下，卡尔曼滤波是理论最优的；在工程实践中，调参良好的互补滤波往往已经足够好。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  无人机多传感器数据融合 · 交互式教学案例 · IMU数据融合
+</footer>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// ===== Global Data =====
+const N = 500;
+const dt = 0.02; // 50Hz sampling
+let timeArr = [];
+for (let i = 0; i < N; i++) timeArr.push(i * dt);
+
+let isPlaying = false;
+let animFrame = null;
+
+// Chart default options
+const defaultChartOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 300 },
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#1a2236',
+      borderColor: '#2a3654',
+      borderWidth: 1,
+      titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
+      bodyFont: { family: "'Noto Sans SC', sans-serif", size: 12 },
+      padding: 10,
+      cornerRadius: 8,
+    }
+  },
+  scales: {
+    x: {
+      grid: { color: 'rgba(148,163,184,0.06)' },
+      ticks: { color: '#64748b', font: { family: "'JetBrains Mono'", size: 10 }, maxTicksLimit: 10 },
+      title: { display: true, text: '时间 (s)', color: '#64748b', font: { size: 11 } }
+    },
+    y: {
+      grid: { color: 'rgba(148,163,184,0.06)' },
+      ticks: { color: '#64748b', font: { family: "'JetBrains Mono'", size: 10 } },
+      title: { display: true, text: '角度 (°)', color: '#64748b', font: { size: 11 } }
+    }
+  }
+};
+
+function deepCopy(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+// ===== Utility Functions =====
+function gaussianRandom() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function generateTrueAngle(freq) {
+  const arr = [];
+  for (let i = 0; i < N; i++) {
+    const t = i * dt;
+    arr.push(15 * Math.sin(2 * Math.PI * freq * t) + 5 * Math.sin(2 * Math.PI * freq * 3.7 * t + 1) + 3 * Math.sin(2 * Math.PI * freq * 0.3 * t + 2));
+  }
+  return arr;
+}
+
+function generateAccData(trueAngle, noise) {
+  return trueAngle.map(v => v + gaussianRandom() * noise);
+}
+
+function generateGyroIntegrated(trueAngle, driftRate) {
+  const gyroAngle = [trueAngle[0]];
+  for (let i = 1; i < N; i++) {
+    const trueRate = (trueAngle[i] - trueAngle[i-1]) / dt;
+    const noisyRate = trueRate + gaussianRandom() * 0.5 + driftRate;
+    gyroAngle.push(gyroAngle[i-1] + noisyRate * dt);
+  }
+  return gyroAngle;
+}
+
+function calcRMSE(a, b) {
+  let sum = 0;
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) sum += (a[i] - b[i]) ** 2;
+  return Math.sqrt(sum / len);
+}
+
+function lowPassFilter(data, alpha) {
+  const out = [data[0]];
+  for (let i = 1; i < data.length; i++) {
+    out.push(alpha * data[i] + (1 - alpha) * out[i-1]);
+  }
+  return out;
+}
+
+function complementaryFilter(accData, trueAngle, driftRate, alpha) {
+  const fused = [accData[0]];
+  const gyroInt = [trueAngle[0]];
+  for (let i = 1; i < N; i++) {
+    const trueRate = (trueAngle[i] - trueAngle[i-1]) / dt;
+    const noisyRate = trueRate + gaussianRandom() * 0.5 + driftRate;
+    gyroInt.push(gyroInt[i-1] + noisyRate * dt);
+    const gyroPart = (1 - alpha) * (fused[i-1] + noisyRate * dt);
+    const accPart = alpha * accData[i];
+    fused.push(gyroPart + accPart);
+  }
+  return { fused, gyroInt };
+}
+
+function kalmanFilter1D(accData, trueAngle, driftRate, Q, R) {
+  let x = accData[0];
+  let P = 1;
+  const fused = [x];
+  const gains = [P / (P + R)];
+  const gyroInt = [trueAngle[0]];
+
+  for (let i = 1; i < N; i++) {
+    const trueRate = (trueAngle[i] - trueAngle[i-1]) / dt;
+    const noisyRate = trueRate + gaussianRandom() * 0.5 + driftRate;
+    gyroInt.push(gyroInt[i-1] + noisyRate * dt);
+
+    // Predict
+    x = x + noisyRate * dt;
+    P = P + Q;
+
+    // Update
+    const K = P / (P + R);
+    x = x + K * (accData[i] - x);
+    P = (1 - K) * P;
+
+    fused.push(x);
+    gains.push(K);
+  }
+  return { fused, gains, gyroInt };
+}
+
+// ===== Section 1: Drone Canvas =====
+function initDroneCanvas() {
+  const canvas = document.getElementById('droneCanvas');
+  const ctx = canvas.getContext('2d');
+  const scene = document.getElementById('droneScene');
+  let angle = 0;
+
+  function drawDrone(a) {
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(148,163,184,0.06)';
+    ctx.lineWidth = 1;
+    for (let y = 0; y < h; y += 20) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    // Horizon
+    ctx.strokeStyle = 'rgba(59,130,246,0.2)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.save();
+    ctx.translate(w/2, h/2);
+    ctx.rotate(a * Math.PI / 180);
+
+    // Arms
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-80, 0); ctx.lineTo(80, 0); ctx.stroke();
+
+    // Body
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath();
+    ctx.roundRect(-25, -8, 50, 16, 8);
+    ctx.fill();
+
+    // Motors
+    [-80, 80].forEach(x => {
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath(); ctx.arc(x, 0, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath(); ctx.arc(x, 0, 5, 0, Math.PI * 2); ctx.fill();
+      // Propellers
+      ctx.strokeStyle = 'rgba(59,130,246,0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x - 20, -2); ctx.lineTo(x + 20, 2); ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  drawDrone(0);
+
+  scene.addEventListener('mousemove', (e) => {
+    const rect = scene.getBoundingClientRect();
+    const relX = (e.clientX - rect.left) / rect.width - 0.5;
+    angle = relX * 60;
+    drawDrone(angle);
+    document.getElementById('droneAngle').textContent = `θ = ${angle.toFixed(1)}°`;
+  });
+
+  scene.addEventListener('mouseleave', () => {
+    drawDrone(0);
+    document.getElementById('droneAngle').textContent = `θ = 0.0°`;
+  });
+}
+
+// ===== Section 2: Raw Signals =====
+let rawChart = null;
+
+function generateSignals() {
+  const accNoise = parseFloat(document.getElementById('accNoise').value);
+  const gyroDrift = parseFloat(document.getElementById('gyroDrift').value);
+  const freq = parseFloat(document.getElementById('sigFreq').value);
+
+  document.getElementById('accNoiseVal').textContent = accNoise.toFixed(2);
+  document.getElementById('gyroDriftVal').textContent = gyroDrift.toFixed(2);
+  document.getElementById('sigFreqVal').textContent = freq.toFixed(2);
+
+  const trueAngle = generateTrueAngle(freq);
+  const accData = generateAccData(trueAngle, accNoise);
+  const gyroData = generateGyroIntegrated(trueAngle, gyroDrift);
+
+  const accRMSE = calcRMSE(trueAngle, accData);
+  const gyroRMSE = calcRMSE(trueAngle, gyroData);
+  const finalDrift = Math.abs(gyroData[N-1] - trueAngle[N-1]);
+
+  document.getElementById('accRMSE').textContent = accRMSE.toFixed(3);
+  document.getElementById('gyroRMSE').textContent = gyroRMSE.toFixed(3);
+  document.getElementById('gyroDriftDisplay').textContent = finalDrift.toFixed(2) + '°';
+
+  if (rawChart) rawChart.destroy();
+
+  const ctx = document.getElementById('rawSignalChart').getContext('2d');
+  const opts = deepCopy(defaultChartOpts);
+
+  rawChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timeArr.map(t => t.toFixed(1)),
+      datasets: [
+        { label: '真实角度', data: trueAngle, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, tension: 0.3, order: 0 },
+        { label: '加速度计', data: accData, borderColor: 'rgba(59,130,246,0.5)', borderWidth: 1, pointRadius: 0, tension: 0, order: 1 },
+        { label: '陀螺仪积分', data: gyroData, borderColor: '#ec4899', borderWidth: 2, pointRadius: 0, tension: 0.3, order: 0 }
+      ]
+    },
+    options: opts
+  });
+}
+
+function togglePlay() {
+  // Simple regeneration for animation effect
+  generateSignals();
+}
+
+// Event listeners for Section 2 sliders
+['accNoise', 'gyroDrift', 'sigFreq'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    document.getElementById(id + 'Val').textContent = parseFloat(this.value).toFixed(2);
+  });
+});
+
+// ===== Section 3: Low Pass Filter =====
+let lpfChart = null;
+let lpfFreqChart = null;
+let lpfTrueAngle = null;
+
+function initLPF() {
+  lpfTrueAngle = generateTrueAngle(0.2);
+  updateLPF();
+  updateLPFFreqResponse();
+}
+
+function updateLPF() {
+  const alpha = parseFloat(document.getElementById('lpAlpha').value);
+  const noise = parseFloat(document.getElementById('lpNoise').value);
+
+  document.getElementById('lpAlphaVal').textContent = alpha.toFixed(2);
+  document.getElementById('lpNoiseVal').textContent = noise.toFixed(2);
+
+  const accData = generateAccData(lpfTrueAngle, noise);
+  const filtered = lowPassFilter(accData, alpha);
+
+  const rawRMSE = calcRMSE(lpfTrueAngle, accData);
+  const filtRMSE = calcRMSE(lpfTrueAngle, filtered);
+
+  // Estimate delay
+  let bestCorr = -1, bestDelay = 0;
+  for (let d = 0; d < 50; d++) {
+    let corr = 0, count = 0;
+    for (let i = d; i < N; i++) {
+      corr += filtered[i] * lpfTrueAngle[i - d];
+      count++;
+    }
+    if (count > 0 && corr / count > bestCorr) {
+      bestCorr = corr / count;
+      bestDelay = d;
+    }
+  }
+
+  document.getElementById('lpRawRMSE').textContent = rawRMSE.toFixed(3);
+  document.getElementById('lpFilteredRMSE').textContent = filtRMSE.toFixed(3);
+  document.getElementById('lpDelay').textContent = bestDelay;
+
+  if (lpfChart) lpfChart.destroy();
+
+  const ctx = document.getElementById('lpfChart').getContext('2d');
+  lpfChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timeArr.map(t => t.toFixed(1)),
+      datasets: [
+        { label: '真实角度', data: lpfTrueAngle, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: '加速度计原始', data: accData, borderColor: 'rgba(59,130,246,0.3)', borderWidth: 1, pointRadius: 0 },
+        { label: '低通滤波后', data: filtered, borderColor: '#10b981', borderWidth: 2.5, pointRadius: 0, tension: 0.3 }
+      ]
+    },
+    options: deepCopy(defaultChartOpts)
+  });
+
+  updateLPFFreqResponse();
+}
+
+function updateLPFFreqResponse() {
+  const alpha = parseFloat(document.getElementById('lpAlpha').value);
+
+  const freqs = [];
+  const magnitudes = [];
+  for (let f = 0.01; f <= 25; f += 0.1) {
+    freqs.push(f.toFixed(1));
+    const omega = 2 * Math.PI * f * dt;
+    const mag = alpha / Math.sqrt(1 - 2 * (1 - alpha) * Math.cos(omega) + (1 - alpha) ** 2);
+    magnitudes.push(20 * Math.log10(Math.max(mag, 0.0001)));
+  }
+
+  if (lpfFreqChart) lpfFreqChart.destroy();
+
+  const ctx = document.getElementById('lpfFreqChart').getContext('2d');
+  const opts = deepCopy(defaultChartOpts);
+  opts.scales.x.title.text = '频率 (Hz)';
+  opts.scales.y.title.text = '幅度 (dB)';
+  opts.scales.y.min = -40;
+  opts.scales.y.max = 5;
+
+  lpfFreqChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: freqs,
+      datasets: [{
+        label: '频率响应',
+        data: magnitudes,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.1)',
+        fill: true,
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3
+      }, {
+        label: '-3dB线',
+        data: new Array(freqs.length).fill(-3),
+        borderColor: 'rgba(245,158,11,0.4)',
+        borderWidth: 1,
+        borderDash: [5, 5],
+        pointRadius: 0
+      }]
+    },
+    options: opts
+  });
+}
+
+// ===== Section 4: High Pass Filter =====
+let hpfChart = null;
+let hpfTrueAngle = null;
+
+function initHPF() {
+  hpfTrueAngle = generateTrueAngle(0.2);
+  updateHPF();
+}
+
+function updateHPF() {
+  const hpCoef = parseFloat(document.getElementById('hpAlpha').value);
+  const drift = parseFloat(document.getElementById('hpDrift').value);
+
+  document.getElementById('hpAlphaVal').textContent = hpCoef.toFixed(3);
+  document.getElementById('hpDriftVal').textContent = drift.toFixed(2);
+
+  const gyroData = generateGyroIntegrated(hpfTrueAngle, drift);
+
+  // High pass filter
+  const hpFiltered = [0];
+  for (let i = 1; i < N; i++) {
+    hpFiltered.push(hpCoef * (hpFiltered[i-1] + gyroData[i] - gyroData[i-1]));
+  }
+
+  const rawRMSE = calcRMSE(hpfTrueAngle, gyroData);
+  const filtRMSE = calcRMSE(hpfTrueAngle, hpFiltered);
+
+  document.getElementById('hpRawRMSE').textContent = rawRMSE.toFixed(3);
+  document.getElementById('hpFilteredRMSE').textContent = filtRMSE.toFixed(3);
+
+  if (hpfChart) hpfChart.destroy();
+
+  const ctx = document.getElementById('hpfChart').getContext('2d');
+  hpfChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timeArr.map(t => t.toFixed(1)),
+      datasets: [
+        { label: '真实角度', data: hpfTrueAngle, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: '陀螺仪积分', data: gyroData, borderColor: 'rgba(236,72,153,0.3)', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: '高通滤波后', data: hpFiltered, borderColor: '#8b5cf6', borderWidth: 2.5, pointRadius: 0, tension: 0.3 }
+      ]
+    },
+    options: deepCopy(defaultChartOpts)
+  });
+}
+
+// ===== Section 5: Complementary Filter =====
+let cfChart = null;
+let cfTrueAngle = null;
+let cfAccData = null;
+
+function initCF() {
+  cfTrueAngle = generateTrueAngle(0.2);
+  cfAccData = generateAccData(cfTrueAngle, 0.8);
+  updateCF();
+}
+
+function regenCF() {
+  const noise = parseFloat(document.getElementById('cfAccNoise').value);
+  cfTrueAngle = generateTrueAngle(0.2);
+  cfAccData = generateAccData(cfTrueAngle, noise);
+  updateCF();
+}
+
+function updateCF() {
+  const alpha = parseFloat(document.getElementById('cfAlpha').value);
+  const noise = parseFloat(document.getElementById('cfAccNoise').value);
+  const drift = parseFloat(document.getElementById('cfDrift').value);
+
+  document.getElementById('cfAlphaVal').textContent = alpha.toFixed(3);
+  document.getElementById('cfAccNoiseVal').textContent = noise.toFixed(2);
+  document.getElementById('cfDriftVal').textContent = drift.toFixed(2);
+
+  cfAccData = generateAccData(cfTrueAngle, noise);
+  const result = complementaryFilter(cfAccData, cfTrueAngle, drift, alpha);
+
+  const accRMSE = calcRMSE(cfTrueAngle, cfAccData);
+  const gyroRMSE = calcRMSE(cfTrueAngle, result.gyroInt);
+  const fusedRMSE = calcRMSE(cfTrueAngle, result.fused);
+  const improve = ((accRMSE - fusedRMSE) / accRMSE * 100);
+
+  document.getElementById('cfAccRMSE').textContent = accRMSE.toFixed(3);
+  document.getElementById('cfGyroRMSE').textContent = gyroRMSE.toFixed(3);
+  document.getElementById('cfFusedRMSE').textContent = fusedRMSE.toFixed(3);
+  document.getElementById('cfImprove').textContent = improve.toFixed(1) + '%';
+
+  if (cfChart) cfChart.destroy();
+
+  const ctx = document.getElementById('cfChart').getContext('2d');
+  cfChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timeArr.map(t => t.toFixed(1)),
+      datasets: [
+        { label: '真实角度', data: cfTrueAngle, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, tension: 0.3, order: 0 },
+        { label: '加速度计', data: cfAccData, borderColor: 'rgba(59,130,246,0.25)', borderWidth: 1, pointRadius: 0, order: 2 },
+        { label: '陀螺仪积分', data: result.gyroInt, borderColor: 'rgba(236,72,153,0.25)', borderWidth: 1, pointRadius: 0, tension: 0.3, order: 2 },
+        { label: '互补滤波', data: result.fused, borderColor: '#10b981', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 0 }
+      ]
+    },
+    options: deepCopy(defaultChartOpts)
+  });
+}
+
+// CF Steps
+const cfSteps = [
+  { title: '步骤 ①：读取传感器数据', text: '每个采样周期，从加速度计获取当前加速度值 (a<sub>x</sub>, a<sub>y</sub>, a<sub>z</sub>)，从陀螺仪获取当前角速度 ω(t)。加速度计数据通过 atan2 计算出角度 θ<sub>acc</sub>。' },
+  { title: '步骤 ②：陀螺仪积分预测', text: '利用上一时刻的融合角度和当前角速度，预测当前角度：θ<sub>predict</sub> = θ<sub>fused</sub>(t−1) + ω(t) × Δt。这一步利用了陀螺仪的高频响应优势。' },
+  { title: '步骤 ③：加权融合', text: '将加速度计的角度（低通部分）和陀螺仪预测的角度（高通部分）按权重融合：θ<sub>fused</sub> = α × θ<sub>acc</sub> + (1−α) × θ<sub>predict</sub>。α 控制了两者的相对信任度。' },
+  { title: '步骤 ④：输出融合角度', text: '输出 θ<sub>fused</sub> 作为当前最佳角度估计，用于飞控的 PID 控制器。下一个采样周期，θ<sub>fused</sub> 将作为"上一时刻的融合角度"继续迭代。' }
+];
+
+function showCFStep(idx) {
+  document.querySelectorAll('#sec5 .step-item').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  document.getElementById('cfStepText').innerHTML = `<strong>${cfSteps[idx].title}</strong><p>${cfSteps[idx].text}</p>`;
+}
+
+// ===== Section 6: Kalman Filter =====
+let kfChart = null;
+let kfGainChart = null;
+let kfTrueAngle = null;
+let kfAccData = null;
+
+function initKF() {
+  kfTrueAngle = generateTrueAngle(0.2);
+  kfAccData = generateAccData(kfTrueAngle, 0.8);
+  updateKF();
+}
+
+function regenKF() {
+  const noise = parseFloat(document.getElementById('kfAccNoise').value);
+  kfTrueAngle = generateTrueAngle(0.2);
+  kfAccData = generateAccData(kfTrueAngle, noise);
+  updateKF();
+}
+
+function updateKF() {
+  const Q = parseFloat(document.getElementById('kfQ').value);
+  const R = parseFloat(document.getElementById('kfR').value);
+  const noise = parseFloat(document.getElementById('kfAccNoise').value);
+  const drift = parseFloat(document.getElementById('kfDrift').value);
+
+  document.getElementById('kfQVal').textContent = Q.toFixed(3);
+  document.getElementById('kfRVal').textContent = R.toFixed(3);
+  document.getElementById('kfAccNoiseVal').textContent = noise.toFixed(2);
+  document.getElementById('kfDriftVal2').textContent = drift.toFixed(2);
+
+  kfAccData = generateAccData(kfTrueAngle, noise);
+  const result = kalmanFilter1D(kfAccData, kfTrueAngle, drift, Q, R);
+
+  const accRMSE = calcRMSE(kfTrueAngle, kfAccData);
+  const gyroRMSE = calcRMSE(kfTrueAngle, result.gyroInt);
+  const fusedRMSE = calcRMSE(kfTrueAngle, result.fused);
+  const steadyGain = result.gains[result.gains.length - 1];
+
+  document.getElementById('kfAccRMSE').textContent = accRMSE.toFixed(3);
+  document.getElementById('kfGyroRMSE').textContent = gyroRMSE.toFixed(3);
+  document.getElementById('kfFusedRMSE').textContent = fusedRMSE.toFixed(3);
+  document.getElementById('kfSteadyGain').textContent = steadyGain.toFixed(4);
+
+  if (kfChart) kfChart.destroy();
+
+  const ctx = document.getElementById('kfChart').getContext('2d');
+  kfChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timeArr.map(t => t.toFixed(1)),
+      datasets: [
+        { label: '真实角度', data: kfTrueAngle, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, tension: 0.3, order: 0 },
+        { label: '加速度计', data: kfAccData, borderColor: 'rgba(59,130,246,0.25)', borderWidth: 1, pointRadius: 0, order: 2 },
+        { label: '陀螺仪积分', data: result.gyroInt, borderColor: 'rgba(236,72,153,0.25)', borderWidth: 1, pointRadius: 0, tension: 0.3, order: 2 },
+        { label: '卡尔曼滤波', data: result.fused, borderColor: '#ef4444', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 0 }
+      ]
+    },
+    options: deepCopy(defaultChartOpts)
+  });
+
+  // Gain chart
+  if (kfGainChart) kfGainChart.destroy();
+  const gctx = document.getElementById('kfGainChart').getContext('2d');
+  const gOpts = deepCopy(defaultChartOpts);
+  gOpts.scales.y.title.text = '卡尔曼增益 K';
+  gOpts.scales.y.min = 0;
+
+  kfGainChart = new Chart(gctx, {
+    type: 'line',
+    data: {
+      labels: timeArr.map(t => t.toFixed(1)),
+      datasets: [{
+        label: '卡尔曼增益',
+        data: result.gains,
+        borderColor: '#06b6d4',
+        backgroundColor: 'rgba(6,182,212,0.08)',
+        fill: true,
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3
+      }]
+    },
+    options: gOpts
+  });
+}
+
+// KF Tabs
+function switchKFTab(idx) {
+  document.querySelectorAll('#kfTabs .tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('kfTab' + i).classList.toggle('active', i === idx);
+  }
+}
+
+// ===== Section 7: Comparison =====
+let compChart = null;
+let compTrueAngle = null;
+
+function initComparison() {
+  compTrueAngle = generateTrueAngle(0.2);
+  updateComparison();
+}
+
+function regenComparison() {
+  compTrueAngle = generateTrueAngle(0.2);
+  updateComparison();
+}
+
+function updateComparison() {
+  const noise = parseFloat(document.getElementById('cmpAccNoise').value);
+  const drift = parseFloat(document.getElementById('cmpDrift').value);
+  const cfAlpha = parseFloat(document.getElementById('cmpCfAlpha').value);
+
+  document.getElementById('cmpAccNoiseVal').textContent = noise.toFixed(2);
+  document.getElementById('cmpDriftVal').textContent = drift.toFixed(2);
+  document.getElementById('cmpCfAlphaVal').textContent = cfAlpha.toFixed(3);
+
+  const accData = generateAccData(compTrueAngle, noise);
+  const cfResult = complementaryFilter(accData, compTrueAngle, drift, cfAlpha);
+  const kfResult = kalmanFilter1D(accData, compTrueAngle, drift, 0.01, noise * noise);
+
+  const accRMSE = calcRMSE(compTrueAngle, accData);
+  const gyroRMSE = calcRMSE(compTrueAngle, cfResult.gyroInt);
+  const cfRMSE = calcRMSE(compTrueAngle, cfResult.fused);
+  const kfRMSE = calcRMSE(compTrueAngle, kfResult.fused);
+
+  document.getElementById('cmpAccRMSE').textContent = accRMSE.toFixed(3);
+  document.getElementById('cmpGyroRMSE').textContent = gyroRMSE.toFixed(3);
+  document.getElementById('cmpCfRMSE').textContent = cfRMSE.toFixed(3);
+  document.getElementById('cmpKfRMSE').textContent = kfRMSE.toFixed(3);
+
+  if (compChart) compChart.destroy();
+
+  const ctx = document.getElementById('compChart').getContext('2d');
+  compChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timeArr.map(t => t.toFixed(1)),
+      datasets: [
+        { label: '真实角度', data: compTrueAngle, borderColor: '#f59e0b', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 0 },
+        { label: '加速度计', data: accData, borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, pointRadius: 0, order: 3 },
+        { label: '陀螺仪', data: cfResult.gyroInt, borderColor: 'rgba(236,72,153,0.2)', borderWidth: 1, pointRadius: 0, tension: 0.3, order: 3 },
+        { label: '互补滤波', data: cfResult.fused, borderColor: '#10b981', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 1 },
+        { label: '卡尔曼滤波', data: kfResult.fused, borderColor: '#ef4444', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 0 }
+      ]
+    },
+    options: deepCopy(defaultChartOpts)
+  });
+}
+
+// ===== Progress Bar =====
+window.addEventListener('scroll', () => {
+  const winH = document.documentElement.scrollHeight - window.innerHeight;
+  const scrolled = (window.scrollY / winH) * 100;
+  document.getElementById('progressBar').style.width = scrolled + '%';
+});
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', () => {
+  initDroneCanvas();
+  generateSignals();
+  initLPF();
+  initHPF();
+  initCF();
+  initKF();
+  initComparison();
+});
+</script>
+
+</body>
+</html>
