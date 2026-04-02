@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>六旋翼单桨失效容错控制</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--surface:#111827;--surface2:#1a2332;--border:#1e2d3d;
+  --accent:#00e5ff;--accent2:#76ff03;--warn:#ff6e40;--danger:#ff1744;
+  --text:#e0e6ed;--text2:#8899aa;--text3:#556677;
+  --glow:0 0 20px rgba(0,229,255,.15);
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Noto Sans SC','JetBrains Mono',sans-serif;
+  line-height:1.8;overflow-x:hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Header */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+  position:relative;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 80%,rgba(0,229,255,.06) 0%,transparent 60%);
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(30,45,61,.3) 60px,rgba(30,45,61,.3) 61px),
+             repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(30,45,61,.3) 60px,rgba(30,45,61,.3) 61px);
+  pointer-events:none;
+}
+.hero h1{
+  font-size:clamp(2rem,5vw,3.5rem);font-weight:900;
+  letter-spacing:-.02em;margin-bottom:.5rem;
+  background:linear-gradient(135deg,var(--accent),#b388ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  position:relative;z-index:1;
+}
+.hero .subtitle{
+  font-size:1.1rem;color:var(--text2);max-width:600px;
+  position:relative;z-index:1;margin-bottom:2rem;
+}
+.scroll-hint{
+  position:absolute;bottom:2rem;
+  animation:bounce 2s infinite;color:var(--text3);font-size:.85rem;
+  display:flex;flex-direction:column;align-items:center;gap:.3rem;
+}
+.scroll-hint svg{width:24px;height:24px;stroke:var(--text3)}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+
+/* Navigation */
+.nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(10,14,23,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;justify-content:center;gap:1rem;padding:.8rem 1rem;
+  flex-wrap:wrap;
+}
+.nav a{
+  color:var(--text2);text-decoration:none;font-size:.82rem;
+  padding:.35rem .8rem;border-radius:4px;transition:.2s;
+  font-weight:500;white-space:nowrap;
+}
+.nav a:hover{color:var(--accent);background:rgba(0,229,255,.08)}
+
+/* Sections */
+.section{
+  max-width:960px;margin:0 auto;padding:4rem 1.5rem;
+}
+.section-title{
+  font-size:1.6rem;font-weight:700;margin-bottom:.3rem;
+  display:flex;align-items:center;gap:.6rem;
+}
+.section-title .num{
+  font-family:'JetBrains Mono';font-size:.85rem;
+  color:var(--accent);background:rgba(0,229,255,.1);
+  padding:.15rem .5rem;border-radius:3px;
+}
+.section-desc{color:var(--text2);margin-bottom:2rem;font-size:.95rem}
+
+/* Hexacopter SVG Interactive */
+.hex-container{
+  display:flex;flex-direction:column;align-items:center;gap:1.5rem;
+  margin:2rem 0;
+}
+.hex-svg-wrap{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:1.5rem;width:100%;max-width:520px;
+  box-shadow:var(--glow);position:relative;
+}
+.hex-svg-wrap .badge{
+  position:absolute;top:12px;right:12px;
+  font-size:.7rem;font-family:'JetBrains Mono';
+  padding:.2rem .5rem;border-radius:3px;
+  background:rgba(0,229,255,.12);color:var(--accent);
+  border:1px solid rgba(0,229,255,.25);
+}
+.hex-controls{
+  display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center;
+}
+.hex-controls button{
+  font-family:'JetBrains Mono','Noto Sans SC';font-size:.78rem;
+  padding:.4rem .9rem;border-radius:5px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface2);
+  color:var(--text);transition:.2s;
+}
+.hex-controls button:hover{border-color:var(--accent);color:var(--accent)}
+.hex-controls button.active{
+  background:rgba(0,229,255,.15);border-color:var(--accent);color:var(--accent);
+}
+.hex-controls button.danger-btn.active{
+  background:rgba(255,23,68,.15);border-color:var(--danger);color:var(--danger);
+}
+
+/* Info Cards */
+.info-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:1rem;margin:1.5rem 0;
+}
+.info-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:1.2rem 1.4rem;
+  transition:.3s;position:relative;overflow:hidden;
+}
+.info-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),transparent);
+}
+.info-card.warn::before{background:linear-gradient(90deg,var(--warn),transparent)}
+.info-card.danger::before{background:linear-gradient(90deg,var(--danger),transparent)}
+.info-card h4{font-size:.9rem;font-weight:600;margin-bottom:.4rem}
+.info-card p{font-size:.85rem;color:var(--text2);line-height:1.7}
+
+/* Strategy Compare */
+.strategy-tabs{
+  display:flex;gap:0;margin-bottom:0;
+}
+.strategy-tab{
+  flex:1;padding:.7rem 1rem;text-align:center;cursor:pointer;
+  font-size:.85rem;font-weight:600;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text2);transition:.2s;
+}
+.strategy-tab:first-child{border-radius:8px 0 0 0}
+.strategy-tab:last-child{border-radius:0 8px 0 0}
+.strategy-tab.active{
+  background:var(--surface2);color:var(--accent);
+  border-bottom-color:var(--surface2);
+}
+.strategy-content{
+  background:var(--surface2);border:1px solid var(--border);
+  border-top:none;border-radius:0 0 8px 8px;
+  padding:1.5rem;min-height:280px;
+}
+.strategy-content .hidden{display:none}
+
+.pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.pros h5,.cons h5{font-size:.82rem;font-weight:600;margin-bottom:.5rem}
+.pros h5{color:var(--accent2)}
+.cons h5{color:var(--warn)}
+.pros li,.cons li{
+  font-size:.82rem;color:var(--text2);margin-bottom:.35rem;
+  list-style:none;padding-left:1.2rem;position:relative;
+}
+.pros li::before{content:'✓';position:absolute;left:0;color:var(--accent2);font-weight:700}
+.cons li::before{content:'✗';position:absolute;left:0;color:var(--warn);font-weight:700}
+
+/* Thrust Budget Table */
+.budget-table{
+  width:100%;border-collapse:collapse;margin:1.5rem 0;
+  font-size:.85rem;
+}
+.budget-table th,.budget-table td{
+  padding:.7rem 1rem;text-align:center;
+  border:1px solid var(--border);
+}
+.budget-table th{
+  background:rgba(0,229,255,.08);color:var(--accent);
+  font-weight:600;font-size:.78rem;text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.budget-table td{color:var(--text2)}
+.budget-table tr:hover td{background:rgba(255,255,255,.02)}
+.budget-table .highlight{color:var(--accent);font-weight:600}
+.budget-table .warn-val{color:var(--warn);font-weight:600}
+.budget-table .danger-val{color:var(--danger);font-weight:600}
+
+/* Formula */
+.formula-block{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:1.2rem 1.5rem;margin:1rem 0;
+  font-family:'JetBrains Mono';font-size:.85rem;
+  overflow-x:auto;position:relative;
+}
+.formula-block .label{
+  position:absolute;top:8px;right:10px;
+  font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;
+}
+
+/* Flow Steps */
+.flow{display:flex;flex-direction:column;gap:0;margin:1.5rem 0}
+.flow-step{
+  display:flex;gap:1rem;align-items:flex-start;position:relative;
+  padding:1rem 0 1rem 2.5rem;
+}
+.flow-step::before{
+  content:'';position:absolute;left:15px;top:0;bottom:0;
+  width:2px;background:var(--border);
+}
+.flow-step:last-child::before{display:none}
+.flow-step .dot{
+  position:absolute;left:8px;top:1.1rem;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--accent);border:3px solid var(--bg);
+  z-index:1;
+}
+.flow-step .dot.green{background:var(--accent2)}
+.flow-step .dot.orange{background:var(--warn)}
+.flow-step h5{font-size:.9rem;font-weight:600;margin-bottom:.2rem}
+.flow-step p{font-size:.82rem;color:var(--text2);line-height:1.7}
+
+/* Conclusion */
+.conclusion{
+  background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(179,136,255,.06));
+  border:1px solid rgba(0,229,255,.2);border-radius:12px;
+  padding:2rem;margin:2rem 0;
+}
+.conclusion h3{font-size:1.1rem;margin-bottom:.8rem;color:var(--accent)}
+.conclusion p{font-size:.9rem;color:var(--text2);line-height:1.9}
+.conclusion .key{
+  display:inline-block;background:rgba(0,229,255,.1);
+  padding:.1rem .5rem;border-radius:3px;color:var(--accent);
+  font-weight:600;font-size:.85rem;
+}
+
+/* Gauge */
+.gauge-row{display:flex;gap:1.5rem;flex-wrap:wrap;justify-content:center;margin:1.5rem 0}
+.gauge-item{text-align:center;min-width:140px}
+.gauge-item .ring-label{font-size:.75rem;color:var(--text2);margin-top:.4rem}
+.gauge-item .ring-value{font-size:1.3rem;font-weight:700;font-family:'JetBrains Mono'}
+
+/* Footer */
+footer{
+  text-align:center;padding:3rem 1rem;
+  color:var(--text3);font-size:.78rem;
+  border-top:1px solid var(--border);
+}
+
+/* Responsive */
+@media(max-width:640px){
+  .pros-cons{grid-template-columns:1fr}
+  .info-grid{grid-template-columns:1fr}
+  .section{padding:3rem 1rem}
+  .nav a{font-size:.75rem;padding:.3rem .5rem}
+}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .6s ease both}
+
+/* MathJax-like inline formula styling */
+.math{font-family:'JetBrains Mono';font-style:italic;color:var(--accent);font-size:.9em}
+.math-block{
+  text-align:center;margin:1rem 0;font-family:'JetBrains Mono';
+  color:var(--accent);font-size:.95rem;
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>六旋翼单桨失效容错控制</h1>
+  <p class="subtitle">当一个电机突然失效，六旋翼如何利用冗余自由度保持飞行？<br>交互式可视化帮你理清核心思路。</p>
+  <div class="scroll-hint">
+    向下滚动
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  </div>
+</section>
+
+<!-- NAV -->
+<nav class="nav" id="topnav">
+  <a href="#sec1">① 构型基础</a>
+  <a href="#sec2">② 失效分析</a>
+  <a href="#sec3">③ 策略对比</a>
+  <a href="#sec4">④ 推力预算</a>
+  <a href="#sec5">⑤ 工程实施</a>
+  <a href="#sec6">⑥ 总结</a>
+</nav>
+
+<!-- SEC 1: 构型 -->
+<section class="section anim" id="sec1">
+  <div class="section-title"><span class="num">01</span>标准六旋翼构型</div>
+  <p class="section-desc">6 个电机等间距 60° 排列，交替 CW/CCW 旋转。点击下方按钮模拟不同桨失效场景。</p>
+
+  <div class="hex-container">
+    <div class="hex-svg-wrap">
+      <span class="badge" id="statusBadge">正常 · 6 桨运行</span>
+      <svg id="hexSvg" viewBox="-200 -200 400 400" xmlns="http://www.w3.org/2000/svg">
+        <!-- arms and motors rendered by JS -->
+      </svg>
+    </div>
+    <div class="hex-controls">
+      <button class="active" onclick="setScenario('normal')">正常飞行</button>
+      <button class="danger-btn" onclick="setScenario('m1fail')">M1 失效</button>
+      <button onclick="setScenario('stratA')">策略 A：停对桨</button>
+      <button onclick="setScenario('stratB')">策略 B：5 桨重构</button>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <h4>过驱动系统</h4>
+      <p>6 个执行器控制 4 个自由度（<span class="math">T, τ<sub>ϕ</sub>, τ<sub>θ</sub>, τ<sub>ψ</sub></span>），拥有 <strong>2 个冗余自由度</strong>——这正是容错的数学基础。</p>
+    </div>
+    <div class="info-card">
+      <h4>控制量</h4>
+      <p>总升力 \(T\)、滚转力矩 \(\tau_\phi\)、俯仰力矩 \(\tau_\theta\)、偏航力矩 \(\tau_\psi\)，四个通道共同维持姿态与位置。</p>
+    </div>
+  </div>
+</section>
+
+<!-- SEC 2: 失效分析 -->
+<section class="section anim" id="sec2">
+  <div class="section-title"><span class="num">02</span>单桨失效后丢了什么？</div>
+  <p class="section-desc">假设 M1（CW）失效，立即产生三个问题：</p>
+
+  <div class="info-grid">
+    <div class="info-card warn">
+      <h4>🔻 升力缺口</h4>
+      <p>最大推力从 \(6F_{\max}\) 降为 \(5F_{\max}\)，悬停油门比从 ≈67% 升至 ≈80%，操控裕度被显著压缩。</p>
+    </div>
+    <div class="info-card warn">
+      <h4>⚖️ 滚转/俯仰不平衡</h4>
+      <p>失效桨在特定方位的力矩贡献消失，剩余 5 桨不再天然对称，产生持续的力矩偏差。</p>
+    </div>
+    <div class="info-card danger">
+      <h4>🔄 偏航力矩失衡（最棘手）</h4>
+      <p>CW 与 CCW 桨数变为 2:3，反扭矩天然失衡。平衡偏航需要"消耗"额外的推力裕度。</p>
+    </div>
+  </div>
+
+  <div class="formula-block">
+    <span class="label">关键判定</span>
+    剩余 5 执行器 &gt; 4 自由度 → 冗余度 = 1 → <span style="color:var(--accent2)">理论仍可控</span><br>
+    但实际可控性取决于推力约束 \(0 \le F_i \le F_{\max}\) 和偏航补偿代价
+  </div>
+</section>
+
+<!-- SEC 3: 策略对比 -->
+<section class="section anim" id="sec3">
+  <div class="section-title"><span class="num">03</span>两种主流策略对比</div>
+  <p class="section-desc">停掉对桨 vs. 保留五桨重构混控——如何选择？</p>
+
+  <div>
+    <div class="strategy-tabs">
+      <div class="strategy-tab active" onclick="showStrategy('a')">策略 A：停掉对桨</div>
+      <div class="strategy-tab" onclick="showStrategy('b')">策略 B：5 桨重构 ★推荐</div>
+    </div>
+    <div class="strategy-content">
+      <!-- Strategy A -->
+      <div id="stratA-content">
+        <p style="font-size:.9rem;color:var(--text);margin-bottom:.5rem;font-weight:600">
+          M1 失效 → 主动关闭 M4（对面电机） → 4 桨飞行
+        </p>
+        <p style="font-size:.85rem;color:var(--text2);line-height:1.8">
+          CW/CCW 数量恢复 2:2，偏航容易平衡。但最大推力仅剩 \(4F_{\max}\)，悬停需要接近满油门，几乎没有操控余量。构成的"虚拟四旋翼"不是正交对称的，滚转和俯仰耦合严重。
+        </p>
+        <div class="pros-cons">
+          <div class="pros">
+            <h5>优势</h5>
+            <ul>
+              <li>偏航自然平衡，无需持续补偿</li>
+              <li>不会出现机体持续旋转</li>
+              <li>混控逻辑相对简单</li>
+            </ul>
+          </div>
+          <div class="cons">
+            <h5>劣势</h5>
+            <ul>
+              <li>推力损失 33%，裕度极小</li>
+              <li>推重比需 ≥ 2.5 才安全</li>
+              <li>滚转俯仰严重耦合</li>
+              <li>控制品质明显下降</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <!-- Strategy B -->
+      <div id="stratB-content" class="hidden">
+        <p style="font-size:.9rem;color:var(--text);margin-bottom:.5rem;font-weight:600">
+          M1 失效 → 保留全部 5 桨 → 在线切换混控矩阵
+        </p>
+        <p style="font-size:.85rem;color:var(--text2);line-height:1.8">
+          原始分配矩阵 \(B\)（4×6）删去失效列得到 \(B_5\)（4×5），通过加权伪逆求解 \(u_5 = B_5^\dagger \, v_{\text{cmd}}\)。推荐搭配 <strong>Relaxed Yaw</strong> 方案——放弃航向锁定，仅控制 \(\phi, \theta, T\)，允许机体缓慢自旋。
+        </p>
+        <div class="pros-cons">
+          <div class="pros">
+            <h5>优势</h5>
+            <ul>
+              <li>保留 \(5F_{\max}\) 最大推力</li>
+              <li>推重比 ≥ 1.8 即可安全飞行</li>
+              <li>学术成熟（ETH Zürich 等）</li>
+              <li>PX4 已有实际实现</li>
+            </ul>
+          </div>
+          <div class="cons">
+            <h5>劣势/注意</h5>
+            <ul>
+              <li>Relaxed Yaw 下机体会缓慢旋转</li>
+              <li>全自由度保持时偏航代价大</li>
+              <li>需要预算全部失效场景的伪逆</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yaw sub-strategies -->
+  <div style="margin-top:2rem">
+    <p style="font-size:.95rem;font-weight:600;margin-bottom:.8rem">策略 B 的偏航处理路线</p>
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>全自由度保持</h4>
+        <p>伪逆分配同时控制 \(\phi, \theta, \psi, T\)。偏航代价大，少数方向的桨需加速，多数方向需减速，推力裕度小，机动时易饱和。</p>
+      </div>
+      <div class="info-card" style="border-color:rgba(0,229,255,.3)">
+        <h4 style="color:var(--accent)">Relaxed Yaw ★</h4>
+        <p>只控制 \(\phi, \theta, T\)，允许 yaw 轴自由旋转。推力和姿态裕度大幅改善，GPS/光流仍可保持位置，安全降落完全可行。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEC 4: 推力预算 -->
+<section class="section anim" id="sec4">
+  <div class="section-title"><span class="num">04</span>推力预算速算</div>
+  <p class="section-desc">推重比是容错能力的核心约束。拖动滑块查看不同推重比下的裕度。</p>
+
+  <div style="text-align:center;margin-bottom:1rem">
+    <label style="font-size:.85rem;color:var(--text2)">整机推重比：
+      <span id="twrVal" style="color:var(--accent);font-weight:700;font-family:'JetBrains Mono'">2.0</span>
+    </label><br>
+    <input type="range" id="twrSlider" min="1.2" max="3.0" step="0.1" value="2.0"
+      style="width:80%;max-width:400px;margin-top:.5rem;accent-color:var(--accent)">
+  </div>
+
+  <div class="gauge-row" id="gaugeRow">
+    <!-- filled by JS -->
+  </div>
+
+  <table class="budget-table">
+    <thead>
+      <tr><th>指标</th><th>6 桨正常</th><th>5 桨（策略 B）</th><th>4 桨（策略 A）</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>总最大推力</td>
+        <td class="highlight">6F<sub>max</sub></td>
+        <td>5F<sub>max</sub></td>
+        <td class="warn-val">4F<sub>max</sub></td>
+      </tr>
+      <tr>
+        <td>悬停油门比</td>
+        <td id="hov6">16.7%</td>
+        <td id="hov5">20.0%</td>
+        <td id="hov4">25.0%</td>
+      </tr>
+      <tr>
+        <td>机动+偏航余量</td>
+        <td class="highlight">充裕</td>
+        <td id="margin5">中等</td>
+        <td id="margin4" class="danger-val">极小</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="formula-block">
+    <span class="label">安全判据</span>
+    悬停油门比 ≤ 60%~65%，即 \(\dfrac{W}{n \cdot F_{\max}} \le 0.65\)<br><br>
+    5 桨方案 → 推重比 ≥ 1.54（考虑偏航补偿，建议 <span style="color:var(--accent2)">≥ 1.8</span>）<br>
+    4 桨方案 → 推重比 ≥ <span style="color:var(--warn)">2.5</span> 才比较安全
+  </div>
+</section>
+
+<!-- SEC 5: 工程实施 -->
+<section class="section anim" id="sec5">
+  <div class="section-title"><span class="num">05</span>工程实施流程</div>
+  <p class="section-desc">从故障检测到安全着陆的完整链路。</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="dot"></span>
+      <div>
+        <h5>① 故障检测</h5>
+        <p>监测电调反馈电流/转速，或用观测器估计各桨推力残差，判定失效桨编号。检测延迟目标 &lt;100ms。</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="dot green"></span>
+      <div>
+        <h5>② 混控矩阵在线切换</h5>
+        <p>预先为每个桨失效场景离线计算好 \(B_i^\dagger\)（6 种情况），故障确认后直接查表切换，无需在线求伪逆。</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="dot orange"></span>
+      <div>
+        <h5>③ 偏航策略决策</h5>
+        <p>推重比 ≥ 2 → 可尝试全自由度保持；推重比 1.5~2 → Relaxed Yaw，放弃航向锁定，仅保位置和姿态稳定。</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="dot"></span>
+      <div>
+        <h5>④ 控制器增益切换</h5>
+        <p>失效后等效惯量和力臂变化，PID/INDI 控制器增益需切换到预设的容错参数组。</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="dot green"></span>
+      <div>
+        <h5>⑤ 安全着陆</h5>
+        <p>执行受控下降或返航降落，GPS/光流保持位置精度。Relaxed Yaw 下机体自旋但位置稳定。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEC 6: 总结 -->
+<section class="section anim" id="sec6">
+  <div class="section-title"><span class="num">06</span>总结与建议</div>
+
+  <div class="conclusion">
+    <h3>最优解：5 桨 + 重构混控 + Relaxed Yaw</h3>
+    <p>
+      对于大多数六旋翼平台，<span class="key">保留 5 桨</span> 结合 <span class="key">混控矩阵重构</span> 和 <span class="key">Relaxed Yaw</span> 是最优方案——推力利用率最高、学术和工程成熟度最高、安全边际最大。
+    </p>
+    <p style="margin-top:.8rem">
+      只有在任务绝对要求航向锁定且推重比足够大（≥ 2.5）时，才考虑停对桨方案。设计阶段就应将整机推重比留到 <span class="key">≥ 1.8</span>，为容错留足空间。
+    </p>
+  </div>
+</section>
+
+<footer>
+  六旋翼单桨失效容错控制 · 交互式技术解析
+</footer>
+
+<!-- MathJax for formula rendering -->
+<script>
+window.MathJax={tex:{inlineMath:[['\\(','\\)']],displayMath:[['\\[','\\]']]}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.min.js" crossorigin="anonymous"></script>
+
+<script>
+// =========== Hexacopter SVG ===========
+const svg = document.getElementById('hexSvg');
+const badge = document.getElementById('statusBadge');
+const R = 130; // arm length in SVG units
+const motors = [];
+for(let i=0;i<6;i++){
+  const angle = (i*60 - 90)*Math.PI/180;
+  motors.push({
+    id:i+1,
+    x: R*Math.cos(angle),
+    y: R*Math.sin(angle),
+    cw: i%2===0, // M1,M3,M5 = CW; M2,M4,M6 = CCW
+    angle
+  });
+}
+
+let currentScenario = 'normal';
+
+function renderHex(scenario){
+  currentScenario = scenario;
+  svg.innerHTML = '';
+
+  // center body
+  const body = `<circle cx="0" cy="0" r="22" fill="#1a2332" stroke="#2a3a4d" stroke-width="2"/>
+    <text x="0" y="1" text-anchor="middle" dominant-baseline="middle" fill="#556677" font-size="8" font-family="JetBrains Mono">BODY</text>`;
+
+  let failed = [];
+  let disabled = [];
+  let active = [];
+  let statusText = '';
+  let badgeColor = '';
+
+  if(scenario==='normal'){
+    active=[1,2,3,4,5,6]; statusText='正常 · 6 桨运行';
+  } else if(scenario==='m1fail'){
+    failed=[1]; active=[2,3,4,5,6]; statusText='⚠ M1 失效 · 5 桨可用';
+  } else if(scenario==='stratA'){
+    failed=[1]; disabled=[4]; active=[2,3,5,6]; statusText='策略 A · 4 桨飞行';
+  } else if(scenario==='stratB'){
+    failed=[1]; active=[2,3,4,5,6]; statusText='策略 B · 5 桨重构';
+  }
+
+  let html = '';
+
+  // Draw arms
+  motors.forEach(m=>{
+    const isFailed = failed.includes(m.id);
+    const isDisabled = disabled.includes(m.id);
+    const isActive = !isFailed && !isDisabled;
+    const armColor = isFailed ? '#ff1744' : isDisabled ? '#555' : '#2a3a4d';
+    html += `<line x1="0" y1="0" x2="${m.x}" y2="${m.y}" stroke="${armColor}" stroke-width="3"/>`;
+  });
+
+  html += body;
+
+  // Draw motors
+  motors.forEach(m=>{
+    const isFailed = failed.includes(m.id);
+    const isDisabled = disabled.includes(m.id);
+    const isActive = !isFailed && !isDisabled;
+
+    let fillColor = isActive ? (m.cw ? '#00e5ff' : '#76ff03') : isFailed ? '#ff1744' : '#444';
+    let opacity = isActive ? 1 : (isFailed ? 0.7 : 0.4);
+    let ringSize = 26;
+    let boostRing = '';
+
+    // Strategy B boost visualization
+    if(scenario==='stratB' && isActive){
+      // opposite-spin motors work harder
+      ringSize = 28;
+      if(!m.cw){ // CCW motors (minority CW lost) spin harder
+        boostRing = `<circle cx="${m.x}" cy="${m.y}" r="32" fill="none" stroke="${fillColor}" stroke-width="1.5" opacity=".4" stroke-dasharray="4 3">
+          <animateTransform attributeName="transform" type="rotate" from="0 ${m.x} ${m.y}" to="${m.cw?'-':''}360 ${m.x} ${m.y}" dur="1.5s" repeatCount="indefinite"/>
+        </circle>`;
+      }
+    }
+
+    // spinning animation
+    let spin = '';
+    if(isActive){
+      const dir = m.cw ? '' : '-';
+      const dur = (scenario==='stratB' && !m.cw) ? '0.6s' : '0.9s';
+      spin = `<animateTransform attributeName="transform" type="rotate" from="0 ${m.x} ${m.y}" to="${dir}360 ${m.x} ${m.y}" dur="${dur}" repeatCount="indefinite"/>`;
+    }
+
+    // Prop blades
+    const bladeLen = 20;
+    let blades = '';
+    if(!isFailed && !isDisabled){
+      for(let b=0;b<3;b++){
+        const ba = b*120*Math.PI/180;
+        const bx1 = m.x + bladeLen*Math.cos(ba);
+        const by1 = m.y + bladeLen*Math.sin(ba);
+        const bx2 = m.x - bladeLen*Math.cos(ba);
+        const by2 = m.y - bladeLen*Math.sin(ba);
+        blades += `<line x1="${bx1}" y1="${by1}" x2="${bx2}" y2="${by2}" stroke="${fillColor}" stroke-width="2.5" opacity=".5" stroke-linecap="round"/>`;
+      }
+    }
+
+    // Failed X
+    let failMark = '';
+    if(isFailed){
+      failMark = `<line x1="${m.x-10}" y1="${m.y-10}" x2="${m.x+10}" y2="${m.y+10}" stroke="#ff1744" stroke-width="3"/>
+        <line x1="${m.x+10}" y1="${m.y-10}" x2="${m.x-10}" y2="${m.y+10}" stroke="#ff1744" stroke-width="3"/>`;
+    }
+    if(isDisabled){
+      failMark = `<line x1="${m.x-8}" y1="${m.y}" x2="${m.x+8}" y2="${m.y}" stroke="#888" stroke-width="2"/>`;
+    }
+
+    html += `<g opacity="${opacity}">
+      ${boostRing}
+      <g>${blades}${spin}</g>
+      <circle cx="${m.x}" cy="${m.y}" r="12" fill="${fillColor}" opacity=".2"/>
+      <circle cx="${m.x}" cy="${m.y}" r="7" fill="${fillColor}"/>
+      ${failMark}
+    </g>`;
+
+    // Labels
+    const labelOff = 18;
+    const lx = m.x + labelOff * Math.cos(m.angle);
+    const ly = m.y + labelOff * Math.sin(m.angle);
+    const labelColor = isFailed ? '#ff1744' : isDisabled ? '#666' : '#8899aa';
+    const rotLabel = m.cw ? 'CW' : 'CCW';
+    html += `<text x="${lx}" y="${ly-6}" text-anchor="middle" fill="${labelColor}" font-size="10" font-family="JetBrains Mono" font-weight="600">M${m.id}</text>`;
+    html += `<text x="${lx}" y="${ly+6}" text-anchor="middle" fill="${labelColor}" font-size="7" font-family="JetBrains Mono" opacity=".7">${rotLabel}</text>`;
+  });
+
+  svg.innerHTML = html;
+  badge.textContent = statusText;
+
+  // Update button active states
+  document.querySelectorAll('.hex-controls button').forEach(btn => btn.classList.remove('active'));
+  const btnMap = {normal:0, m1fail:1, stratA:2, stratB:3};
+  document.querySelectorAll('.hex-controls button')[btnMap[scenario]]?.classList.add('active');
+}
+
+function setScenario(s){ renderHex(s); }
+
+// =========== Strategy Tabs ===========
+function showStrategy(which){
+  const tabs = document.querySelectorAll('.strategy-tab');
+  tabs[0].classList.toggle('active', which==='a');
+  tabs[1].classList.toggle('active', which==='b');
+  document.getElementById('stratA-content').classList.toggle('hidden', which!=='a');
+  document.getElementById('stratB-content').classList.toggle('hidden', which!=='b');
+}
+
+// =========== Thrust Budget Slider ===========
+const slider = document.getElementById('twrSlider');
+const twrDisplay = document.getElementById('twrVal');
+const gaugeRow = document.getElementById('gaugeRow');
+
+function updateBudget(){
+  const twr = parseFloat(slider.value);
+  twrDisplay.textContent = twr.toFixed(1);
+
+  // hover throttle = W / (n * Fmax) = 1 / (n/6 * twr) since Fmax = twr*W/6
+  // Actually: twr = 6*Fmax / W, so W = 6*Fmax/twr
+  // hover ratio for n motors = W/(n*Fmax) = 6/(n*twr)
+  const h6 = (6/(6*twr)*100);
+  const h5 = (6/(5*twr)*100);
+  const h4 = (6/(4*twr)*100);
+
+  document.getElementById('hov6').textContent = h6.toFixed(1)+'%';
+  document.getElementById('hov5').textContent = h5.toFixed(1)+'%';
+  document.getElementById('hov4').textContent = h4.toFixed(1)+'%';
+
+  // margin assessment
+  const m5 = h5 <= 55 ? '充裕' : h5 <= 65 ? '中等' : h5 <= 80 ? '偏小' : '不足';
+  const m4 = h4 <= 55 ? '充裕' : h4 <= 65 ? '中等' : h4 <= 80 ? '偏小' : '不足';
+  const m5el = document.getElementById('margin5');
+  const m4el = document.getElementById('margin4');
+  m5el.textContent = m5;
+  m4el.textContent = m4;
+  m5el.className = h5<=55?'highlight':h5<=65?'':'warn-val';
+  m4el.className = h4<=55?'highlight':h4<=65?'':h4<=80?'warn-val':'danger-val';
+
+  // Gauges
+  renderGauges(h6,h5,h4);
+}
+
+function renderGauges(h6,h5,h4){
+  const data = [
+    {label:'6 桨', val:h6, color:'#00e5ff'},
+    {label:'5 桨', val:h5, color:h5>65?'#ff6e40':'#76ff03'},
+    {label:'4 桨', val:h4, color:h4>80?'#ff1744':h4>65?'#ff6e40':'#76ff03'},
+  ];
+  gaugeRow.innerHTML = data.map(d=>{
+    const pct = Math.min(d.val,100);
+    const r = 40;
+    const circ = 2*Math.PI*r;
+    const dashLen = circ * pct/100;
+    const dashGap = circ - dashLen;
+    const safeArc = circ * 65/100;
+    return `<div class="gauge-item">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="#1e2d3d" stroke-width="6"/>
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="${d.color}" stroke-width="6"
+          stroke-dasharray="${dashLen} ${dashGap}"
+          stroke-dashoffset="${circ*0.25}" stroke-linecap="round" opacity=".85"/>
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,110,64,.25)" stroke-width="1"
+          stroke-dasharray="0 ${safeArc} ${circ-safeArc} 0"
+          stroke-dashoffset="${circ*0.25}"/>
+        <text x="50" y="46" text-anchor="middle" fill="${d.color}" font-size="15" font-family="JetBrains Mono" font-weight="700">${pct.toFixed(0)}%</text>
+        <text x="50" y="60" text-anchor="middle" fill="#667788" font-size="8">悬停油门</text>
+      </svg>
+      <div class="ring-label">${d.label}</div>
+    </div>`;
+  }).join('');
+}
+
+// Init
+renderHex('normal');
+updateBudget();
+slider.addEventListener('input', updateBudget);
+
+// Scroll animations
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting) e.target.style.opacity=1;
+  });
+},{threshold:0.1});
+document.querySelectorAll('.anim').forEach(el=>{
+  el.style.opacity=0;
+  el.style.transition='opacity .6s ease';
+  observer.observe(el);
+});
+</script>
+</body>
+</html>
