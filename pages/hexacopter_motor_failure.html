@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>六旋翼无人机电机失效模拟器</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56,189,248,0.25);
+    --danger: #ef4444;
+    --danger-glow: rgba(239,68,68,0.3);
+    --warning: #f59e0b;
+    --success: #22c55e;
+    --cw-color: #a78bfa;
+    --ccw-color: #34d399;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans SC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .noise-overlay {
+    position: fixed; inset:0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999;
+  }
+
+  header {
+    text-align: center;
+    padding: 32px 20px 10px;
+    position: relative;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, var(--accent), #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header .subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    max-width: 1280px;
+    margin: 20px auto;
+    padding: 0 20px 40px;
+  }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+  }
+
+  .viz-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .viz-panel::before {
+    content: '';
+    position: absolute; top:0; left:0; right:0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .viz-panel canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    display: block;
+    border-radius: 8px;
+  }
+
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top:0; left:0; right:0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(56,189,248,0.3), transparent);
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  .motor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .motor-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .motor-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(56,189,248,0.1);
+  }
+  .motor-btn.active {
+    border-color: var(--danger);
+    background: rgba(239,68,68,0.08);
+    box-shadow: 0 0 24px var(--danger-glow);
+  }
+  .motor-btn .motor-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .motor-btn .motor-dir {
+    font-size: 10px;
+    margin-top: 3px;
+    font-weight: 500;
+  }
+  .motor-btn .cw { color: var(--cw-color); }
+  .motor-btn .ccw { color: var(--ccw-color); }
+  .motor-btn .motor-status {
+    font-size: 10px;
+    margin-top: 4px;
+    color: var(--success);
+    font-weight: 500;
+  }
+  .motor-btn.active .motor-status {
+    color: var(--danger);
+  }
+  .motor-btn.active .motor-num {
+    color: var(--danger);
+  }
+
+  .reset-btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+    font-size: 13px;
+  }
+  .data-row:last-child { border-bottom: none; }
+  .data-label { color: var(--text-dim); font-weight: 400; }
+  .data-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .data-value.danger { color: var(--danger); }
+  .data-value.warning { color: var(--warning); }
+  .data-value.success { color: var(--success); }
+
+  .thrust-bar-container {
+    margin: 4px 0;
+  }
+  .thrust-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 3px;
+  }
+  .thrust-bar-label span:first-child {
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .thrust-bar-label span:last-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .thrust-bar-track {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .thrust-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease, background 0.3s;
+    background: var(--accent);
+  }
+  .thrust-bar-fill.dead { background: var(--danger); }
+  .thrust-bar-fill.over { background: var(--warning); }
+
+  .effect-text {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    font-weight: 300;
+  }
+  .effect-text strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .effect-text .danger-text { color: var(--danger); font-weight: 600; }
+  .effect-text .warn-text { color: var(--warning); font-weight: 600; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 10px 0 4px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .legend-swatch {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+  }
+
+  .scenario-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .tag-normal { background: rgba(34,197,94,0.12); color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
+  .tag-failure { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+</style>
+</head>
+<body>
+<div class="noise-overlay"></div>
+
+<header>
+  <h1>六旋翼无人机 · 电机失效模拟器</h1>
+  <p class="subtitle">交互式推力分布与力矩不平衡可视化 — 点击右侧电机按钮模拟单电机失效</p>
+</header>
+
+<div class="app">
+  <!-- Left: Visualization -->
+  <div class="viz-panel">
+    <canvas id="hexCanvas"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--cw-color)"></div>顺时针 (CW)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--ccw-color)"></div>逆时针 (CCW)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--accent)"></div>推力向量</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--danger)"></div>失效电机</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--warning)"></div>合力矩方向</div>
+    </div>
+  </div>
+
+  <!-- Right: Controls & Data -->
+  <div class="side-panel">
+    <!-- Motor selector -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>电机控制面板</div>
+      <div class="motor-grid" id="motorGrid"></div>
+      <button class="reset-btn" onclick="resetAll()">全部恢复正常</button>
+    </div>
+
+    <!-- Thrust bars -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>推力分布</div>
+      <div id="thrustBars"></div>
+    </div>
+
+    <!-- Force & Torque data -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>力与力矩分析</div>
+      <div id="forceData"></div>
+    </div>
+
+    <!-- Effect description -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>失效效应分析</div>
+      <div id="effectDesc"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== HEXACOPTER PHYSICS ==========
+// Motor layout: numbered 1-6, positioned at 60° intervals
+// Motor 1 at 90° (top/front), going clockwise
+// Standard config: odd motors CW, even motors CCW
+const NUM_MOTORS = 6;
+const ANGLE_OFFSET = Math.PI / 2; // Motor 1 at top
+
+const motors = [];
+for (let i = 0; i < NUM_MOTORS; i++) {
+  const angle = ANGLE_OFFSET - (i * 2 * Math.PI / NUM_MOTORS);
+  motors.push({
+    id: i + 1,
+    angle: angle,
+    x: Math.cos(angle),
+    y: Math.sin(angle),
+    // Odd = CW, Even = CCW
+    direction: (i % 2 === 0) ? 'CW' : 'CCW',
+    dirLabel: (i % 2 === 0) ? '顺时针' : '逆时针',
+  });
+}
+
+let failedMotor = -1; // -1 means none
+const nominalThrust = 1.0; // per motor, normalized
+const armLength = 1.0;
+// Yaw torque coefficient (reaction torque)
+const kappa = 0.05;
+
+function computeState() {
+  // Compensation: when one motor fails, adjacent motors and opposite motor adjust
+  const thrusts = new Array(NUM_MOTORS).fill(nominalThrust);
+  let compensated = true;
+
+  if (failedMotor >= 0) {
+    thrusts[failedMotor] = 0;
+
+    // Solve for compensation:
+    // We want to maintain hover (total thrust = 6*T -> need 5 motors to produce ~6T equivalent or accept altitude loss)
+    // More realistically: the controller tries to balance roll/pitch/yaw
+    // For a hex: losing 1 motor, the opposite motor must reduce to balance yaw
+    // Adjacent motors increase to compensate roll/pitch
+
+    const fi = failedMotor;
+    const oppIdx = (fi + 3) % 6;
+    const adjL = (fi + 5) % 6;
+    const adjR = (fi + 1) % 6;
+    const farL = (fi + 4) % 6;
+    const farR = (fi + 2) % 6;
+
+    // Compensation strategy for hex:
+    // Opposite motor reduces to ~0 to balance yaw torque
+    // The 4 remaining motors increase equally
+    // This gives near-balanced pitch/roll but reduced total thrust
+
+    // More accurate: opposite motor drops to near 0 for yaw balance
+    // since failed & opposite spin same direction (if alternating)
+    // Actually: in alternating config, opposite motor spins SAME direction
+    // So killing opposite balances yaw, then 4 remaining balance pitch/roll
+
+    // Check if same direction
+    const failedDir = motors[fi].direction;
+    const oppDir = motors[oppIdx].direction;
+
+    if (failedDir === oppDir) {
+      // Standard hex: opposite has same rotation -> reduce it to balance yaw
+      thrusts[oppIdx] = 0.15; // Nearly zero but some for stability
+      // Remaining 4 motors increase
+      thrusts[adjL] = 1.35;
+      thrusts[adjR] = 1.35;
+      thrusts[farL] = 1.25;
+      thrusts[farR] = 1.25;
+    } else {
+      // Non-standard: just redistribute
+      thrusts[adjL] = 1.30;
+      thrusts[adjR] = 1.30;
+      thrusts[oppIdx] = 0.70;
+      thrusts[farL] = 1.10;
+      thrusts[farR] = 1.10;
+    }
+  }
+
+  // Compute net forces and torques
+  let totalThrust = 0;
+  let rollMoment = 0;   // around X-axis (left-right)
+  let pitchMoment = 0;  // around Y-axis (front-back)
+  let yawTorque = 0;
+
+  for (let i = 0; i < NUM_MOTORS; i++) {
+    const T = thrusts[i];
+    totalThrust += T;
+    // Roll = torque around X from Y-offset thrust
+    rollMoment += T * motors[i].x * armLength;
+    // Pitch = torque around Y from X-offset thrust
+    pitchMoment += T * motors[i].y * armLength;
+    // Yaw = reaction torque (CW positive, CCW negative)
+    const yawSign = motors[i].direction === 'CW' ? 1 : -1;
+    yawTorque += yawSign * kappa * T;
+  }
+
+  const totalNominal = NUM_MOTORS * nominalThrust;
+  const thrustPercent = (totalThrust / totalNominal * 100).toFixed(1);
+  const residualRoll = rollMoment;
+  const residualPitch = pitchMoment;
+  const residualYaw = yawTorque;
+
+  return {
+    thrusts,
+    totalThrust,
+    thrustPercent,
+    rollMoment: residualRoll,
+    pitchMoment: residualPitch,
+    yawTorque: residualYaw,
+    compensated
+  };
+}
+
+// ========== UI ==========
+function buildMotorGrid() {
+  const grid = document.getElementById('motorGrid');
+  grid.innerHTML = '';
+  motors.forEach((m, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'motor-btn' + (failedMotor === i ? ' active' : '');
+    btn.innerHTML = `
+      <div class="motor-num">M${m.id}</div>
+      <div class="motor-dir"><span class="${m.direction.toLowerCase()}">${m.dirLabel} (${m.direction})</span></div>
+      <div class="motor-status">${failedMotor === i ? '⊘ 失效' : '● 正常'}</div>
+    `;
+    btn.onclick = () => toggleMotor(i);
+    grid.appendChild(btn);
+  });
+}
+
+function toggleMotor(idx) {
+  failedMotor = (failedMotor === idx) ? -1 : idx;
+  update();
+}
+
+function resetAll() {
+  failedMotor = -1;
+  update();
+}
+
+function updateThrustBars(state) {
+  const container = document.getElementById('thrustBars');
+  let html = '';
+  state.thrusts.forEach((t, i) => {
+    const pct = (t / 1.5 * 100).toFixed(0);
+    const val = (t * 100).toFixed(0);
+    let cls = '';
+    if (t === 0) cls = 'dead';
+    else if (t > 1.05) cls = 'over';
+    const color = t === 0 ? 'var(--danger)' : (t > 1.05 ? 'var(--warning)' : 'var(--accent)');
+    html += `
+      <div class="thrust-bar-container">
+        <div class="thrust-bar-label">
+          <span>M${i+1} (${motors[i].direction})</span>
+          <span style="color:${color}">${val}%</span>
+        </div>
+        <div class="thrust-bar-track">
+          <div class="thrust-bar-fill ${cls}" style="width:${pct}%"></div>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function updateForceData(state) {
+  const container = document.getElementById('forceData');
+  const totalClass = state.totalThrust < 5.5 ? 'warning' : 'success';
+  const rollVal = state.rollMoment.toFixed(3);
+  const pitchVal = state.pitchMoment.toFixed(3);
+  const yawVal = state.yawTorque.toFixed(4);
+
+  const rollClass = Math.abs(state.rollMoment) > 0.01 ? 'warning' : 'success';
+  const pitchClass = Math.abs(state.pitchMoment) > 0.01 ? 'warning' : 'success';
+  const yawClass = Math.abs(state.yawTorque) > 0.005 ? 'danger' : 'success';
+
+  container.innerHTML = `
+    <div class="data-row"><span class="data-label">总推力</span><span class="data-value ${totalClass}">${state.thrustPercent}%</span></div>
+    <div class="data-row"><span class="data-label">横滚力矩 (Roll)</span><span class="data-value ${rollClass}">${rollVal} N·m</span></div>
+    <div class="data-row"><span class="data-label">俯仰力矩 (Pitch)</span><span class="data-value ${pitchClass}">${pitchVal} N·m</span></div>
+    <div class="data-row"><span class="data-label">偏航力矩 (Yaw)</span><span class="data-value ${yawClass}">${yawVal} N·m</span></div>
+    <div class="data-row"><span class="data-label">推力效率</span><span class="data-value ${totalClass}">${(state.totalThrust/6*100).toFixed(1)}%</span></div>
+  `;
+}
+
+function updateEffectDesc(state) {
+  const container = document.getElementById('effectDesc');
+  if (failedMotor < 0) {
+    container.innerHTML = `
+      <div class="scenario-tag tag-normal">正常飞行</div>
+      <div class="effect-text">
+        所有六个电机均以额定推力运行，<strong>推力对称分布</strong>。
+        横滚、俯仰、偏航力矩均为零，无人机处于稳定悬停状态。
+        每个电机承担约 <strong>16.7%</strong> 的总升力。
+      </div>
+    `;
+    return;
+  }
+
+  const m = motors[failedMotor];
+  const oppIdx = (failedMotor + 3) % 6;
+  const oppM = motors[oppIdx];
+
+  // Determine tilt direction
+  const tiltAngle = Math.atan2(-m.y, -m.x) * 180 / Math.PI;
+  let tiltDir = '';
+  if (tiltAngle > -22.5 && tiltAngle <= 22.5) tiltDir = '右倾';
+  else if (tiltAngle > 22.5 && tiltAngle <= 67.5) tiltDir = '右前倾';
+  else if (tiltAngle > 67.5 && tiltAngle <= 112.5) tiltDir = '前倾';
+  else if (tiltAngle > 112.5 && tiltAngle <= 157.5) tiltDir = '左前倾';
+  else if (tiltAngle > 157.5 || tiltAngle <= -157.5) tiltDir = '左倾';
+  else if (tiltAngle > -157.5 && tiltAngle <= -112.5) tiltDir = '左后倾';
+  else if (tiltAngle > -112.5 && tiltAngle <= -67.5) tiltDir = '后倾';
+  else tiltDir = '右后倾';
+
+  const yawDir = m.direction === 'CW' ? '逆时针偏航' : '顺时针偏航';
+
+  container.innerHTML = `
+    <div class="scenario-tag tag-failure">M${m.id} 失效</div>
+    <div class="effect-text">
+      <strong>M${m.id}</strong>（${m.dirLabel}旋转）失效后：<br>
+      <br>
+      <span class="danger-text">① 推力缺失：</span>M${m.id} 位置丧失升力，机体向该侧<strong>${tiltDir}</strong>，
+      产生未补偿的横滚/俯仰力矩。<br><br>
+      <span class="danger-text">② 偏航失衡：</span>缺少 M${m.id} 的${m.direction}反扭力矩，
+      无人机将趋向<strong>${yawDir}</strong>。<br><br>
+      <span class="warn-text">③ 补偿策略：</span>对侧 <strong>M${oppM.id}</strong>（同向旋转）降低推力至约15%
+      以平衡偏航力矩；相邻电机提升至 ~135% 补偿升力与姿态。<br><br>
+      总可用推力降至约 <strong>${state.thrustPercent}%</strong>，
+      最大机动能力显著下降，需尽快降落。
+    </div>
+  `;
+}
+
+// ========== CANVAS RENDERING ==========
+const canvas = document.getElementById('hexCanvas');
+const ctx = canvas.getContext('2d');
+let animFrame = 0;
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const size = Math.min(rect.width - 40, 640);
+  canvas.width = size * 2;
+  canvas.height = size * 2;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+}
+
+function drawFrame() {
+  resizeCanvas();
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const armLen = W * 0.3;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid
+  ctx.strokeStyle = 'rgba(56,189,248,0.04)';
+  ctx.lineWidth = 1;
+  const gridSize = 40;
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  const state = computeState();
+  animFrame += 0.02;
+
+  // Draw arms
+  motors.forEach((m, i) => {
+    const mx = cx + m.x * armLen;
+    const my = cy - m.y * armLen;
+
+    const grad = ctx.createLinearGradient(cx, cy, mx, my);
+    grad.addColorStop(0, 'rgba(100,116,139,0.5)');
+    grad.addColorStop(1, failedMotor === i ? 'rgba(239,68,68,0.4)' : 'rgba(100,116,139,0.3)');
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(mx, my);
+    ctx.stroke();
+  });
+
+  // Center body
+  ctx.beginPath();
+  ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(30,45,69,0.9)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(56,189,248,0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Direction indicator (front)
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 30);
+  ctx.lineTo(cx - 8, cy - 18);
+  ctx.lineTo(cx + 8, cy - 18);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(56,189,248,0.7)';
+  ctx.fill();
+
+  // Draw motors
+  motors.forEach((m, i) => {
+    const mx = cx + m.x * armLen;
+    const my = cy - m.y * armLen;
+    const thrust = state.thrusts[i];
+    const isFailed = failedMotor === i;
+
+    // Motor housing
+    const motorRadius = 28;
+    ctx.beginPath();
+    ctx.arc(mx, my, motorRadius, 0, Math.PI * 2);
+
+    if (isFailed) {
+      ctx.fillStyle = 'rgba(239,68,68,0.15)';
+      ctx.strokeStyle = 'rgba(239,68,68,0.7)';
+    } else {
+      ctx.fillStyle = 'rgba(30,45,69,0.8)';
+      ctx.strokeStyle = m.direction === 'CW' ? 'rgba(167,139,250,0.6)' : 'rgba(52,211,153,0.6)';
+    }
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    // Spinning propeller animation
+    if (!isFailed) {
+      const speed = thrust * 3;
+      const rotAngle = animFrame * speed * (m.direction === 'CW' ? 1 : -1);
+      const bladeLen = motorRadius + 14;
+
+      for (let b = 0; b < 2; b++) {
+        const ba = rotAngle + b * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(mx - Math.cos(ba) * bladeLen, my - Math.sin(ba) * bladeLen);
+        ctx.lineTo(mx + Math.cos(ba) * bladeLen, my + Math.sin(ba) * bladeLen);
+        ctx.strokeStyle = m.direction === 'CW'
+          ? `rgba(167,139,250,${0.3 + thrust * 0.2})`
+          : `rgba(52,211,153,${0.3 + thrust * 0.2})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      // Prop disc (blur effect)
+      ctx.beginPath();
+      ctx.arc(mx, my, bladeLen, 0, Math.PI * 2);
+      ctx.fillStyle = m.direction === 'CW'
+        ? `rgba(167,139,250,${0.03 + thrust * 0.04})`
+        : `rgba(52,211,153,${0.03 + thrust * 0.04})`;
+      ctx.fill();
+    } else {
+      // X mark for failed
+      const s = 12;
+      ctx.strokeStyle = 'rgba(239,68,68,0.8)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(mx - s, my - s); ctx.lineTo(mx + s, my + s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(mx + s, my - s); ctx.lineTo(mx - s, my + s);
+      ctx.stroke();
+    }
+
+    // Thrust vector arrow
+    if (thrust > 0) {
+      const arrowLen = thrust * 50;
+      ctx.beginPath();
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx, my - arrowLen);
+      ctx.strokeStyle = isFailed ? 'rgba(239,68,68,0.5)' : `rgba(56,189,248,${0.4 + thrust * 0.3})`;
+      ctx.lineWidth = thrust > 1.05 ? 4 : 3;
+      ctx.stroke();
+
+      // Arrowhead
+      ctx.beginPath();
+      ctx.moveTo(mx, my - arrowLen - 8);
+      ctx.lineTo(mx - 5, my - arrowLen);
+      ctx.lineTo(mx + 5, my - arrowLen);
+      ctx.closePath();
+      ctx.fillStyle = isFailed ? 'rgba(239,68,68,0.5)' : `rgba(56,189,248,${0.5 + thrust * 0.3})`;
+      ctx.fill();
+    }
+
+    // Thrust percentage
+    ctx.font = `bold ${W > 800 ? 14 : 12}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = isFailed ? 'rgba(239,68,68,0.9)' : 'rgba(226,232,240,0.9)';
+    ctx.fillText(`${(thrust * 100).toFixed(0)}%`, mx, my + motorRadius + 20);
+
+    // Motor label
+    ctx.font = `bold ${W > 800 ? 13 : 11}px 'Noto Sans SC', sans-serif`;
+    ctx.fillStyle = isFailed ? 'rgba(239,68,68,0.9)' : 'rgba(226,232,240,0.8)';
+    ctx.fillText(`M${m.id}`, mx, my + 5);
+  });
+
+  // Draw resultant torque vector if motor failed
+  if (failedMotor >= 0) {
+    // Roll-pitch torque arrow from center
+    const rMag = Math.sqrt(state.rollMoment ** 2 + state.pitchMoment ** 2);
+    if (rMag > 0.01) {
+      const scale = 200;
+      const tx = state.rollMoment / rMag;
+      const ty = state.pitchMoment / rMag;
+      const len = Math.min(rMag * scale, 120);
+      const ex = cx + tx * len;
+      const ey = cy - ty * len;
+
+      // Glow
+      ctx.shadowColor = 'rgba(245,158,11,0.5)';
+      ctx.shadowBlur = 12;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = 'rgba(245,158,11,0.9)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Arrowhead
+      const aLen = 12;
+      const angle = Math.atan2(-(ty), tx);
+      ctx.beginPath();
+      ctx.moveTo(ex + aLen * Math.cos(angle), ey - aLen * Math.sin(angle));
+      ctx.lineTo(ex + aLen * Math.cos(angle + 2.5), ey - aLen * Math.sin(angle + 2.5));
+      ctx.lineTo(ex + aLen * Math.cos(angle - 2.5), ey - aLen * Math.sin(angle - 2.5));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(245,158,11,0.9)';
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+
+      // Label
+      ctx.font = `bold ${W > 800 ? 13 : 11}px 'Noto Sans SC', sans-serif`;
+      ctx.fillStyle = 'rgba(245,158,11,0.9)';
+      ctx.fillText('合力矩', ex + 12, ey - 8);
+    }
+
+    // Yaw indicator (curved arrow around center)
+    if (Math.abs(state.yawTorque) > 0.001) {
+      const yawR = 55;
+      const dir = state.yawTorque > 0 ? 1 : -1;
+      const startA = -Math.PI / 3;
+      const endA = Math.PI / 3;
+
+      ctx.beginPath();
+      if (dir > 0) {
+        ctx.arc(cx, cy, yawR, startA, endA, false);
+      } else {
+        ctx.arc(cx, cy, yawR, startA, endA, true);
+      }
+      ctx.strokeStyle = `rgba(239,68,68,${0.4 + Math.abs(state.yawTorque) * 5})`;
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrow tip on the arc
+      const tipA = dir > 0 ? endA : startA;
+      const tipX = cx + yawR * Math.cos(tipA);
+      const tipY = cy + yawR * Math.sin(tipA);
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(239,68,68,0.8)';
+      ctx.fill();
+
+      ctx.font = `bold 11px 'Noto Sans SC', sans-serif`;
+      ctx.fillStyle = 'rgba(239,68,68,0.8)';
+      ctx.textAlign = 'center';
+      ctx.fillText(dir > 0 ? 'Yaw →' : '← Yaw', cx, cy + yawR + 18);
+    }
+  }
+
+  // Status badge
+  ctx.font = `bold ${W > 800 ? 14 : 12}px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'left';
+  if (failedMotor >= 0) {
+    ctx.fillStyle = 'rgba(239,68,68,0.9)';
+    ctx.fillText(`⚠ M${failedMotor+1} FAILURE`, 20, 30);
+  } else {
+    ctx.fillStyle = 'rgba(34,197,94,0.9)';
+    ctx.fillText('● ALL NOMINAL', 20, 30);
+  }
+
+  requestAnimationFrame(drawFrame);
+}
+
+function update() {
+  buildMotorGrid();
+  const state = computeState();
+  updateThrustBars(state);
+  updateForceData(state);
+  updateEffectDesc(state);
+}
+
+// Init
+update();
+drawFrame();
+window.addEventListener('resize', resizeCanvas);
+</script>
+</body>
+</html>
