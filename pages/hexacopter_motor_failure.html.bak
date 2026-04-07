@@ -351,8 +351,6 @@
       <div class="card-title"><span class="dot"></span>失效效应分析</div>
       <div id="effectDesc"></div>
     </div>
-
-
 	<div class="conclusion">
     <h3>...你的标题...</h3>
     <p>...你的文字...</p>
@@ -376,9 +374,6 @@
       </a>
     </div>
 </div>
-
-	
-
 
   </div>
 </div>
