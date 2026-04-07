@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C* 控制律深度解析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e17;
+  --bg2: #111827;
+  --bg3: #1e293b;
+  --accent: #38bdf8;
+  --accent2: #818cf8;
+  --accent3: #f472b6;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --border: #334155;
+  --success: #34d399;
+  --warn: #fbbf24;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans SC', sans-serif;
+  font-weight: 400;
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  padding: 2rem;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(56,189,248,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(129,140,248,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+.hero-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid rgba(56,189,248,0.3);
+  padding: 0.3rem 1rem;
+  border-radius: 999px;
+  margin-bottom: 2rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  animation: fadeIn 1s ease;
+}
+.hero h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  font-weight: 900;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  animation: fadeUp 0.8s ease;
+}
+.hero h1 .cstar {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero p {
+  color: var(--text2);
+  font-size: 1.15rem;
+  max-width: 600px;
+  animation: fadeUp 1s ease 0.2s both;
+}
+.scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  animation: bounce 2s infinite;
+  color: var(--text2);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.scroll-hint svg { width: 20px; height: 20px; }
+
+/* Layout */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+section {
+  padding: 5rem 0;
+}
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+h2 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  line-height: 1.3;
+}
+h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 2rem 0 0.8rem;
+  color: var(--accent);
+}
+p { margin-bottom: 1rem; color: var(--text2); }
+p strong, li strong { color: var(--text); }
+
+/* Formula card */
+.formula-card {
+  background: linear-gradient(135deg, rgba(56,189,248,0.06), rgba(129,140,248,0.06));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  text-align: center;
+  margin: 2rem 0;
+  position: relative;
+  overflow: hidden;
+}
+.formula-card::after {
+  content: '';
+  position: absolute;
+  top: -1px; left: 20%; right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+}
+.formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+.formula .hl { color: var(--accent); }
+.formula .hl2 { color: var(--accent2); }
+.formula .hl3 { color: var(--accent3); }
+.formula-note {
+  font-size: 0.85rem;
+  color: var(--text2);
+}
+
+/* Flow diagram */
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 2rem 0;
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+.flow-node {
+  flex-shrink: 0;
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  min-width: 120px;
+}
+.flow-node.upstream { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3); color: var(--accent); }
+.flow-node.mid { background: rgba(129,140,248,0.1); border-color: rgba(129,140,248,0.3); color: var(--accent2); }
+.flow-node.down { background: rgba(244,114,182,0.1); border-color: rgba(244,114,182,0.3); color: var(--accent3); }
+.flow-arrow {
+  flex-shrink: 0;
+  color: var(--text2);
+  font-size: 1.2rem;
+  padding: 0 0.3rem;
+}
+.flow-label {
+  font-size: 0.65rem;
+  color: var(--text2);
+  margin-top: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Comparison table */
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.9rem;
+}
+.comp-table th, .comp-table td {
+  padding: 1rem 1.2rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.comp-table th {
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+.comp-table td { color: var(--text2); }
+.comp-table tr:hover td { color: var(--text); background: rgba(56,189,248,0.03); }
+
+/* Cards */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin: 2rem 0;
+}
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+.card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.8rem;
+}
+.card h4 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+.card p { font-size: 0.85rem; margin-bottom: 0; }
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 1rem 0;
+}
+
+/* Sim */
+.sim-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2rem 0;
+}
+.sim-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 1.5rem;
+  align-items: end;
+}
+.control-group label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.4rem;
+}
+.control-group input[type="range"] {
+  width: 140px;
+  accent-color: var(--accent);
+}
+.control-group .val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin-left: 0.5rem;
+}
+.btn {
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000;
+}
+.btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+canvas {
+  width: 100%;
+  height: 320px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.8rem;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Readouts */
+.readouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.readout {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 0.8rem;
+  text-align: center;
+}
+.readout-label {
+  font-size: 0.6rem;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.readout-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 0.2rem;
+}
+
+/* Footer */
+footer {
+  padding: 3rem 0;
+  text-align: center;
+  color: var(--text2);
+  font-size: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Anim */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+@media (max-width: 640px) {
+  .card-grid { grid-template-columns: 1fr; }
+  .flow { flex-wrap: wrap; justify-content: center; }
+  .sim-controls { flex-direction: column; }
+  .control-group input[type="range"] { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">Fly-By-Wire Flight Control</div>
+  <h1><span class="cstar">C*</span> 控制律<br>深度解析</h1>
+  <p>从控制准则到 PID 实现——理解现代电传飞控系统纵向控制的核心设计哲学</p>
+  <div class="scroll-hint">
+    <span>向下滚动</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+  </div>
+</div>
+
+<!-- Section 1: What is C* -->
+<section>
+<div class="container">
+  <div class="section-num">01 — 基本概念</div>
+  <h2>什么是 C* 控制律？</h2>
+  <p>C*（读作 C-Star）是一种专为飞机<strong>纵向飞行控制</strong>设计的复合控制准则，广泛应用于现代电传操纵（Fly-By-Wire）系统中。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">🐢</div>
+      <h4>低速飞行</h4>
+      <p>飞行员对<strong>俯仰角速度 \(q\)</strong> 更敏感，操纵主要表现为速率指令型响应。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🚀</div>
+      <h4>高速飞行</h4>
+      <p>飞行员对<strong>法向过载 \(n_z\)</strong>（g 值）更敏感，操纵主要表现为过载指令型响应。</p>
+    </div>
+  </div>
+
+  <p>为了让飞行员在<strong>全速域</strong>内获得统一的手感体验，C* 将两者融合为一个单一的控制变量：</p>
+
+  <div class="formula-card">
+    <div class="formula">
+      <span class="hl">C*</span> = <span class="hl2">n<sub>z</sub></span> + <span class="hl3">V<sub>co</sub></span> · <span class="hl2">q</span>
+    </div>
+    <div class="formula-note">
+      其中 V<sub>co</sub> 为交叉速度（Crossover Velocity），通常取 ≈ 124 m/s（约 240 kt）<br>
+      当空速 &lt; V<sub>co</sub> 时，q 的权重大；当空速 &gt; V<sub>co</sub> 时，n<sub>z</sub> 的权重大
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- Section 2: Architecture -->
+<section style="background: var(--bg2);">
+<div class="container">
+  <div class="section-num">02 — 系统架构</div>
+  <h2>C* 在控制回路中的位置</h2>
+  <p>理解 C* 与 PID 的关系，关键在于认清它们分属控制系统的<strong>不同层级</strong>。</p>
+
+  <div class="flow">
+    <div class="flow-node upstream">飞行员<br>拉杆 δ<sub>stick</sub><div class="flow-label">输入</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node upstream">C* 指令<br>C*<sub>cmd</sub><div class="flow-label">策略层</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node mid">误差 e<br>= C*<sub>cmd</sub> − C*<sub>fbk</sub><div class="flow-label">比较</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node mid">PID<br>控制器<div class="flow-label">算法层</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node down">升降舵<br>δ<sub>e</sub><div class="flow-label">物理层</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node down">飞机<br>动力学<div class="flow-label">被控对象</div></div>
+  </div>
+
+  <p style="text-align:center; font-size:0.8rem; color:var(--text2); margin-top:-0.5rem;">
+    ↻ 反馈回路：传感器测量 n<sub>z</sub> 和 q，合成 C*<sub>fbk</sub> 回送至比较环节
+  </p>
+
+  <h3>三个层级</h3>
+  <table class="comp-table">
+    <tr><th>层级</th><th>角色</th><th>职责</th></tr>
+    <tr><td><strong>策略层（C*）</strong></td><td>上游 — 定义目标</td><td>将杆位映射为 C*<sub>cmd</sub>，将传感器数据融合为 C*<sub>fbk</sub>，产生误差 e</td></tr>
+    <tr><td><strong>算法层（PID）</strong></td><td>中游 — 消除误差</td><td>根据 e 计算舵面偏转指令 u = K<sub>p</sub>e + K<sub>i</sub>∫e + K<sub>d</sub>ė</td></tr>
+    <tr><td><strong>物理层（作动器）</strong></td><td>下游 — 执行指令</td><td>液压系统驱动升降舵，改变飞机姿态</td></tr>
+  </table>
+</div>
+</section>
+
+<!-- Section 3: Difference -->
+<section>
+<div class="container">
+  <div class="section-num">03 — 核心区别</div>
+  <h2>C* 与 PID 的本质区别</h2>
+  <p>一句话概括：<strong>C* 是"控制什么"，PID 是"怎么控制"</strong>。</p>
+
+  <table class="comp-table">
+    <tr><th>维度</th><th>C* 控制律</th><th>PID 控制器</th></tr>
+    <tr><td>本质</td><td>控制<strong>准则</strong>（Criterion）</td><td>控制<strong>算法</strong>（Algorithm）</td></tr>
+    <tr><td>回答的问题</td><td>"飞行品质应该达到什么标准？"</td><td>"误差信号如何转化为执行量？"</td></tr>
+    <tr><td>领域特异性</td><td>航空飞行控制专用</td><td>通用控制方法</td></tr>
+    <tr><td>关注对象</td><td>n<sub>z</sub> + V<sub>co</sub>·q 的复合指标</td><td>任意误差信号 e(t)</td></tr>
+    <tr><td>可替代性</td><td>可换为其他准则（如 C*U、γ*）</td><td>可换为其他算法（如 LQR、H∞）</td></tr>
+    <tr><td>在回路中的位置</td><td>上游（定义 e 的含义）+ 反馈侧</td><td>中游（处理 e，输出 u）</td></tr>
+  </table>
+
+  <div class="formula-card" style="text-align:left;">
+    <p style="color:var(--text); margin-bottom:0.5rem;"><strong>为什么 C* 不可能在 PID 下游？</strong></p>
+    <p style="font-size:0.9rem;">如果 C* 在 PID 下游，意味着 PID 先输出信号后 C* 才处理——但 PID 必须<strong>先知道"差多少"</strong>（即 C* 的误差）才能决定"给多少舵角"。因果关系不允许 C* 后置。</p>
+  </div>
+</div>
+</section>
+
+<!-- Section 4: Example -->
+<section style="background: var(--bg2);">
+<div class="container">
+  <div class="section-num">04 — 实例推演</div>
+  <h2>空客 A320 巡航拉杆爬升</h2>
+  <p>假设飞机在巡航状态，飞行员向后拉杆请求爬升。以下为控制系统的工作流程：</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>① 指令生成（上游）</h4>
+      <p>飞行员拉杆 → FLCC 计算得 C*<sub>cmd</sub> = 2.0</p>
+    </div>
+    <div class="card">
+      <h4>② 反馈计算</h4>
+      <p>传感器测得 n<sub>z</sub>=1.0g，q=0 → C*<sub>fbk</sub> = 1.0 + 124×0 = 1.0</p>
+    </div>
+    <div class="card">
+      <h4>③ PID 处理</h4>
+      <p>误差 e = 2.0 − 1.0 = 1.0 → PID 输出：升降舵上偏 5°</p>
+    </div>
+    <div class="card">
+      <h4>④ 执行响应</h4>
+      <p>液压作动器偏转舵面 → 飞机抬头 → n<sub>z</sub> 和 q 变化 → C*<sub>fbk</sub> 逐渐趋近 2.0</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- Section 5: Simulation -->
+<section>
+<div class="container">
+  <div class="section-num">05 — 交互仿真</div>
+  <h2>C* + PID 控制回路仿真</h2>
+  <p>调节参数，观察 C* 控制律如何通过 PID 驱动飞机响应飞行员的拉杆指令。</p>
+
+  <div class="sim-panel">
+    <div class="sim-controls">
+      <div class="control-group">
+        <label>C*<sub>cmd</sub> 指令值</label>
+        <input type="range" id="cmdSlider" min="1.0" max="3.0" step="0.1" value="2.0">
+        <span class="val" id="cmdVal">2.0</span>
+      </div>
+      <div class="control-group">
+        <label>Kp 比例增益</label>
+        <input type="range" id="kpSlider" min="0.5" max="5.0" step="0.1" value="2.0">
+        <span class="val" id="kpVal">2.0</span>
+      </div>
+      <div class="control-group">
+        <label>Ki 积分增益</label>
+        <input type="range" id="kiSlider" min="0.0" max="3.0" step="0.1" value="0.8">
+        <span class="val" id="kiVal">0.8</span>
+      </div>
+      <div class="control-group">
+        <label>Kd 微分增益</label>
+        <input type="range" id="kdSlider" min="0.0" max="2.0" step="0.05" value="0.5">
+        <span class="val" id="kdVal">0.5</span>
+      </div>
+    </div>
+    <div style="display:flex; gap:0.8rem; margin-bottom:1.5rem;">
+      <button class="btn btn-primary" onclick="runSim()">▶ 运行仿真</button>
+      <button class="btn btn-outline" onclick="resetSim()">↺ 重置</button>
+    </div>
+
+    <canvas id="simCanvas"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent);"></div> C*<sub>fbk</sub> 实际值</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent3);"></div> C*<sub>cmd</sub> 指令</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--success);"></div> n<sub>z</sub> 法向过载</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--warn);"></div> δ<sub>e</sub> 舵偏角</div>
+    </div>
+
+    <div class="readouts">
+      <div class="readout"><div class="readout-label">C*<sub>fbk</sub></div><div class="readout-val" id="rCstar">1.00</div></div>
+      <div class="readout"><div class="readout-label">n<sub>z</sub> (g)</div><div class="readout-val" id="rNz">1.00</div></div>
+      <div class="readout"><div class="readout-label">q (°/s)</div><div class="readout-val" id="rQ">0.00</div></div>
+      <div class="readout"><div class="readout-label">δ<sub>e</sub> (°)</div><div class="readout-val" id="rDe">0.00</div></div>
+      <div class="readout"><div class="readout-label">误差 e</div><div class="readout-val" id="rErr">0.00</div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<footer>
+  <div class="container">
+    C* 控制律深度解析 · 飞行控制系统教学演示
+  </div>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// Slider bindings
+['cmd','kp','ki','kd'].forEach(k => {
+  const s = $(k+'Slider'), v = $(k+'Val');
+  s.addEventListener('input', () => v.textContent = s.value);
+});
+
+// Simple longitudinal model + C* PID sim
+function runSim() {
+  const Ccmd = parseFloat($('cmdSlider').value);
+  const Kp = parseFloat($('kpSlider').value);
+  const Ki = parseFloat($('kiSlider').value);
+  const Kd = parseFloat($('kdSlider').value);
+  const Vco = 124; // m/s crossover velocity (used normalized)
+  const dt = 0.02;
+  const steps = 500; // 10 seconds
+
+  // State
+  let nz = 1.0;   // normal load factor (g)
+  let q = 0.0;    // pitch rate (rad/s conceptual, shown as deg/s)
+  let de = 0.0;   // elevator deflection deg
+  let integral = 0;
+  let prevErr = 0;
+
+  // History
+  const hCstar = [], hNz = [], hDe = [], hCmd = [];
+
+  for (let i = 0; i < steps; i++) {
+    // C* feedback (Vco·q normalized so units work together)
+    // We treat q in consistent units: Vco factor already embedded
+    const Cfbk = nz + 0.12 * q; // simplified weighting
+
+    const err = Ccmd - Cfbk;
+    integral += err * dt;
+    integral = Math.max(-5, Math.min(5, integral));
+    const deriv = (err - prevErr) / dt;
+    prevErr = err;
+
+    // PID output → elevator command
+    de = Kp * err + Ki * integral + Kd * deriv;
+    de = Math.max(-25, Math.min(25, de)); // saturate
+
+    // Simplified aircraft response
+    // elevator → pitch rate change, pitch rate → load factor
+    const qDot = de * 0.8 - q * 2.0; // elevator effectiveness + damping
+    q += qDot * dt;
+    const nzDot = q * 3.0 - (nz - 1.0) * 1.5; // pitch rate drives nz, with restoring
+    nz += nzDot * dt;
+
+    hCstar.push(Cfbk);
+    hNz.push(nz);
+    hDe.push(de);
+    hCmd.push(Ccmd);
+  }
+
+  drawChart(hCstar, hNz, hDe, hCmd, Ccmd);
+
+  // Final readouts
+  const last = steps - 1;
+  $('rCstar').textContent = hCstar[last].toFixed(2);
+  $('rNz').textContent = hNz[last].toFixed(2);
+  $('rQ').textContent = (q * 57.3).toFixed(2);
+  $('rDe').textContent = hDe[last].toFixed(2);
+  $('rErr').textContent = (Ccmd - hCstar[last]).toFixed(3);
+}
+
+function drawChart(hCstar, hNz, hDe, hCmd, Ccmd) {
+  const canvas = $('simCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const pad = { t: 30, b: 30, l: 50, r: 20 };
+  const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Compute y range
+  const all = [...hCstar, ...hNz, ...hCmd];
+  let yMin = Math.min(...all, ...hDe.map(d => d * 0.1)) - 0.3;
+  let yMax = Math.max(...all, ...hDe.map(d => d * 0.1)) + 0.3;
+
+  const xScale = i => pad.l + (i / hCstar.length) * pw;
+  const yScale = v => pad.t + (1 - (v - yMin) / (yMax - yMin)) * ph;
+
+  // Grid
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (i / 4) * ph;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    const val = yMax - (i / 4) * (yMax - yMin);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(1), pad.l - 6, y + 3);
+  }
+
+  // Time labels
+  ctx.textAlign = 'center';
+  for (let s = 0; s <= 10; s += 2) {
+    const x = xScale(s / 10 * hCstar.length);
+    ctx.fillText(s + 's', x, H - 8);
+  }
+
+  function drawLine(data, color, width, transform) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const val = transform ? transform(v) : v;
+      const x = xScale(i), y = yScale(val);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  // Cmd reference (dashed)
+  ctx.setLineDash([6, 4]);
+  drawLine(hCmd, '#f472b6', 1.5);
+  ctx.setLineDash([]);
+
+  // Lines
+  drawLine(hDe, '#fbbf24', 1.2, v => v * 0.1); // scale elevator for display
+  drawLine(hNz, '#34d399', 1.5);
+  drawLine(hCstar, '#38bdf8', 2.5);
+
+  // Labels
+  ctx.font = '11px Noto Sans SC, sans-serif';
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('C*fbk', xScale(hCstar.length) - 30, yScale(hCstar[hCstar.length - 1]) - 8);
+}
+
+function resetSim() {
+  $('cmdSlider').value = 2.0; $('cmdVal').textContent = '2.0';
+  $('kpSlider').value = 2.0; $('kpVal').textContent = '2.0';
+  $('kiSlider').value = 0.8; $('kiVal').textContent = '0.8';
+  $('kdSlider').value = 0.5; $('kdVal').textContent = '0.5';
+  $('rCstar').textContent = '1.00';
+  $('rNz').textContent = '1.00';
+  $('rQ').textContent = '0.00';
+  $('rDe').textContent = '0.00';
+  $('rErr').textContent = '0.00';
+  const canvas = $('simCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// Auto run on load
+window.addEventListener('load', () => setTimeout(runSim, 300));
+window.addEventListener('resize', runSim);
+</script>
+</body>
+</html>

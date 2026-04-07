@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞行器多工况配平 · 交互式教学</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=LXGW+WenKai:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07090f;--bg1:#0c1018;--bg2:#111723;--bg3:#171f2e;
+  --panel:#0f1520;--border:#1e2a3d;--border2:#2a3a55;
+  --t:#cdd6e4;--t2:#8694aa;--t3:#556278;
+  --amber:#e8a93a;--amber2:#ffc857;--amberbg:rgba(232,169,58,.08);
+  --green:#3ddc84;--greenbg:rgba(61,220,132,.07);
+  --red:#ff6b6b;--redbg:rgba(255,107,107,.07);
+  --cyan:#56ccf2;--cyanbg:rgba(86,204,242,.07);
+  --mag:#c084fc;--magbg:rgba(192,132,252,.07);
+  --blue:#60a5fa;--bluebg:rgba(96,165,250,.07);
+  --mono:'IBM Plex Mono',monospace;
+  --body:'LXGW WenKai',sans-serif;
+  --head:'Noto Serif SC',serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t);font-family:var(--body);font-size:15px;line-height:1.75}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+.topbar{position:sticky;top:0;z-index:99;background:rgba(7,9,15,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;height:46px;gap:1.5rem;font-family:var(--mono);font-size:.72rem}
+.topbar .logo{color:var(--amber);font-weight:600;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.topbar nav{display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
+.topbar nav::-webkit-scrollbar{display:none}
+.topbar nav a{color:var(--t3);text-decoration:none;padding:.7rem .9rem;white-space:nowrap;transition:color .2s;border-bottom:2px solid transparent}
+.topbar nav a:hover,.topbar nav a.on{color:var(--amber);border-bottom-color:var(--amber)}
+
+.wrap{max-width:1140px;margin:0 auto;padding:0 1.5rem}
+section{padding:4.5rem 0}
+.sep{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+
+h2{font-family:var(--head);font-size:clamp(1.5rem,3.2vw,2rem);font-weight:700;margin-bottom:.3rem}
+h2 em{font-style:normal;color:var(--amber)}
+.sub{color:var(--t2);font-size:.88rem;margin-bottom:2rem}
+h3{font-size:1.05rem;font-weight:700;margin-bottom:.8rem;color:var(--t)}
+.tag{font-family:var(--mono);font-size:.65rem;color:var(--amber);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;opacity:.8}
+p.desc{color:var(--t2);font-size:.9rem;max-width:720px;margin-bottom:1.5rem}
+
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.2rem}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.72rem}
+.panel-head .title{color:var(--amber);font-weight:600}
+.panel-head .hint{color:var(--t3)}
+.panel-body{padding:1.2rem}
+
+.fc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:.7rem;margin-bottom:1.5rem}
+.fc-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;padding:.9rem 1rem;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.fc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--amber);opacity:0;transition:opacity .25s}
+.fc-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.fc-card.active{border-color:var(--amber);background:var(--amberbg)}
+.fc-card.active::before{opacity:1}
+.fc-card .fc-icon{font-size:1.3rem;margin-bottom:.4rem}
+.fc-card .fc-name{font-size:.82rem;font-weight:700;margin-bottom:.2rem}
+.fc-card .fc-spec{font-family:var(--mono);font-size:.68rem;color:var(--t3);line-height:1.5}
+
+.readouts{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.6rem;margin:1rem 0}
+.readout{background:var(--bg1);border:1px solid var(--border);border-radius:6px;padding:.7rem .8rem;text-align:center}
+.readout .r-label{font-family:var(--mono);font-size:.62rem;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem}
+.readout .r-val{font-family:var(--mono);font-size:1.15rem;font-weight:600}
+.readout .r-unit{font-size:.7rem;color:var(--t3);margin-left:.15rem}
+.readout.ok .r-val{color:var(--green)}
+.readout.warn .r-val{color:var(--amber2)}
+.readout.bad .r-val{color:var(--red)}
+
+canvas{display:block;width:100%;border-radius:4px;cursor:crosshair}
+
+.ctrl-row{display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;margin:.8rem 0}
+.ctrl{display:flex;flex-direction:column;gap:.2rem}
+.ctrl label{font-family:var(--mono);font-size:.68rem;color:var(--t3)}
+.ctrl .cv{font-family:var(--mono);font-size:.78rem;color:var(--amber);font-weight:500}
+input[type=range]{-webkit-appearance:none;width:150px;height:3px;background:var(--border);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--amber);cursor:pointer;box-shadow:0 0 6px rgba(232,169,58,.35)}
+.btn{font-family:var(--mono);font-size:.75rem;padding:.45rem 1rem;border:1px solid var(--amber);background:var(--amberbg);color:var(--amber);border-radius:5px;cursor:pointer;transition:all .2s;font-weight:500}
+.btn:hover{background:rgba(232,169,58,.18)}
+.btn.solid{background:var(--amber);color:var(--bg);border-color:var(--amber)}
+.btn.solid:hover{background:var(--amber2)}
+
+.eq{background:var(--bg1);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:6px;padding:.9rem 1.2rem;margin:.8rem 0;font-family:var(--mono);font-size:.82rem;line-height:2;color:#b0bdd0;overflow-x:auto;white-space:pre-wrap}
+
+.insight{border-radius:8px;padding:1rem 1.2rem;margin:1rem 0;font-size:.88rem}
+.insight.amber{background:var(--amberbg);border:1px solid rgba(232,169,58,.2)}
+.insight.green{background:var(--greenbg);border:1px solid rgba(61,220,132,.18)}
+.insight.red{background:var(--redbg);border:1px solid rgba(255,107,107,.18)}
+.insight.cyan{background:var(--cyanbg);border:1px solid rgba(86,204,242,.18)}
+.insight.mag{background:var(--magbg);border:1px solid rgba(192,132,252,.18)}
+.insight b{font-weight:700}
+.insight .ib{font-weight:700;margin-bottom:.3rem;display:block}
+.insight .ib.a{color:var(--amber)}
+.insight .ib.g{color:var(--green)}
+.insight .ib.r{color:var(--red)}
+.insight .ib.c{color:var(--cyan)}
+.insight .ib.m{color:var(--mag)}
+
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin:1rem 0}
+.tbl th,.tbl td{padding:.55rem .8rem;border:1px solid var(--border);text-align:left}
+.tbl th{background:var(--bg2);color:var(--amber);font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.tbl td{color:var(--t2)}
+.tbl tr:hover td{background:var(--bg2)}
+
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:800px){.cols{grid-template-columns:1fr}.ctrl-row{gap:.6rem}input[type=range]{width:120px}}
+
+footer{text-align:center;padding:2.5rem;font-size:.72rem;color:var(--t3);border-top:1px solid var(--border)}
+
+/* ── New: Number callout blocks ── */
+.num-stack{display:flex;flex-direction:column;gap:.5rem;margin:1rem 0}
+.num-row{display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:7px;font-family:var(--mono);font-size:.85rem;transition:border-color .2s}
+.num-row:hover{border-color:var(--border2)}
+.num-row .nr-tag{flex-shrink:0;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;width:80px;font-weight:600}
+.num-row .nr-eq{flex:1;color:var(--t)}
+.num-row .nr-val{font-weight:600;font-size:1rem}
+.nr-plus{font-size:1.2rem;color:var(--t3);text-align:center;padding:.1rem 0;font-family:var(--mono)}
+.nr-equals{font-size:1.1rem;color:var(--amber);text-align:center;padding:.2rem 0;font-family:var(--mono);font-weight:700}
+
+/* ── Live sim panel ── */
+.sim-readout-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:1rem 0}
+.sim-ro{background:var(--bg1);border:1px solid var(--border);border-radius:8px;padding:.8rem;text-align:center;transition:border-color .3s}
+.sim-ro .sr-label{font-family:var(--mono);font-size:.6rem;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.15rem}
+.sim-ro .sr-val{font-family:var(--mono);font-size:1.3rem;font-weight:600}
+.sim-ro .sr-unit{font-size:.65rem;color:var(--t3)}
+.sim-ro .sr-sub{font-size:.65rem;color:var(--t3);margin-top:.15rem}
+.sim-ro.trim-col{border-left:3px solid var(--cyan)}
+.sim-ro.cmd-col{border-left:3px solid var(--mag)}
+.sim-ro.delta-col{border-left:3px solid var(--green)}
+.sim-ro.actual-col{border-left:3px solid var(--amber)}
+
+/* ── Animated bar ── */
+.bar-wrap{margin:.6rem 0}
+.bar-label-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.68rem;margin-bottom:.2rem}
+.bar-track{height:22px;background:var(--bg1);border:1px solid var(--border);border-radius:4px;position:relative;overflow:hidden}
+.bar-seg{position:absolute;top:0;height:100%;transition:width .3s,left .3s}
+.bar-marker{position:absolute;top:-3px;width:2px;height:28px;transition:left .3s}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">✈ Trim Lab</div>
+  <nav>
+    <a href="#sec-what">什么是配平</a>
+    <a href="#sec-conditions">多工况配平</a>
+    <a href="#sec-where">配平结果去哪</a>
+    <a href="#sec-arch">控制架构</a>
+    <a href="#sec-trio">三量辨析</a>
+    <a href="#sec-lin">线性化</a>
+    <a href="#sec-summary">总结</a>
+  </nav>
+</div>
+
+<!-- ════════════════ S1: 什么是配平 ════════════════ -->
+<section id="sec-what">
+<div class="wrap">
+  <div class="tag">Chapter 01 — Fundamentals</div>
+  <h2>配平（Trim）介绍</h2>
+  <p class="desc">
+    一句话：<b style="color:var(--amber)">给定一个你想要的飞行状态，反算出舵面和油门该放在什么位置，才能让飞机"不动不晃"地待在那个状态上。</b>
+  </p>
+  <div class="cols">
+    <div>
+      <h3>数学表达</h3>
+      <div class="eq">给定飞行条件（V, H, γ, φ, ...）
+求解 (x₀, u₀) 使得：
+
+    ẋ = f(x₀, u₀) = 0
+
+即所有状态导数 = 0
+→ 加速度 = 0 → 稳态飞行</div>
+      <p class="desc" style="margin-top:.8rem;">
+        其中 x₀ 包含迎角 α₀、俯仰角 θ₀ 等状态的<b style="color:var(--t)">平衡值</b>；u₀ 包含升降舵 δe₀、油门 δT₀ 等控制面的<b style="color:var(--t)">平衡偏转量</b>。
+      </p>
+    </div>
+    <div>
+      <h3>物理直觉</h3>
+      <div class="insight amber"><span class="ib a">升力 = 重力分量</span><span style="color:var(--t2)">飞机不掉也不爬（或按照设定的 γ 角爬升/下滑）</span></div>
+      <div class="insight green"><span class="ib g">推力 = 阻力分量</span><span style="color:var(--t2)">飞机不加速也不减速，维持速度</span></div>
+      <div class="insight cyan"><span class="ib c">俯仰力矩 = 0</span><span style="color:var(--t2)">机头不上仰也不下俯，稳稳地指向前方</span></div>
+      <div class="insight mag"><span class="ib m">偏航/滚转力矩 = 0</span><span style="color:var(--t2)">飞机不翻滚也不偏航（转弯时有特殊条件）</span></div>
+    </div>
+  </div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- ════════════════ S2: 多工况配平 ════════════════ -->
+<section id="sec-conditions">
+<div class="wrap">
+  <div class="tag">Chapter 02 — Multi-Condition Trim</div>
+  <h2>六种典型工况：<em>亲手配一配</em></h2>
+  <p class="desc">
+    不同的飞行任务意味着完全不同的力平衡关系。选择下方的工况卡片，然后手动调节滑块尝试配平，或点击"自动求解"看答案。
+  </p>
+  <div class="fc-grid" id="fcGrid">
+    <div class="fc-card active" data-fc="0"><div class="fc-icon">✈️</div><div class="fc-name">低速平飞</div><div class="fc-spec">V=60 m/s · H=1000m<br>γ=0° · φ=0°</div></div>
+    <div class="fc-card" data-fc="1"><div class="fc-icon">🛫</div><div class="fc-name">巡航平飞</div><div class="fc-spec">V=120 m/s · H=5000m<br>γ=0° · φ=0°</div></div>
+    <div class="fc-card" data-fc="2"><div class="fc-icon">⬆️</div><div class="fc-name">稳定爬升</div><div class="fc-spec">V=80 m/s · H=2000m<br>γ=+8° · φ=0°</div></div>
+    <div class="fc-card" data-fc="3"><div class="fc-icon">⬇️</div><div class="fc-name">稳定下滑</div><div class="fc-spec">V=70 m/s · H=3000m<br>γ=−6° · φ=0°</div></div>
+    <div class="fc-card" data-fc="4"><div class="fc-icon">🔄</div><div class="fc-name">协调转弯</div><div class="fc-spec">V=90 m/s · H=2000m<br>γ=0° · φ=30°</div></div>
+    <div class="fc-card" data-fc="5"><div class="fc-icon">⚡</div><div class="fc-name">高速平飞</div><div class="fc-spec">V=200 m/s · H=8000m<br>γ=0° · φ=0°</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="title" id="trimPanelTitle">TRIM SOLVER — 低速平飞</span>
+      <span class="hint">拖动滑块手动配平 / 点击自动求解</span>
+    </div>
+    <div class="panel-body">
+      <canvas id="trimCanvas" width="900" height="400" style="margin-bottom:.8rem"></canvas>
+      <div class="ctrl-row">
+        <div class="ctrl"><label>迎角 α (°)</label><input type="range" id="sAlpha" min="-4" max="22" value="5" step="0.2"><span class="cv" id="vAlpha">5.0°</span></div>
+        <div class="ctrl"><label>升降舵 δe (°)</label><input type="range" id="sDe" min="-30" max="15" value="-3" step="0.2"><span class="cv" id="vDe">-3.0°</span></div>
+        <div class="ctrl"><label>油门 δT (%)</label><input type="range" id="sDt" min="0" max="100" value="55" step="1"><span class="cv" id="vDt">55%</span></div>
+        <div class="ctrl"><label>副翼 δa (°)</label><input type="range" id="sDa" min="-20" max="20" value="0" step="0.2"><span class="cv" id="vDa">0.0°</span></div>
+        <button class="btn solid" id="btnSolve">⚡ 自动求解</button>
+        <button class="btn" id="btnReset">↺ 重置</button>
+      </div>
+      <div class="readouts" id="readouts"></div>
+      <div id="trimResult" style="margin-top:.6rem;font-size:.82rem;font-family:var(--mono);min-height:22px"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><span class="title">各工况配平解对比</span><span class="hint">点击"自动求解"后此表自动填充</span></div>
+    <div class="panel-body" style="overflow-x:auto">
+      <table class="tbl" id="trimTable">
+        <thead><tr><th>工况</th><th>V (m/s)</th><th>γ (°)</th><th>φ (°)</th><th>α₀ (°)</th><th>δe₀ (°)</th><th>δT₀ (%)</th><th>δa₀ (°)</th><th>状态</th></tr></thead>
+        <tbody id="trimTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="insight amber">
+    <span class="ib a">🔍 观察要点</span>
+    <span style="color:var(--t2)">
+      低速需要更大迎角来产生足够升力 → α₀ 更大 → 升降舵偏转更多来配平力矩。
+      爬升需要更大推力来克服重力分量 → δT₀ 更大。
+      协调转弯时升力要大于重力（L = W/cosφ）→ 需要同时增大 α₀ 和 δT₀。
+      <b style="color:var(--t)">每个工况得到的 (x₀, u₀) 都不同——这就是为什么需要"多点设计"。</b>
+    </span>
+  </div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- ════════════════ S3: 配平结果去哪？════════════════ -->
+<section id="sec-where">
+<div class="wrap">
+  <div class="tag">Chapter 03 — The Key Question</div>
+  <h2>配平结果到底<em>给谁用</em>？</h2>
+  <p class="desc">
+    答案是：<b style="color:var(--amber)">配平结果同时服务于 Plant（被控对象模型）和 Controller（控制器），但用途完全不同。</b>
+  </p>
+  <div class="cols">
+    <div class="panel" style="border-color:var(--cyan)">
+      <div class="panel-head" style="border-color:var(--cyan)"><span class="title" style="color:var(--cyan)">→ 用于 PLANT（被控对象建模）</span></div>
+      <div class="panel-body">
+        <h3 style="color:var(--cyan)">提供线性化基准点</h3>
+        <p style="color:var(--t2);font-size:.88rem;margin-bottom:.8rem">配平解 (x₀, u₀) 是做泰勒展开的<b style="color:var(--t)">展开中心</b>。在这个点上计算偏导数（雅可比矩阵），得到线性化的 A、B 矩阵：</p>
+        <div class="eq">A = ∂f/∂x |₍ₓ₀,ᵤ₀₎    // 系统矩阵
+B = ∂f/∂u |₍ₓ₀,ᵤ₀₎    // 输入矩阵
+
+→ 这组 (A, B) 描述的是飞行器
+  在配平点附近的动态特性</div>
+        <div class="insight cyan" style="margin-top:.8rem"><span class="ib c">一句话</span><span style="color:var(--t2)">配平点决定了你用什么"<b style="color:var(--t)">被控对象模型</b>"来设计控制器。换个配平点，A、B 矩阵就变了，设计出的控制器参数也不同。</span></div>
+      </div>
+    </div>
+    <div class="panel" style="border-color:var(--amber)">
+      <div class="panel-head" style="border-color:var(--amber)"><span class="title">→ 用于 CONTROLLER（控制器指令）</span></div>
+      <div class="panel-body">
+        <h3 style="color:var(--amber)">提供前馈 / 标称指令</h3>
+        <p style="color:var(--t2);font-size:.88rem;margin-bottom:.8rem">配平解中的 u₀ = [δe₀, δT₀, ...]ᵀ 就是让飞机维持在目标状态所需的<b style="color:var(--t)">标称舵偏和油门</b>。实际飞行时，控制器输出的总指令是：</p>
+        <div class="eq">u_total = u₀ + Δu
+         ↑        ↑
+      配平值    控制器反馈修正量
+    (前馈)     (闭环输出)</div>
+        <div class="insight amber" style="margin-top:.8rem"><span class="ib a">一句话</span><span style="color:var(--t2)">u₀ 负责"<b style="color:var(--t)">大头</b>"——把飞机稳在目标状态附近；控制器只负责"<b style="color:var(--t)">微调</b>"——修正扰动引起的偏差。</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:1.5rem">
+    <div class="panel-head"><span class="title">信号流全景图：配平结果的两条去路</span><span class="hint">交互 · 点击各模块查看说明</span></div>
+    <div class="panel-body">
+      <canvas id="archCanvas" width="900" height="440"></canvas>
+      <div id="archDetail" style="min-height:40px;margin-top:.8rem;font-size:.84rem;color:var(--t2);font-family:var(--mono)"></div>
+    </div>
+  </div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- ════════════════ S4: 完整控制架构 ════════════════ -->
+<section id="sec-arch">
+<div class="wrap">
+  <div class="tag">Chapter 04 — Control Architecture</div>
+  <h2>完整控制架构中<em>配平在哪个位置</em></h2>
+  <p class="desc">下面展示一个典型的增益调度飞控系统架构。仔细看配平结果如何同时流入前馈通道和反馈通道。</p>
+  <div class="panel">
+    <div class="panel-head"><span class="title">增益调度飞控系统 · 信号流</span></div>
+    <div class="panel-body"><canvas id="gsCanvas" width="900" height="380"></canvas></div>
+  </div>
+  <div class="insight green">
+    <span class="ib g">📐 架构解读</span>
+    <span style="color:var(--t2)">
+      <b style="color:var(--t)">① 配平表（Trim Schedule）</b>：存储各工况的 u₀(V,H) — 实时查表得到当前飞行状态对应的标称舵偏。→ 这就是<b style="color:var(--t)">前馈指令</b>。<br>
+      <b style="color:var(--t)">② 增益表（Gain Schedule）</b>：存储各工况控制器增益 K(V,H) — 由各点线性化模型 (A,B) 设计得到。→ 这就是<b style="color:var(--t)">反馈增益</b>。<br>
+      <b style="color:var(--t)">③ 实际指令</b>：u = u₀(V,H) + K(V,H) · Δx — 前馈 + 反馈之和发送给舵机。
+    </span>
+  </div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NEW SECTION: 配平值 vs 期望值 vs 控制器修正量 — 三量辨析
+     ═══════════════════════════════════════════════════════════════ -->
+<section id="sec-trio">
+<div class="wrap">
+  <div class="tag">Chapter 05 — The Three Quantities</div>
+  <h2>配平值 · 期望值 · 控制器修正量：<em>三量辨析</em></h2>
+  <p class="desc">
+    很多人分不清"配平值"和"控制器的期望值"——它们确实相关，但<b style="color:var(--amber)">绝不是同一个东西</b>。下面用一个具体数值场景，把三者的关系一层一层拆给你看。
+  </p>
+
+  <!-- ── 三个概念卡片 ── -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.8rem;margin-bottom:2rem">
+    <div class="panel" style="border-color:var(--cyan);margin:0">
+      <div class="panel-body" style="padding:1rem 1.2rem">
+        <div style="font-family:var(--mono);font-size:.62rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.4rem">① 配平值 Trim Value</div>
+        <h3 style="color:var(--cyan);font-size:.95rem;margin-bottom:.5rem">系统的"平衡基准"</h3>
+        <p style="color:var(--t2);font-size:.82rem;line-height:1.7">
+          在某个飞行状态下，所有力和力矩平衡时的<b style="color:var(--t)">状态量 x<sub>trim</sub></b>（如迎角 α₀）和<b style="color:var(--t)">控制量 u<sub>trim</sub></b>（如升降舵 δe₀、推力 δT₀）。<br>
+          <span style="color:var(--cyan)">角色：稳态工作点。飞机就安安静静待在这。</span>
+        </p>
+      </div>
+    </div>
+    <div class="panel" style="border-color:var(--mag);margin:0">
+      <div class="panel-body" style="padding:1rem 1.2rem">
+        <div style="font-family:var(--mono);font-size:.62rem;color:var(--mag);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.4rem">② 期望值 Command / Desired</div>
+        <h3 style="color:var(--mag);font-size:.95rem;margin-bottom:.5rem">控制器的"目标"</h3>
+        <p style="color:var(--t2);font-size:.82rem;line-height:1.7">
+          飞行员或制导律给出的指令——"我想要俯仰角 5°"或"爬升到 5200m"。<br>
+          <b style="color:var(--t)">它不一定等于配平值！</b>它可以是一个新的目标，与当前配平点有偏差。<br>
+          <span style="color:var(--mag)">角色：控制目标。飞机要往这去。</span>
+        </p>
+      </div>
+    </div>
+    <div class="panel" style="border-color:var(--green);margin:0">
+      <div class="panel-body" style="padding:1rem 1.2rem">
+        <div style="font-family:var(--mono);font-size:.62rem;color:var(--green);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.4rem">③ 控制器修正量 Δu</div>
+        <h3 style="color:var(--green);font-size:.95rem;margin-bottom:.5rem">反馈输出的"微调"</h3>
+        <p style="color:var(--t2);font-size:.82rem;line-height:1.7">
+          控制器根据"当前状态与期望之间的误差"计算出的额外修正量。<br>
+          <b style="color:var(--t)">控制器设计的就是这个 Δu。</b><br>
+          <span style="color:var(--green)">角色：修正偏差。让飞机从"在这"到达"去那"。</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 核心公式 ── -->
+  <div class="panel">
+    <div class="panel-head"><span class="title">核心公式：三量关系</span></div>
+    <div class="panel-body">
+      <div class="eq" style="font-size:.9rem;line-height:2.2;border-left-color:var(--amber)">
+<b style="color:var(--amber)">状态分解：</b>   x  =  x_trim  +  Δx
+                    ↑        ↑          ↑
+                 当前真实   配平基准    偏离量（传感器测量）
+
+<b style="color:var(--amber)">输入分解：</b>   u  =  u_trim  +  Δu
+                    ↑        ↑          ↑
+               实际给舵机   配平前馈    控制器反馈修正
+
+<b style="color:var(--amber)">控制器做的事：</b>  Δu = −K · (x − x_cmd)  =  −K · (Δx − Δx_cmd)
+                                     ↑                        ↑
+                          用绝对值算误差            等价地用增量算误差</div>
+
+      <div class="insight amber" style="margin-top:1rem">
+        <span class="ib a">🔑 关键：期望值也可以写成增量形式</span>
+        <span style="color:var(--t2)">
+          如果期望俯仰角是 5.2°，而配平俯仰角是 3.2°，那么：<br>
+          <b style="color:var(--t)">绝对期望：</b>θ<sub>cmd</sub> = 5.2°<br>
+          <b style="color:var(--t)">增量期望：</b>Δθ<sub>cmd</sub> = 5.2° − 3.2° = 2°<br>
+          控制器比较的是 <b style="color:var(--amber)">误差 e = Δx<sub>cmd</sub> − Δx</b>，即"你想偏离配平点多少"和"你实际偏离了多少"之间的差。
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 交互数值场景 ── -->
+  <div class="panel" style="margin-top:1.5rem">
+    <div class="panel-head">
+      <span class="title">▶ 交互场景：Ma=0.7 / 5000m 平飞 → 抬头机动</span>
+      <span class="hint">拖动滑块，实时观察三量变化</span>
+    </div>
+    <div class="panel-body">
+      <p style="color:var(--t2);font-size:.85rem;margin-bottom:1rem">
+        飞机当前在 5000m 高度、Ma=0.7 平飞，已配平。现在你给控制器一个指令：改变俯仰角。<br>
+        下方模拟了控制器工作的过程——观察<span style="color:var(--cyan)">配平值</span>始终不变，<span style="color:var(--mag)">期望值</span>由你设定，<span style="color:var(--green)">Δu</span> 由控制器自动计算。
+      </p>
+
+      <!-- Trim baseline (fixed) -->
+      <h3 style="font-size:.88rem;color:var(--t3);margin-bottom:.5rem">📌 配平基准（固定不变）</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.5rem;margin-bottom:1.2rem">
+        <div class="sim-ro trim-col"><div class="sr-label">α_trim</div><div class="sr-val" style="color:var(--cyan)">3.2<span class="sr-unit">°</span></div><div class="sr-sub">配平迎角</div></div>
+        <div class="sim-ro trim-col"><div class="sr-label">θ_trim</div><div class="sr-val" style="color:var(--cyan)">3.2<span class="sr-unit">°</span></div><div class="sr-sub">配平俯仰角</div></div>
+        <div class="sim-ro trim-col"><div class="sr-label">δe_trim</div><div class="sr-val" style="color:var(--cyan)">-1.5<span class="sr-unit">°</span></div><div class="sr-sub">配平升降舵</div></div>
+        <div class="sim-ro trim-col"><div class="sr-label">δT_trim</div><div class="sr-val" style="color:var(--cyan)">62<span class="sr-unit">%</span></div><div class="sr-sub">配平推力</div></div>
+        <div class="sim-ro trim-col"><div class="sr-label">q_trim</div><div class="sr-val" style="color:var(--cyan)">0<span class="sr-unit">°/s</span></div><div class="sr-sub">配平角速率</div></div>
+      </div>
+
+      <!-- Command slider -->
+      <h3 style="font-size:.88rem;color:var(--mag);margin-bottom:.5rem">🎯 期望值（你来设定）</h3>
+      <div class="ctrl-row" style="margin-bottom:.2rem">
+        <div class="ctrl">
+          <label>期望俯仰角 θ_cmd (°)</label>
+          <input type="range" id="sThetaCmd" min="-2" max="15" value="5.2" step="0.1" style="width:260px">
+          <span class="cv" id="vThetaCmd" style="color:var(--mag)">5.2°</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.2rem">
+        <div class="sim-ro cmd-col"><div class="sr-label">θ_cmd (绝对)</div><div class="sr-val" style="color:var(--mag)" id="cmdAbs">5.2<span class="sr-unit">°</span></div><div class="sr-sub">控制器目标</div></div>
+        <div class="sim-ro cmd-col"><div class="sr-label">Δθ_cmd (增量)</div><div class="sr-val" style="color:var(--mag)" id="cmdDelta">2.0<span class="sr-unit">°</span></div><div class="sr-sub">= θ_cmd − θ_trim</div></div>
+      </div>
+
+      <!-- Time / response slider -->
+      <h3 style="font-size:.88rem;color:var(--t3);margin-bottom:.5rem">⏱ 控制过程模拟</h3>
+      <div class="ctrl-row" style="margin-bottom:.3rem">
+        <div class="ctrl">
+          <label>时间进度（模拟控制器响应）</label>
+          <input type="range" id="sTime" min="0" max="100" value="0" step="1" style="width:300px">
+          <span class="cv" id="vTime" style="color:var(--t)">t = 0.0s</span>
+        </div>
+        <button class="btn" id="btnAnimate">▶ 播放动画</button>
+      </div>
+
+      <!-- Live computation readouts -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:.5rem;margin:1rem 0" id="liveReadouts"></div>
+
+      <!-- Stacked bar: actual = trim + delta -->
+      <h3 style="font-size:.88rem;color:var(--t3);margin-top:1.2rem;margin-bottom:.4rem">升降舵指令分解</h3>
+      <div class="bar-wrap">
+        <div class="bar-label-row">
+          <span style="color:var(--cyan)">u_trim = −1.5°</span>
+          <span style="color:var(--green)" id="barDeltaLabel">Δu = 0°</span>
+          <span style="color:var(--amber)" id="barTotalLabel">u_total = −1.5°</span>
+        </div>
+        <div class="bar-track" id="barTrack" style="height:28px">
+          <div class="bar-seg" id="barTrim" style="background:rgba(86,204,242,.25);border-right:2px solid var(--cyan)"></div>
+          <div class="bar-seg" id="barDelta" style="background:rgba(61,220,132,.25);border-right:2px solid var(--green)"></div>
+          <div class="bar-marker" id="barZero" style="background:var(--t3)"></div>
+        </div>
+        <div class="bar-label-row" style="margin-top:.15rem">
+          <span>−30°</span><span>0°</span><span>+15°</span>
+        </div>
+      </div>
+
+      <!-- Canvas: time response -->
+      <canvas id="trioCanvas" width="900" height="280" style="margin-top:1rem"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Equation-to-example mapping table ── -->
+  <div class="panel" style="margin-top:1.5rem">
+    <div class="panel-head"><span class="title">公式 ↔ 数值对照表</span><span class="hint">每一行公式对应例子中的哪个数</span></div>
+    <div class="panel-body" style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr><th>公式中的量</th><th>物理含义</th><th>本例数值</th><th>属于谁？</th></tr>
+        </thead>
+        <tbody>
+          <tr><td style="color:var(--cyan);font-family:var(--mono)">x<sub>trim</sub></td><td>配平状态——迎角、俯仰角等</td><td style="color:var(--cyan)">α=3.2°, θ=3.2°, q=0°/s</td><td>配平求解器输出</td></tr>
+          <tr><td style="color:var(--cyan);font-family:var(--mono)">u<sub>trim</sub></td><td>配平输入——升降舵、推力等</td><td style="color:var(--cyan)">δe=−1.5°, δT=62%</td><td>配平求解器输出</td></tr>
+          <tr><td style="color:var(--mag);font-family:var(--mono)">x<sub>cmd</sub></td><td>期望状态（绝对值）</td><td style="color:var(--mag)">θ<sub>cmd</sub>=5.2°</td><td>制导律 / 飞行员输入</td></tr>
+          <tr><td style="color:var(--mag);font-family:var(--mono)">Δx<sub>cmd</sub></td><td>期望状态（相对配平的增量）</td><td style="color:var(--mag)">Δθ<sub>cmd</sub>=5.2−3.2=2.0°</td><td>= x<sub>cmd</sub> − x<sub>trim</sub></td></tr>
+          <tr><td style="color:var(--t);font-family:var(--mono)">x</td><td>飞机当前真实状态</td><td style="color:var(--t)" id="tblX">θ=3.2° (初始)</td><td>传感器测量</td></tr>
+          <tr><td style="color:var(--t);font-family:var(--mono)">Δx</td><td>当前状态偏离配平的量</td><td style="color:var(--t)" id="tblDx">Δθ=0° (初始)</td><td>= x − x<sub>trim</sub></td></tr>
+          <tr><td style="color:var(--amber);font-family:var(--mono)">e = Δx<sub>cmd</sub>−Δx</td><td>控制器误差</td><td style="color:var(--amber)" id="tblE">e=2.0° (初始)</td><td>控制器内部</td></tr>
+          <tr><td style="color:var(--green);font-family:var(--mono)">Δu</td><td>控制器修正量</td><td style="color:var(--green)" id="tblDu">Δδe=0° (初始)</td><td>控制器输出</td></tr>
+          <tr><td style="color:var(--amber);font-family:var(--mono)">u = u<sub>trim</sub>+Δu</td><td>实际发给舵机的指令</td><td style="color:var(--amber)" id="tblU">δe=−1.5° (初始)</td><td>前馈 + 反馈</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--t3);font-size:.78rem;margin-top:.5rem;font-family:var(--mono)">
+        ↑ 拖动上方时间滑块或播放动画，此表中的数值会实时更新。
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Common Misconceptions ── -->
+  <div class="insight red" style="margin-top:1.5rem">
+    <span class="ib r">⚠ 常见混淆纠正</span>
+    <span style="color:var(--t2)">
+      <b style="color:var(--t)">误区1："配平值就是控制器的期望值"</b><br>
+      不是。配平值是力/力矩平衡时的稳态量，期望值是你想让飞机去到的目标。只有当目标恰好就是当前配平状态时两者才相等（即"保持平飞不动"时 Δx<sub>cmd</sub>=0）。<br><br>
+      <b style="color:var(--t)">误区2："控制器直接输出 u（舵面角度）"</b><br>
+      不是。控制器设计和输出的是 <b style="color:var(--green)">Δu</b>（修正量），最终实际指令 u = u<sub>trim</sub> + Δu。如果你只给 Δu 而忘了加 u<sub>trim</sub>，舵面从零开始——飞机根本飞不了。<br><br>
+      <b style="color:var(--t)">误区3："期望值只能用绝对量表示"</b><br>
+      不是。期望值可以写成绝对值（θ<sub>cmd</sub>=5.2°）也可以写成相对配平点的增量（Δθ<sub>cmd</sub>=2°），两者完全等价。很多飞控实现用增量形式，因为控制器本来就在增量空间里工作。
+    </span>
+  </div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- ════════════════ S6: 线性化 ════════════════ -->
+<section id="sec-lin">
+<div class="wrap">
+  <div class="tag">Chapter 06 — Linearization</div>
+  <h2>线性化：配平点上的<em>泰勒展开</em></h2>
+  <p class="desc">有了配平点 (x₀, u₀)，线性化就是在这个点做一阶泰勒展开。</p>
+  <div class="panel">
+    <div class="panel-head"><span class="title">交互：非线性函数 vs 切线近似</span><span class="hint">拖动配平点位置</span></div>
+    <div class="panel-body">
+      <canvas id="linCanvas" width="900" height="360"></canvas>
+      <div class="ctrl-row">
+        <div class="ctrl"><label>配平点 x₀</label><input type="range" id="sX0" min="-2" max="14" value="5" step="0.1"><span class="cv" id="vX0">5.0</span></div>
+        <div class="ctrl"><label>有效范围 (±)</label><input type="range" id="sRange" min="0.5" max="6" value="2.5" step="0.25"><span class="cv" id="vRange">±2.5</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="insight cyan"><span class="ib c">线性化的意义</span><span style="color:var(--t2)">将 ẋ = f(x,u) 变成 Δẋ = AΔx + BΔu。这个线性模型可以直接用于特征值分析、传递函数推导、LQR/H∞ 设计等所有线性控制方法。</span></div>
+    <div class="insight amber"><span class="ib a">有效性边界</span><span style="color:var(--t2)">小扰动假设意味着 |Δx| 和 |Δu| 要足够小。超出范围后线性模型失真 → 控制器性能下降甚至不稳定。所以需要多点线性化 + 增益调度。</span></div>
+  </div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- ════════════════ S7: 总结 ════════════════ -->
+<section id="sec-summary">
+<div class="wrap">
+  <div class="tag">Chapter 07 — Summary</div>
+  <h2>来龙去脉<em>一图总结</em></h2>
+  <div class="panel">
+    <div class="panel-head"><span class="title">配平 → 线性化 → 控制律：完整链路</span></div>
+    <div class="panel-body"><canvas id="summaryCanvas" width="900" height="300"></canvas></div>
+  </div>
+  <div class="insight green" style="font-size:.92rem;line-height:1.9">
+    <span class="ib g" style="font-size:1rem">📌 关键结论</span>
+    <span style="color:var(--t2)">
+      <b style="color:var(--green)">❶</b> <b style="color:var(--t)">配平是"起点"</b>：它找到力/力矩平衡的飞行状态，是一切后续工作的基准。<br>
+      <b style="color:var(--green)">❷</b> <b style="color:var(--t)">配平结果同时喂给 Plant 和 Controller</b>：(x₀,u₀) 给线性化提供展开点（→ Plant 建模），u₀ 作为前馈指令（→ Controller 标称输出）。<br>
+      <b style="color:var(--green)">❸</b> <b style="color:var(--t)">线性化是"桥梁"</b>：把非线性飞行力学问题翻译成线性控制理论的语言 (A,B,C,D)。<br>
+      <b style="color:var(--green)">❹</b> <b style="color:var(--t)">控制律只管"Δu"</b>：控制器设计的是扰动修正量。实际指令 = u₀(前馈) + Δu(反馈)。<br>
+      <b style="color:var(--green)">❺</b> <b style="color:var(--t)">配平值 ≠ 期望值</b>：配平值是平衡基准，期望值是控制目标，控制器处理的是二者之间的误差。<br>
+      <b style="color:var(--green)">❻</b> <b style="color:var(--t)">多工况 → 增益调度</b>：在飞行包线内多个点重复上述流程，用查表/插值覆盖全工况。
+    </span>
+  </div>
+</div>
+</section>
+
+<footer>飞行器多工况配平与控制律设计 · 交互式教学 · 2026</footer>
+
+<!-- ══════════════════════════════════════════════
+     SCRIPTS
+     ══════════════════════════════════════════════ -->
+<script>
+const DPR=window.devicePixelRatio||1;
+function initC(c){const r=c.getBoundingClientRect();c.width=r.width*DPR;c.height=r.height*DPR;const x=c.getContext('2d');x.scale(DPR,DPR);c.style.width=r.width+'px';c.style.height=r.height+'px';return x}
+
+// ── Nav highlight ──
+const secs=document.querySelectorAll('section');
+const navs=document.querySelectorAll('.topbar nav a');
+window.addEventListener('scroll',()=>{
+  let cur='';secs.forEach(s=>{if(scrollY>=s.offsetTop-100)cur=s.id});
+  navs.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur));
+});
+
+// ══════════════════════════════════════
+// FLIGHT CONDITIONS + TRIM SOLVER
+// ══════════════════════════════════════
+const FC=[
+  {name:'低速平飞',V:60,H:1000,gamma:0,phi:0},
+  {name:'巡航平飞',V:120,H:5000,gamma:0,phi:0},
+  {name:'稳定爬升',V:80,H:2000,gamma:8,phi:0},
+  {name:'稳定下滑',V:70,H:3000,gamma:-6,phi:0},
+  {name:'协调转弯',V:90,H:2000,gamma:0,phi:30},
+  {name:'高速平飞',V:200,H:8000,gamma:0,phi:0},
+];
+
+function aeroModel(alpha_deg,de_deg,dt_pct,da_deg,fc){
+  const a=alpha_deg*Math.PI/180,g=fc.gamma*Math.PI/180,ph=fc.phi*Math.PI/180,V=fc.V;
+  const rho=1.225*Math.exp(-fc.H/8500),q=0.5*rho*V*V,S=20,c_bar=1.8,m=4500,W=m*9.81;
+  const CL=0.25+0.082*alpha_deg+0.012*de_deg;
+  const CD=0.022+0.048*(alpha_deg*alpha_deg)/400+0.0008*Math.abs(de_deg);
+  const Cm=0.015-0.009*alpha_deg-0.022*de_deg;
+  const Cl_roll=0.0005*da_deg;
+  const L=CL*q*S,D=CD*q*S,T=dt_pct/100*(m*12);
+  const Fz=L*Math.cos(a)+T*Math.sin(a)-W*Math.cos(g)/Math.max(Math.cos(ph),0.5);
+  const Fx=T*Math.cos(a)-D-W*Math.sin(g);
+  const My=Cm*q*S*c_bar,Mx=Cl_roll*q*S*10;
+  return{L,D,T,W,Fz,Fx,My,Mx,CL,CD,Cm,q,rho};
+}
+
+function solveTrim(fc){
+  let a=5,de=-3,dt=55,da=0;
+  for(let i=0;i<500;i++){
+    const r=aeroModel(a,de,dt,da,fc);
+    a-=r.Fz*0.00012;dt-=r.Fx*0.0003;de-=r.My*0.08;da-=r.Mx*0.2;
+    a=Math.max(-4,Math.min(22,a));de=Math.max(-30,Math.min(15,de));
+    dt=Math.max(0,Math.min(100,dt));da=Math.max(-20,Math.min(20,da));
+  }
+  return{alpha:a,de,dt,da};
+}
+
+let curFC=0;const trimSolutions=new Array(6).fill(null);
+const sA=document.getElementById('sAlpha'),sD=document.getElementById('sDe'),sT=document.getElementById('sDt'),sAa=document.getElementById('sDa');
+const vA=document.getElementById('vAlpha'),vD=document.getElementById('vDe'),vT=document.getElementById('vDt'),vAa=document.getElementById('vDa');
+
+function selectFC(idx){
+  curFC=idx;document.querySelectorAll('.fc-card').forEach((c,i)=>c.classList.toggle('active',i===idx));
+  document.getElementById('trimPanelTitle').textContent='TRIM SOLVER — '+FC[idx].name;
+  sA.value=5;sD.value=-3;sT.value=55;sAa.value=0;updateTrim();
+}
+document.querySelectorAll('.fc-card').forEach(c=>c.addEventListener('click',()=>selectFC(parseInt(c.dataset.fc))));
+
+function updateTrim(){
+  const fc=FC[curFC],alpha=parseFloat(sA.value),de=parseFloat(sD.value),dt=parseFloat(sT.value),da=parseFloat(sAa.value);
+  vA.textContent=alpha.toFixed(1)+'°';vD.textContent=de.toFixed(1)+'°';vT.textContent=dt+'%';vAa.textContent=da.toFixed(1)+'°';
+  const r=aeroModel(alpha,de,dt,da,fc);drawTrimCanvas(fc,alpha,de,dt,da,r);drawReadouts(r);
+}
+[sA,sD,sT,sAa].forEach(s=>s.addEventListener('input',updateTrim));
+
+document.getElementById('btnSolve').addEventListener('click',()=>{
+  const fc=FC[curFC],sol=solveTrim(fc);trimSolutions[curFC]=sol;
+  sA.value=sol.alpha.toFixed(1);sD.value=sol.de.toFixed(1);sT.value=Math.round(sol.dt);sAa.value=sol.da.toFixed(1);
+  updateTrim();updateTable();
+  document.getElementById('trimResult').innerHTML=`<span style="color:var(--green)">✅ 配平解: α₀=${sol.alpha.toFixed(2)}° δe₀=${sol.de.toFixed(2)}° δT₀=${sol.dt.toFixed(1)}% δa₀=${sol.da.toFixed(2)}°</span>`;
+});
+document.getElementById('btnReset').addEventListener('click',()=>{sA.value=5;sD.value=-3;sT.value=55;sAa.value=0;document.getElementById('trimResult').innerHTML='';updateTrim()});
+
+function drawReadouts(r){
+  const ro=document.getElementById('readouts');
+  const items=[
+    {label:'ΔF_z (升力方向)',val:r.Fz,unit:'N',thr:300},{label:'ΔF_x (推力方向)',val:r.Fx,unit:'N',thr:200},
+    {label:'M_pitch (俯仰)',val:r.My,unit:'N·m',thr:80},{label:'M_roll (滚转)',val:r.Mx,unit:'N·m',thr:30},
+    {label:'升力 L',val:r.L,unit:'N',thr:99999},{label:'阻力 D',val:r.D,unit:'N',thr:99999},
+    {label:'推力 T',val:r.T,unit:'N',thr:99999},{label:'动压 q',val:r.q,unit:'Pa',thr:99999},
+  ];
+  ro.innerHTML=items.map(it=>{
+    const cls=it.thr<99999?(Math.abs(it.val)<it.thr*0.15?'ok':Math.abs(it.val)<it.thr?'warn':'bad'):'';
+    return `<div class="readout ${cls}"><div class="r-label">${it.label}</div><div class="r-val">${it.val.toFixed(1)}<span class="r-unit">${it.unit}</span></div></div>`;
+  }).join('');
+}
+
+function drawTrimCanvas(fc,alpha,de,dt,da,r){
+  const c=document.getElementById('trimCanvas'),W=900,H=400;
+  c.style.width=W+'px';c.style.height=H+'px';const ctx=initC(c),w=W,h=H;
+  ctx.fillStyle='#080b12';ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='rgba(30,42,61,.4)';ctx.lineWidth=1;
+  for(let i=0;i<w;i+=50){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,h);ctx.stroke()}
+  for(let i=0;i<h;i+=50){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(w,i);ctx.stroke()}
+  const cx=w*0.38,cy=h*0.48,aRad=alpha*Math.PI/180;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(-aRad*0.5);
+  ctx.beginPath();ctx.moveTo(-90,0);ctx.bezierCurveTo(-70,-10,60,-8,95,-2);ctx.bezierCurveTo(60,8,-70,10,-90,0);
+  ctx.fillStyle='#1a2640';ctx.strokeStyle='#3a5580';ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-15,-6);ctx.lineTo(-35,-55);ctx.lineTo(-22,-55);ctx.lineTo(15,-6);ctx.moveTo(-15,6);ctx.lineTo(-35,55);ctx.lineTo(-22,55);ctx.lineTo(15,6);ctx.fillStyle='#243654';ctx.fill();
+  ctx.beginPath();ctx.moveTo(-75,-8);ctx.lineTo(-95,-35);ctx.lineTo(-82,-35);ctx.lineTo(-65,-8);ctx.fillStyle='#243654';ctx.fill();
+  ctx.restore();
+  function arrow(x,y,dx,dy,col,lbl,val){
+    const len=Math.sqrt(dx*dx+dy*dy);if(len<3)return;const sc=Math.min(len,130),nx=dx/len*sc,ny=dy/len*sc;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+nx,y+ny);ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.stroke();
+    const ang=Math.atan2(ny,nx);ctx.beginPath();ctx.moveTo(x+nx,y+ny);ctx.lineTo(x+nx-9*Math.cos(ang-.35),y+ny-9*Math.sin(ang-.35));ctx.lineTo(x+nx-9*Math.cos(ang+.35),y+ny-9*Math.sin(ang+.35));ctx.closePath();ctx.fillStyle=col;ctx.fill();
+    ctx.font='600 11px "IBM Plex Mono"';ctx.fillStyle=col;ctx.fillText(lbl+' '+Math.abs(val).toFixed(0),x+nx+(dx>0?6:-65),y+ny+(dy>0?16:-6));
+  }
+  const fs=0.008;
+  arrow(cx,cy,0,-r.L*fs,'#56ccf2','L =',r.L);arrow(cx,cy,0,r.W*fs*Math.cos(fc.gamma*Math.PI/180),'#ff6b6b','W =',r.W);
+  arrow(cx,cy,-r.D*fs*4,0,'#ffc857','D =',r.D);arrow(cx,cy,r.T*fs*4,0,'#3ddc84','T =',r.T);
+  ctx.font='500 12px "IBM Plex Mono"';
+  [`工况: ${FC[curFC].name}`,`V=${fc.V} m/s  H=${fc.H}m`,`γ=${fc.gamma}°  φ=${fc.phi}°`,`ρ=${r.rho.toFixed(3)} kg/m³`].forEach((s,i)=>{ctx.fillStyle='#556278';ctx.fillText(s,w-200,30+i*20)});
+  const gaugeX=w-200,gaugeW=160;
+  [{label:'升力−重力分量',val:r.Fz,max:5000},{label:'推力−阻力',val:r.Fx,max:3000},{label:'俯仰力矩',val:r.My,max:500}].forEach((g,i)=>{
+    const gy=h*0.55+i*55;ctx.font='500 10px "IBM Plex Mono"';ctx.fillStyle='#556278';ctx.fillText(g.label,gaugeX,gy-6);
+    ctx.fillStyle='#131b28';ctx.fillRect(gaugeX,gy,gaugeW,10);ctx.fillStyle='#2a3a55';ctx.fillRect(gaugeX+gaugeW/2-0.5,gy-2,1,14);
+    const norm=Math.max(-1,Math.min(1,g.val/g.max)),fillW=norm*gaugeW/2,balanced=Math.abs(norm)<0.06;
+    ctx.fillStyle=balanced?'#3ddc84':Math.abs(norm)<0.25?'#ffc857':'#ff6b6b';ctx.fillRect(gaugeX+gaugeW/2,gy,fillW,10);
+    ctx.fillStyle='#e2e8f0';ctx.fillRect(gaugeX+gaugeW/2-1,gy-2,2,14);
+    ctx.font='600 10px "IBM Plex Mono"';ctx.fillStyle=balanced?'#3ddc84':'#ff6b6b';ctx.fillText((g.val>0?'+':'')+g.val.toFixed(0),gaugeX+gaugeW+6,gy+9);
+  });
+}
+
+function updateTable(){
+  document.getElementById('trimTableBody').innerHTML=FC.map((fc,i)=>{
+    const s=trimSolutions[i];
+    if(!s)return `<tr><td style="color:var(--t)">${fc.name}</td><td>${fc.V}</td><td>${fc.gamma}</td><td>${fc.phi}</td><td colspan="4" style="color:var(--t3)">未求解</td><td>—</td></tr>`;
+    const r=aeroModel(s.alpha,s.de,s.dt,s.da,fc),ok=Math.abs(r.Fz)<200&&Math.abs(r.Fx)<150&&Math.abs(r.My)<50;
+    return `<tr><td style="color:var(--t)">${fc.name}</td><td>${fc.V}</td><td>${fc.gamma}</td><td>${fc.phi}</td><td style="color:var(--amber)">${s.alpha.toFixed(2)}</td><td style="color:var(--amber)">${s.de.toFixed(2)}</td><td style="color:var(--amber)">${s.dt.toFixed(1)}</td><td style="color:var(--amber)">${s.da.toFixed(2)}</td><td style="color:${ok?'var(--green)':'var(--red)'};">${ok?'✅':'⚠'}</td></tr>`;
+  }).join('');
+}
+updateTable();updateTrim();
+
+// ══════════════════════════════════════
+// ARCHITECTURE DIAGRAM
+// ══════════════════════════════════════
+(function(){
+  const c=document.getElementById('archCanvas'),W=900,H=440;
+  c.style.width=W+'px';c.style.height=H+'px';
+  const det=document.getElementById('archDetail');
+  const blocks=[
+    {id:'trim',x:80,y:40,w:160,h:50,text:'配平求解器',sub:'f(x₀,u₀)=0',col:'#e8a93a'},
+    {id:'x0',x:80,y:145,w:140,h:40,text:'x₀ (状态平衡值)',sub:'α₀, θ₀, V₀...',col:'#56ccf2'},
+    {id:'u0',x:80,y:220,w:140,h:40,text:'u₀ (输入平衡值)',sub:'δe₀, δT₀...',col:'#e8a93a'},
+    {id:'lin',x:320,y:145,w:160,h:50,text:'线性化 (雅可比)',sub:'∂f/∂x, ∂f/∂u',col:'#56ccf2'},
+    {id:'AB',x:550,y:145,w:140,h:50,text:'(A, B) 矩阵',sub:'线性状态空间',col:'#c084fc'},
+    {id:'ctrl',x:550,y:260,w:150,h:50,text:'控制律设计',sub:'LQR / H∞ / PID',col:'#c084fc'},
+    {id:'K',x:550,y:360,w:120,h:45,text:'增益 K',sub:'反馈矩阵',col:'#3ddc84'},
+    {id:'ff',x:260,y:360,w:130,h:45,text:'前馈 u₀',sub:'标称指令',col:'#e8a93a'},
+    {id:'sum',x:430,y:400,w:36,h:36,text:'Σ',sub:'',col:'#fff'},
+    {id:'plant',x:580,y:400,w:160,h:45,text:'实际飞行器',sub:'u = u₀ + Δu',col:'#ff6b6b'},
+  ];
+  const arrs=[['trim','x0'],['trim','u0'],['x0','lin'],['u0','lin'],['lin','AB'],['AB','ctrl'],['ctrl','K'],['u0','ff'],['ff','sum'],['K','sum'],['sum','plant']];
+  const details={
+    trim:'配平求解器：给定飞行条件 (V,H,γ,φ)，通过数值迭代找到 f(x₀,u₀)=0 的平衡状态和输入。',
+    x0:'状态平衡值 x₀：包含迎角 α₀、俯仰角 θ₀ 等。① 是线性化的展开点，② 是控制器误差计算的参考（x − x₀）。',
+    u0:'输入平衡值 u₀：升降舵 δe₀、油门 δT₀ 等。有两条去路 → ① 参与线性化 ② 作为前馈指令。',
+    lin:'在 (x₀,u₀) 处计算雅可比矩阵 A=∂f/∂x、B=∂f/∂u。',AB:'A 的特征值 = 飞行模态，B 描述控制面效能。',
+    ctrl:'利用 (A,B) 通过 LQR/H∞ 等求解反馈增益 K。',K:'Δu = −K·(x−x_cmd)。只负责修正偏离。',
+    ff:'前馈 u₀——维持飞行状态的标称指令。',sum:'u_total = u₀ + Δu。',plant:'接收最终指令，按 ẋ=f(x,u) 运动。',
+  };
+  function gb(id){return blocks.find(b=>b.id===id)}
+  function draw(){
+    const ctx=initC(c);ctx.fillStyle='#080b12';ctx.fillRect(0,0,W,H);
+    function hd(x,y,a){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7*Math.cos(a-.35),y-7*Math.sin(a-.35));ctx.lineTo(x-7*Math.cos(a+.35),y-7*Math.sin(a+.35));ctx.closePath();ctx.fillStyle='rgba(136,146,168,.35)';ctx.fill()}
+    arrs.forEach(([fid,tid])=>{
+      const f=gb(fid),t=gb(tid);let fx=f.x+f.w/2,fy=f.y+f.h,tx=t.x+t.w/2,ty=t.y;
+      if(fid==='x0'&&tid==='lin'){tx=t.x;ty=t.y+t.h*.3}
+      if(fid==='u0'&&tid==='lin'){tx=t.x;ty=t.y+t.h*.7}
+      if(fid==='u0'&&tid==='ff'){tx=t.x+t.w/2;ty=t.y}
+      if(fid==='AB'&&tid==='ctrl'){tx=t.x+t.w/2;ty=t.y}
+      if(fid==='lin'&&tid==='AB'){const fy2=f.y+f.h/2;tx=t.x;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w,fy2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,Math.atan2(ty-fy2,tx-f.x-f.w));return}
+      if(fid==='ctrl'&&tid==='K'){tx=t.x+t.w/2;ty=t.y}
+      if(fid==='K'&&tid==='sum'){tx=t.x+t.w;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w/2,f.y+f.h);ctx.lineTo(f.x+f.w/2,t.y+t.h/2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx-1,ty,Math.PI);return}
+      if(fid==='ff'&&tid==='sum'){tx=t.x;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w/2,f.y+f.h);ctx.lineTo(f.x+f.w/2,t.y+t.h/2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,0);return}
+      if(fid==='sum'&&tid==='plant'){tx=t.x;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w,f.y+f.h/2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,0);return}
+      ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,Math.atan2(ty-fy,tx-fx));
+    });
+    ctx.font='600 10px "IBM Plex Mono"';ctx.fillStyle='rgba(86,204,242,.5)';ctx.fillText('→ PLANT 建模路径',320,130);
+    ctx.fillStyle='rgba(232,169,58,.5)';ctx.fillText('→ CONTROLLER 前馈路径',160,310);
+    ctx.fillStyle='rgba(61,220,132,.5)';ctx.fillText('→ CONTROLLER 反馈路径',560,340);
+    blocks.forEach(b=>{
+      ctx.fillStyle=b.col+'15';ctx.strokeStyle=b.col+'55';ctx.lineWidth=1.5;ctx.beginPath();
+      if(b.id==='sum')ctx.arc(b.x+b.w/2,b.y+b.h/2,b.w/2,0,Math.PI*2);else ctx.roundRect(b.x,b.y,b.w,b.h,6);
+      ctx.fill();ctx.stroke();ctx.font='600 12px "LXGW WenKai"';ctx.fillStyle=b.col;ctx.textAlign='center';ctx.textBaseline='middle';
+      if(b.sub){ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2-(b.id==='sum'?0:7));ctx.font='400 10px "IBM Plex Mono"';ctx.fillStyle=b.col+'99';ctx.fillText(b.sub,b.x+b.w/2,b.y+b.h/2+10)}
+      else ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    });
+  }
+  c.addEventListener('click',e=>{const rect=c.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;for(const b of blocks)if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){det.innerHTML=`<span style="color:${b.col};font-weight:600">${b.text}</span>: ${details[b.id]||''}`;return}});
+  draw();
+})();
+
+// ══════════════════════════════════════
+// GAIN SCHEDULING ARCHITECTURE
+// ══════════════════════════════════════
+(function(){
+  const c=document.getElementById('gsCanvas'),W=900,H=380;c.style.width=W+'px';c.style.height=H+'px';
+  function draw(){
+    const ctx=initC(c);ctx.fillStyle='#080b12';ctx.fillRect(0,0,W,H);
+    const blocks=[
+      {x:20,y:80,w:110,h:55,text:'飞行条件',sub:'V, H, Ma',col:'#8694aa'},
+      {x:180,y:30,w:130,h:45,text:'配平表',sub:'u₀(V,H)',col:'#e8a93a'},
+      {x:180,y:115,w:130,h:45,text:'增益表',sub:'K(V,H)',col:'#3ddc84'},
+      {x:400,y:30,w:36,h:36,text:'+',sub:'',col:'#fff'},
+      {x:370,y:155,w:100,h:40,text:'×',sub:'K·Δx',col:'#3ddc84'},
+      {x:520,y:70,w:36,h:36,text:'Σ',sub:'',col:'#fff'},
+      {x:620,y:62,w:120,h:50,text:'舵机 / 发动机',sub:'执行机构',col:'#ff6b6b'},
+      {x:620,y:160,w:130,h:55,text:'飞行器',sub:'ẋ=f(x,u)',col:'#56ccf2'},
+      {x:400,y:240,w:120,h:40,text:'传感器',sub:'IMU/AHRS',col:'#c084fc'},
+      {x:180,y:240,w:100,h:40,text:'x − x₀',sub:'状态偏差',col:'#ffc857'},
+    ];
+    ctx.strokeStyle='rgba(136,146,168,.25)';ctx.lineWidth=1.5;
+    function ln(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+    function hd(x,y,a){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7*Math.cos(a-.35),y-7*Math.sin(a-.35));ctx.lineTo(x-7*Math.cos(a+.35),y-7*Math.sin(a+.35));ctx.closePath();ctx.fillStyle='rgba(136,146,168,.35)';ctx.fill()}
+    ln(130,100,180,52);hd(180,52,Math.atan2(52-100,50));ln(130,115,180,137);hd(180,137,0);
+    ln(310,52,400,48);hd(400,48,0);ctx.font='600 9px "IBM Plex Mono"';ctx.fillStyle='rgba(232,169,58,.6)';ctx.fillText('u₀ (前馈)',330,42);
+    ln(310,137,370,170);hd(370,170,Math.atan2(33,-60));
+    ln(470,170,538,106);hd(538,106,Math.atan2(-64,68));ctx.fillStyle='rgba(61,220,132,.6)';ctx.fillText('Δu (反馈)',475,148);
+    ln(556,88,620,87);hd(620,87,0);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillText('u₀+Δu',560,78);
+    ln(680,112,680,160);hd(680,160,Math.PI/2);ln(620,190,520,260);hd(520,256,Math.atan2(66,-100));
+    ctx.fillStyle='rgba(192,132,252,.5)';ctx.fillText('x (实测)',320,252);
+    ln(400,260,280,260);hd(280,260,Math.PI);ln(230,240,390,195);hd(390,195,Math.atan2(-45,160));
+    blocks.forEach(b=>{
+      ctx.fillStyle=b.col+'15';ctx.strokeStyle=b.col+'44';ctx.lineWidth=1.5;ctx.beginPath();
+      if(['Σ','+','×'].includes(b.text))ctx.arc(b.x+b.w/2,b.y+b.h/2,b.w/2,0,Math.PI*2);else ctx.roundRect(b.x,b.y,b.w,b.h,5);
+      ctx.fill();ctx.stroke();ctx.font='600 11px "LXGW WenKai"';ctx.fillStyle=b.col;ctx.textAlign='center';ctx.textBaseline='middle';
+      if(b.sub&&!['Σ','+','×'].includes(b.text)){ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2-7);ctx.font='400 9px "IBM Plex Mono"';ctx.fillStyle=b.col+'88';ctx.fillText(b.sub,b.x+b.w/2,b.y+b.h/2+9)}
+      else{ctx.font='600 14px "IBM Plex Mono"';ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2+1)}
+      ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    });
+    ctx.font='600 10px "IBM Plex Mono"';
+    ctx.fillStyle='#e8a93a';ctx.fillRect(20,330,30,3);ctx.fillText('前馈路径 (来自配平)',58,334);
+    ctx.fillStyle='#3ddc84';ctx.fillRect(20,350,30,3);ctx.fillText('反馈路径 (来自线性化→控制设计)',58,354);
+  }
+  draw();
+})();
+
+// ══════════════════════════════════════════════════════
+// NEW: TRIO INTERACTIVE — trim vs cmd vs delta
+// ══════════════════════════════════════════════════════
+(function(){
+  // Trim baseline (fixed for this scenario)
+  const TRIM = { alpha: 3.2, theta: 3.2, q: 0, de: -1.5, dT: 62 };
+
+  const sThetaCmd = document.getElementById('sThetaCmd');
+  const sTime = document.getElementById('sTime');
+  const vThetaCmd = document.getElementById('vThetaCmd');
+  const vTime = document.getElementById('vTime');
+
+  // Second-order response model: theta responds to command
+  // Simulates a closed-loop short period: wn=2.5 rad/s, zeta=0.7
+  const wn = 2.5, zeta = 0.7;
+
+  function getResponse(thetaCmd, tNorm) {
+    // tNorm 0..1 maps to 0..4s roughly
+    const t = tNorm * 4;
+    const wd = wn * Math.sqrt(1 - zeta * zeta);
+    const dTheta_cmd = thetaCmd - TRIM.theta;
+    // Standard 2nd order step response
+    const ratio = 1 - Math.exp(-zeta * wn * t) * (Math.cos(wd * t) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(wd * t));
+    const dTheta = dTheta_cmd * ratio;
+    const theta = TRIM.theta + dTheta;
+
+    // Derivative for q
+    const dRatio = Math.exp(-zeta * wn * t) * (wn * wn / wd) * Math.sin(wd * t);
+    const q = dTheta_cmd * dRatio * (180 / Math.PI) * 0.05; // scale
+
+    // Controller output: delta_de proportional to error + rate
+    const error = dTheta_cmd - dTheta;
+    const Kp = 0.6, Kd = 0.15;
+    const dDe = -(Kp * error + Kd * q);
+    const de = TRIM.de + dDe;
+
+    // Thrust adjustment
+    const dDt = 0.8 * Math.abs(dTheta_cmd) * ratio;
+    const dTtotal = TRIM.dT + dDt;
+
+    return { theta, dTheta, q, de, dDe, dDt, dTtotal, error, dTheta_cmd, t };
+  }
+
+  function updateTrio() {
+    const thetaCmd = parseFloat(sThetaCmd.value);
+    const tNorm = parseFloat(sTime.value) / 100;
+    vThetaCmd.textContent = thetaCmd.toFixed(1) + '°';
+    vTime.textContent = 't = ' + (tNorm * 4).toFixed(1) + 's';
+
+    // Command readouts
+    document.getElementById('cmdAbs').innerHTML = thetaCmd.toFixed(1) + '<span class="sr-unit">°</span>';
+    document.getElementById('cmdDelta').innerHTML = (thetaCmd - TRIM.theta).toFixed(1) + '<span class="sr-unit">°</span>';
+
+    const r = getResponse(thetaCmd, tNorm);
+
+    // Live readouts
+    const liveEl = document.getElementById('liveReadouts');
+    liveEl.innerHTML = [
+      { label: 'θ 当前', val: r.theta.toFixed(2) + '°', sub: 'x = x_trim + Δx', cls: 'actual-col', col: '--amber' },
+      { label: 'Δθ 偏离量', val: r.dTheta.toFixed(2) + '°', sub: '= θ − θ_trim', cls: 'actual-col', col: '--amber' },
+      { label: 'e 误差', val: r.error.toFixed(2) + '°', sub: '= Δθ_cmd − Δθ', cls: 'actual-col', col: '--amber' },
+      { label: 'Δδe 修正量', val: r.dDe.toFixed(2) + '°', sub: '控制器输出', cls: 'delta-col', col: '--green' },
+      { label: 'δe 实际指令', val: r.de.toFixed(2) + '°', sub: '= δe_trim + Δδe', cls: 'actual-col', col: '--amber' },
+      { label: 'δT 实际推力', val: r.dTtotal.toFixed(1) + '%', sub: '= δT_trim + ΔδT', cls: 'actual-col', col: '--amber' },
+    ].map(it => `<div class="sim-ro ${it.cls}"><div class="sr-label">${it.label}</div><div class="sr-val" style="color:var(${it.col})">${it.val}</div><div class="sr-sub">${it.sub}</div></div>`).join('');
+
+    // Stacked bar for elevator
+    const barMin = -30, barMax = 15, barRange = barMax - barMin;
+    const trimPx = (TRIM.de - barMin) / barRange * 100;
+    const totalPx = (r.de - barMin) / barRange * 100;
+    const zeroPx = (0 - barMin) / barRange * 100;
+
+    const barTrim = document.getElementById('barTrim');
+    const barDelta = document.getElementById('barDelta');
+    const barZero = document.getElementById('barZero');
+
+    if (r.dDe <= 0) {
+      // Delta is negative (more nose-down): bar goes left from trim
+      barTrim.style.left = totalPx + '%'; barTrim.style.width = (trimPx - totalPx) + '%';
+      barDelta.style.left = totalPx + '%'; barDelta.style.width = (trimPx - totalPx) + '%';
+      barTrim.style.background = 'rgba(86,204,242,.2)';
+      barDelta.style.background = 'rgba(61,220,132,.3)';
+    } else {
+      barTrim.style.left = trimPx + '%'; barTrim.style.width = '0%';
+      barDelta.style.left = trimPx + '%'; barDelta.style.width = (totalPx - trimPx) + '%';
+      barDelta.style.background = 'rgba(61,220,132,.3)';
+    }
+    // Show trim portion from left
+    barTrim.style.left = '0%'; barTrim.style.width = trimPx + '%'; barTrim.style.background = 'rgba(86,204,242,.18)';
+    // Delta portion
+    if (r.dDe < 0) {
+      barDelta.style.left = totalPx + '%'; barDelta.style.width = (trimPx - totalPx) + '%';
+    } else {
+      barDelta.style.left = trimPx + '%'; barDelta.style.width = (totalPx - trimPx) + '%';
+    }
+    barDelta.style.background = 'rgba(61,220,132,.3)';
+    barZero.style.left = zeroPx + '%';
+
+    document.getElementById('barDeltaLabel').textContent = 'Δδe = ' + r.dDe.toFixed(2) + '°';
+    document.getElementById('barTotalLabel').textContent = 'u_total = ' + r.de.toFixed(2) + '°';
+
+    // Update mapping table
+    document.getElementById('tblX').textContent = 'θ = ' + r.theta.toFixed(2) + '°';
+    document.getElementById('tblDx').textContent = 'Δθ = ' + r.dTheta.toFixed(2) + '°';
+    document.getElementById('tblE').textContent = 'e = ' + r.error.toFixed(2) + '°';
+    document.getElementById('tblDu').textContent = 'Δδe = ' + r.dDe.toFixed(2) + '°';
+    document.getElementById('tblU').textContent = 'δe = ' + r.de.toFixed(2) + '°';
+
+    // Draw time response canvas
+    drawTrioCanvas(thetaCmd, tNorm);
+  }
+
+  function drawTrioCanvas(thetaCmd, tNormCursor) {
+    const c = document.getElementById('trioCanvas'), W = 900, H = 280;
+    c.style.width = W + 'px'; c.style.height = H + 'px';
+    const ctx = initC(c), w = W, h = H;
+    ctx.fillStyle = '#080b12'; ctx.fillRect(0, 0, w, h);
+
+    const pad = { l: 55, r: 25, t: 20, b: 40 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+    const tMax = 4;
+
+    // Compute full response
+    const N = 200;
+    const thetaData = [], deData = [], times = [];
+    for (let i = 0; i <= N; i++) {
+      const tn = i / N;
+      const r = getResponse(thetaCmd, tn);
+      times.push(tn * tMax);
+      thetaData.push(r.theta);
+      deData.push(r.de);
+    }
+
+    // Y range for theta
+    const allVals = [TRIM.theta, thetaCmd, ...thetaData];
+    let yMin = Math.min(...allVals) - 0.5, yMax = Math.max(...allVals) + 0.5;
+    if (yMax - yMin < 2) { yMin -= 1; yMax += 1; }
+
+    function tx(t) { return pad.l + t / tMax * pw }
+    function ty(y) { return pad.t + (1 - (y - yMin) / (yMax - yMin)) * ph }
+
+    // Grid
+    ctx.strokeStyle = 'rgba(30,42,61,.3)'; ctx.lineWidth = 1;
+    for (let t = 0; t <= tMax; t += 0.5) { ctx.beginPath(); ctx.moveTo(tx(t), pad.t); ctx.lineTo(tx(t), h - pad.b); ctx.stroke() }
+    ctx.font = '10px "IBM Plex Mono"'; ctx.fillStyle = '#3a4a60'; ctx.textAlign = 'center';
+    for (let t = 0; t <= tMax; t += 1) ctx.fillText(t + 's', tx(t), h - pad.b + 14);
+
+    const yStep = (yMax - yMin) / 5;
+    ctx.textAlign = 'right';
+    for (let y = Math.ceil(yMin); y <= yMax; y += Math.max(0.5, Math.round(yStep * 2) / 2)) {
+      ctx.beginPath(); ctx.moveTo(pad.l, ty(y)); ctx.lineTo(w - pad.r, ty(y)); ctx.stroke();
+      ctx.fillText(y.toFixed(1) + '°', pad.l - 6, ty(y) + 3);
+    }
+
+    // Trim line
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(86,204,242,.3)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, ty(TRIM.theta)); ctx.lineTo(w - pad.r, ty(TRIM.theta)); ctx.stroke();
+    ctx.font = '10px "IBM Plex Mono"'; ctx.fillStyle = '#56ccf2'; ctx.textAlign = 'left';
+    ctx.fillText('θ_trim = ' + TRIM.theta + '°', w - pad.r - 120, ty(TRIM.theta) - 5);
+
+    // Command line
+    ctx.strokeStyle = 'rgba(192,132,252,.35)';
+    ctx.beginPath(); ctx.moveTo(pad.l, ty(thetaCmd)); ctx.lineTo(w - pad.r, ty(thetaCmd)); ctx.stroke();
+    ctx.fillStyle = '#c084fc';
+    ctx.fillText('θ_cmd = ' + thetaCmd.toFixed(1) + '°', w - pad.r - 120, ty(thetaCmd) + 12);
+    ctx.setLineDash([]);
+
+    // Δθ_cmd bracket
+    if (Math.abs(thetaCmd - TRIM.theta) > 0.3) {
+      const bx = pad.l + 18;
+      ctx.strokeStyle = 'rgba(192,132,252,.4)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(bx, ty(TRIM.theta)); ctx.lineTo(bx - 8, ty(TRIM.theta));
+      ctx.lineTo(bx - 8, ty(thetaCmd)); ctx.lineTo(bx, ty(thetaCmd));
+      ctx.stroke();
+      ctx.font = '600 10px "IBM Plex Mono"'; ctx.fillStyle = '#c084fc'; ctx.textAlign = 'left';
+      ctx.fillText('Δθ_cmd=' + (thetaCmd - TRIM.theta).toFixed(1) + '°', bx - 50, (ty(TRIM.theta) + ty(thetaCmd)) / 2 + 3);
+    }
+
+    // Response curve
+    ctx.beginPath();
+    times.forEach((t, i) => i === 0 ? ctx.moveTo(tx(t), ty(thetaData[i])) : ctx.lineTo(tx(t), ty(thetaData[i])));
+    ctx.strokeStyle = '#e8a93a'; ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Cursor vertical line
+    const cursorT = tNormCursor * tMax;
+    ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(tx(cursorT), pad.t); ctx.lineTo(tx(cursorT), h - pad.b); ctx.stroke();
+
+    // Cursor dot
+    const cursorR = getResponse(thetaCmd, tNormCursor);
+    ctx.beginPath(); ctx.arc(tx(cursorT), ty(cursorR.theta), 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#e8a93a'; ctx.fill(); ctx.strokeStyle = '#080b12'; ctx.lineWidth = 2; ctx.stroke();
+
+    // Error bracket at cursor
+    if (Math.abs(cursorR.error) > 0.05) {
+      ctx.strokeStyle = 'rgba(255,107,107,.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
+      ctx.beginPath();
+      ctx.moveTo(tx(cursorT) + 10, ty(cursorR.theta));
+      ctx.lineTo(tx(cursorT) + 10, ty(thetaCmd));
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = '600 9px "IBM Plex Mono"'; ctx.fillStyle = '#ff6b6b'; ctx.textAlign = 'left';
+      ctx.fillText('e=' + cursorR.error.toFixed(2) + '°', tx(cursorT) + 14, (ty(cursorR.theta) + ty(thetaCmd)) / 2 + 3);
+    }
+
+    // Legend
+    ctx.font = '11px "LXGW WenKai"'; ctx.textAlign = 'left';
+    const lx = pad.l + 60, ly = pad.t + 8;
+    ctx.fillStyle = '#56ccf2'; ctx.fillRect(lx, ly, 14, 2); ctx.fillText('配平基准 θ_trim', lx + 20, ly + 4);
+    ctx.fillStyle = '#c084fc'; ctx.fillRect(lx, ly + 16, 14, 2); ctx.fillText('期望值 θ_cmd', lx + 20, ly + 20);
+    ctx.fillStyle = '#e8a93a'; ctx.fillRect(lx, ly + 32, 14, 3); ctx.fillText('实际响应 θ(t)', lx + 20, ly + 36);
+
+    // Axis label
+    ctx.fillStyle = '#556278'; ctx.textAlign = 'center'; ctx.font = '11px "LXGW WenKai"';
+    ctx.fillText('俯仰角 θ 时域响应', w / 2, h - 5);
+  }
+
+  sThetaCmd.addEventListener('input', updateTrio);
+  sTime.addEventListener('input', updateTrio);
+
+  // Animation
+  let animId = null;
+  document.getElementById('btnAnimate').addEventListener('click', function () {
+    if (animId) { cancelAnimationFrame(animId); animId = null; this.textContent = '▶ 播放动画'; return; }
+    this.textContent = '⏸ 暂停';
+    sTime.value = 0;
+    const start = performance.now();
+    const duration = 3000;
+    function step(ts) {
+      const p = Math.min((ts - start) / duration, 1);
+      sTime.value = Math.round(p * 100);
+      updateTrio();
+      if (p < 1) animId = requestAnimationFrame(step);
+      else { animId = null; document.getElementById('btnAnimate').textContent = '▶ 播放动画'; }
+    }
+    animId = requestAnimationFrame(step);
+  });
+
+  updateTrio();
+})();
+
+// ══════════════════════════════════════
+// LINEARIZATION VISUALIZATION
+// ══════════════════════════════════════
+(function(){
+  const c=document.getElementById('linCanvas'),W=900,H=360;c.style.width=W+'px';c.style.height=H+'px';
+  const sX=document.getElementById('sX0'),sR=document.getElementById('sRange'),vX=document.getElementById('vX0'),vR=document.getElementById('vRange');
+  function f(x){return 0.9*Math.sin(x*.32)+0.12*x-0.004*x*x*x+0.4}
+  function df(x){return 0.9*.32*Math.cos(x*.32)+0.12-0.012*x*x}
+  function draw(){
+    const ctx=initC(c),w=W,h=H,x0=parseFloat(sX.value),rng=parseFloat(sR.value);
+    vX.textContent=x0.toFixed(1);vR.textContent='±'+rng.toFixed(1);
+    ctx.fillStyle='#080b12';ctx.fillRect(0,0,w,h);
+    const pad={l:55,r:25,t:25,b:42},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b,xMin=-3,xMax=16;
+    const pts=[];for(let x=xMin;x<=xMax;x+=0.05)pts.push({x,y:f(x)});
+    let yMin=Infinity,yMax=-Infinity;pts.forEach(p=>{yMin=Math.min(yMin,p.y);yMax=Math.max(yMax,p.y)});yMin-=.4;yMax+=.4;
+    function tx(x){return pad.l+(x-xMin)/(xMax-xMin)*pw}function ty(y){return pad.t+(1-(y-yMin)/(yMax-yMin))*ph}
+    ctx.strokeStyle='rgba(30,42,61,.3)';ctx.lineWidth=1;
+    for(let x=Math.ceil(xMin);x<=xMax;x+=2){ctx.beginPath();ctx.moveTo(tx(x),pad.t);ctx.lineTo(tx(x),h-pad.b);ctx.stroke();ctx.font='10px "IBM Plex Mono"';ctx.fillStyle='#3a4a60';ctx.textAlign='center';ctx.fillText(x,tx(x),h-pad.b+14)}
+    for(let y=Math.ceil(yMin*2)/2;y<=yMax;y+=.5){ctx.beginPath();ctx.moveTo(pad.l,ty(y));ctx.lineTo(w-pad.r,ty(y));ctx.stroke();ctx.textAlign='right';ctx.fillText(y.toFixed(1),pad.l-6,ty(y)+3)}
+    ctx.fillStyle='rgba(232,169,58,.04)';ctx.fillRect(tx(x0-rng),pad.t,tx(x0+rng)-tx(x0-rng),ph);
+    ctx.strokeStyle='rgba(232,169,58,.15)';ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(tx(x0-rng),pad.t);ctx.lineTo(tx(x0-rng),h-pad.b);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(tx(x0+rng),pad.t);ctx.lineTo(tx(x0+rng),h-pad.b);ctx.stroke();ctx.setLineDash([]);
+    const y0=f(x0),d=df(x0);
+    ctx.beginPath();for(let x=x0-rng;x<=x0+rng;x+=.1)ctx.lineTo(tx(x),ty(f(x)));
+    for(let x=x0+rng;x>=x0-rng;x-=.1)ctx.lineTo(tx(x),ty(y0+d*(x-x0)));ctx.closePath();ctx.fillStyle='rgba(255,107,107,.08)';ctx.fill();
+    ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(tx(p.x),ty(p.y)):ctx.moveTo(tx(p.x),ty(p.y)));ctx.strokeStyle='#56ccf2';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(tx(xMin),ty(y0+d*(xMin-x0)));ctx.lineTo(tx(xMax),ty(y0+d*(xMax-x0)));ctx.strokeStyle='#e8a93a';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(tx(x0),ty(y0),7,0,Math.PI*2);ctx.fillStyle='#ff6b6b';ctx.fill();ctx.strokeStyle='#080b12';ctx.lineWidth=2;ctx.stroke();
+    ctx.font='600 11px "IBM Plex Mono"';ctx.fillStyle='#ff6b6b';ctx.textAlign='left';ctx.fillText(`(${x0.toFixed(1)}, ${y0.toFixed(2)})`,tx(x0)+12,ty(y0)-8);
+    ctx.font='11px "LXGW WenKai"';ctx.fillStyle='#56ccf2';ctx.fillRect(w-180,18,16,3);ctx.fillText('非线性 f(x)',w-158,22);
+    ctx.fillStyle='#e8a93a';ctx.fillRect(w-180,36,16,3);ctx.fillText('线性近似',w-158,40);
+  }
+  sX.addEventListener('input',draw);sR.addEventListener('input',draw);draw();
+})();
+
+// ══════════════════════════════════════
+// SUMMARY FLOW
+// ══════════════════════════════════════
+(function(){
+  const c=document.getElementById('summaryCanvas'),W=900,H=300;c.style.width=W+'px';c.style.height=H+'px';
+  const ctx=initC(c);ctx.fillStyle='#080b12';ctx.fillRect(0,0,W,H);
+  const steps=[{x:60,text:'非线性模型',sub:'ẋ=f(x,u)',col:'#56ccf2'},{x:210,text:'配平',sub:'f(x₀,u₀)=0',col:'#e8a93a'},{x:370,text:'线性化',sub:'A,B 矩阵',col:'#c084fc'},{x:530,text:'控制律设计',sub:'求解 K',col:'#3ddc84'},{x:700,text:'仿真/飞试',sub:'验证闭环',col:'#ff6b6b'}];
+  const cy=90;
+  for(let i=0;i<steps.length-1;i++){
+    ctx.beginPath();ctx.moveTo(steps[i].x+65,cy);ctx.lineTo(steps[i+1].x-5,cy);ctx.strokeStyle='rgba(136,146,168,.25)';ctx.lineWidth=1.5;ctx.stroke();
+    const tx2=steps[i+1].x-5;ctx.beginPath();ctx.moveTo(tx2,cy);ctx.lineTo(tx2-7,cy-4);ctx.lineTo(tx2-7,cy+4);ctx.closePath();ctx.fillStyle='rgba(136,146,168,.3)';ctx.fill();
+  }
+  steps.forEach(s=>{
+    ctx.fillStyle=s.col+'15';ctx.strokeStyle=s.col+'44';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(s.x-5,cy-28,130,56,8);ctx.fill();ctx.stroke();
+    ctx.font='600 12px "LXGW WenKai"';ctx.fillStyle=s.col;ctx.textAlign='center';ctx.fillText(s.text,s.x+60,cy-5);
+    ctx.font='400 10px "IBM Plex Mono"';ctx.fillStyle=s.col+'88';ctx.fillText(s.sub,s.x+60,cy+12);
+  });
+  ctx.beginPath();ctx.moveTo(270,cy+28);ctx.lineTo(270,155);ctx.lineTo(420,155);ctx.strokeStyle='rgba(86,204,242,.3)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.font='600 10px "IBM Plex Mono"';ctx.fillStyle='#56ccf2';ctx.textAlign='center';ctx.fillText('(x₀,u₀) → Plant建模',350,148);
+  ctx.beginPath();ctx.moveTo(270,cy+28);ctx.lineTo(270,210);ctx.lineTo(580,210);ctx.strokeStyle='rgba(232,169,58,.3)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#e8a93a';ctx.fillText('u₀ → Controller前馈',420,203);
+  ctx.beginPath();ctx.moveTo(590,cy+28);ctx.lineTo(590,240);ctx.strokeStyle='rgba(61,220,132,.3)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#3ddc84';ctx.fillText('K → Controller反馈',600,248);
+  ctx.font='600 14px "IBM Plex Mono"';ctx.fillStyle='#cdd6e4';ctx.textAlign='center';
+  ctx.fillText('u = u₀(配平前馈) + K·Δx(反馈修正)',450,285);ctx.textAlign='left';
+})();
+
+// Auto-solve on load
+document.getElementById('btnSolve').click();
+</script>
+</body>
+</html>

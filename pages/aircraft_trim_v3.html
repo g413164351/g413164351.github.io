@@ -159,7 +159,7 @@ footer{text-align:center;padding:2.5rem;font-size:.72rem;color:var(--t3);border-
 <section id="sec-what">
 <div class="wrap">
   <div class="tag">Chapter 01 — Fundamentals</div>
-  <h2>配平（Trim）到底在做什么？</h2>
+  <h2>配平（Trim）介绍</h2>
   <p class="desc">
     一句话：<b style="color:var(--amber)">给定一个你想要的飞行状态，反算出舵面和油门该放在什么位置，才能让飞机"不动不晃"地待在那个状态上。</b>
   </p>
@@ -697,59 +697,177 @@ updateTable();updateTrim();
 // ARCHITECTURE DIAGRAM
 // ══════════════════════════════════════
 (function(){
-  const c=document.getElementById('archCanvas'),W=900,H=440;
-  c.style.width=W+'px';c.style.height=H+'px';
-  const det=document.getElementById('archDetail');
-  const blocks=[
-    {id:'trim',x:80,y:40,w:160,h:50,text:'配平求解器',sub:'f(x₀,u₀)=0',col:'#e8a93a'},
-    {id:'x0',x:80,y:145,w:140,h:40,text:'x₀ (状态平衡值)',sub:'α₀, θ₀, V₀...',col:'#56ccf2'},
-    {id:'u0',x:80,y:220,w:140,h:40,text:'u₀ (输入平衡值)',sub:'δe₀, δT₀...',col:'#e8a93a'},
-    {id:'lin',x:320,y:145,w:160,h:50,text:'线性化 (雅可比)',sub:'∂f/∂x, ∂f/∂u',col:'#56ccf2'},
-    {id:'AB',x:550,y:145,w:140,h:50,text:'(A, B) 矩阵',sub:'线性状态空间',col:'#c084fc'},
-    {id:'ctrl',x:550,y:260,w:150,h:50,text:'控制律设计',sub:'LQR / H∞ / PID',col:'#c084fc'},
-    {id:'K',x:550,y:360,w:120,h:45,text:'增益 K',sub:'反馈矩阵',col:'#3ddc84'},
-    {id:'ff',x:260,y:360,w:130,h:45,text:'前馈 u₀',sub:'标称指令',col:'#e8a93a'},
-    {id:'sum',x:430,y:400,w:36,h:36,text:'Σ',sub:'',col:'#fff'},
-    {id:'plant',x:580,y:400,w:160,h:45,text:'实际飞行器',sub:'u = u₀ + Δu',col:'#ff6b6b'},
-  ];
-  const arrs=[['trim','x0'],['trim','u0'],['x0','lin'],['u0','lin'],['lin','AB'],['AB','ctrl'],['ctrl','K'],['u0','ff'],['ff','sum'],['K','sum'],['sum','plant']];
-  const details={
-    trim:'配平求解器：给定飞行条件 (V,H,γ,φ)，通过数值迭代找到 f(x₀,u₀)=0 的平衡状态和输入。',
-    x0:'状态平衡值 x₀：包含迎角 α₀、俯仰角 θ₀ 等。① 是线性化的展开点，② 是控制器误差计算的参考（x − x₀）。',
-    u0:'输入平衡值 u₀：升降舵 δe₀、油门 δT₀ 等。有两条去路 → ① 参与线性化 ② 作为前馈指令。',
-    lin:'在 (x₀,u₀) 处计算雅可比矩阵 A=∂f/∂x、B=∂f/∂u。',AB:'A 的特征值 = 飞行模态，B 描述控制面效能。',
-    ctrl:'利用 (A,B) 通过 LQR/H∞ 等求解反馈增益 K。',K:'Δu = −K·(x−x_cmd)。只负责修正偏离。',
-    ff:'前馈 u₀——维持飞行状态的标称指令。',sum:'u_total = u₀ + Δu。',plant:'接收最终指令，按 ẋ=f(x,u) 运动。',
+  const c = document.getElementById('archCanvas');
+  const det = document.getElementById('archDetail');
+  const W = 900, H = 440;
+  c.style.width = W + 'px';
+  c.style.height = H + 'px';
+
+  const nodes = {
+    trim:  {type:'rect', x:70,  y:34,  w:200, h:56, title:'配平求解器',      sub:'f(x₀, u₀) = 0',          color:'#e8a93a'},
+    x0:    {type:'rect', x:80,  y:146, w:180, h:56, title:'x₀（状态平衡值）', sub:'α₀, θ₀, V₀, ...',         color:'#56ccf2'},
+    u0:    {type:'rect', x:80,  y:246, w:180, h:56, title:'u₀（输入平衡值）', sub:'δe₀, δT₀, ...',         color:'#e8a93a'},
+    lin:   {type:'rect', x:350, y:166, w:210, h:64, title:'线性化（雅可比）', sub:'A = ∂f/∂x,  B = ∂f/∂u', color:'#56ccf2'},
+    AB:    {type:'rect', x:650, y:166, w:150, h:64, title:'(A, B) 矩阵',     sub:'线性状态空间',            color:'#c084fc'},
+    ctrl:  {type:'rect', x:650, y:260, w:150, h:60, title:'控制律设计',       sub:'LQR / H∞ / PID',         color:'#c084fc'},
+    K:     {type:'rect', x:420, y:288, w:120, h:50, title:'增益 K',          sub:'反馈矩阵',                color:'#3ddc84'},
+    ff:    {type:'rect', x:250, y:348, w:170, h:56, title:'前馈 u₀',         sub:'标称指令',                color:'#e8a93a'},
+    sum:   {type:'circle', cx:470, cy:376, r:24,   title:'Σ',               sub:'',                        color:'#ffc857'},
+    plant: {type:'rect', x:650, y:348, w:170, h:54, title:'实际飞行器',       sub:'u = u₀ + Δu',             color:'#ff6b6b'}
   };
-  function gb(id){return blocks.find(b=>b.id===id)}
-  function draw(){
-    const ctx=initC(c);ctx.fillStyle='#080b12';ctx.fillRect(0,0,W,H);
-    function hd(x,y,a){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7*Math.cos(a-.35),y-7*Math.sin(a-.35));ctx.lineTo(x-7*Math.cos(a+.35),y-7*Math.sin(a+.35));ctx.closePath();ctx.fillStyle='rgba(136,146,168,.35)';ctx.fill()}
-    arrs.forEach(([fid,tid])=>{
-      const f=gb(fid),t=gb(tid);let fx=f.x+f.w/2,fy=f.y+f.h,tx=t.x+t.w/2,ty=t.y;
-      if(fid==='x0'&&tid==='lin'){tx=t.x;ty=t.y+t.h*.3}
-      if(fid==='u0'&&tid==='lin'){tx=t.x;ty=t.y+t.h*.7}
-      if(fid==='u0'&&tid==='ff'){tx=t.x+t.w/2;ty=t.y}
-      if(fid==='AB'&&tid==='ctrl'){tx=t.x+t.w/2;ty=t.y}
-      if(fid==='lin'&&tid==='AB'){const fy2=f.y+f.h/2;tx=t.x;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w,fy2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,Math.atan2(ty-fy2,tx-f.x-f.w));return}
-      if(fid==='ctrl'&&tid==='K'){tx=t.x+t.w/2;ty=t.y}
-      if(fid==='K'&&tid==='sum'){tx=t.x+t.w;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w/2,f.y+f.h);ctx.lineTo(f.x+f.w/2,t.y+t.h/2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx-1,ty,Math.PI);return}
-      if(fid==='ff'&&tid==='sum'){tx=t.x;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w/2,f.y+f.h);ctx.lineTo(f.x+f.w/2,t.y+t.h/2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,0);return}
-      if(fid==='sum'&&tid==='plant'){tx=t.x;ty=t.y+t.h/2;ctx.beginPath();ctx.moveTo(f.x+f.w,f.y+f.h/2);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,0);return}
-      ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(tx,ty);ctx.strokeStyle='rgba(136,146,168,.3)';ctx.lineWidth=1.5;ctx.stroke();hd(tx,ty,Math.atan2(ty-fy,tx-fx));
-    });
-    ctx.font='600 10px "IBM Plex Mono"';ctx.fillStyle='rgba(86,204,242,.5)';ctx.fillText('→ PLANT 建模路径',320,130);
-    ctx.fillStyle='rgba(232,169,58,.5)';ctx.fillText('→ CONTROLLER 前馈路径',160,310);
-    ctx.fillStyle='rgba(61,220,132,.5)';ctx.fillText('→ CONTROLLER 反馈路径',560,340);
-    blocks.forEach(b=>{
-      ctx.fillStyle=b.col+'15';ctx.strokeStyle=b.col+'55';ctx.lineWidth=1.5;ctx.beginPath();
-      if(b.id==='sum')ctx.arc(b.x+b.w/2,b.y+b.h/2,b.w/2,0,Math.PI*2);else ctx.roundRect(b.x,b.y,b.w,b.h,6);
-      ctx.fill();ctx.stroke();ctx.font='600 12px "LXGW WenKai"';ctx.fillStyle=b.col;ctx.textAlign='center';ctx.textBaseline='middle';
-      if(b.sub){ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2-(b.id==='sum'?0:7));ctx.font='400 10px "IBM Plex Mono"';ctx.fillStyle=b.col+'99';ctx.fillText(b.sub,b.x+b.w/2,b.y+b.h/2+10)}
-      else ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
-    });
+
+  const details = {
+    trim: '给定飞行条件后，数值求解平衡工作点，输出一组配平结果 (x₀, u₀)。',
+    x0: '状态平衡值：作为线性化展开点的一部分，也可作为状态偏差 Δx = x − x₀ 的参考基准。',
+    u0: '输入平衡值：一方面参与线性化，另一方面作为前馈/标称控制指令直接送往执行端。',
+    lin: '在配平点 (x₀, u₀) 附近做一阶泰勒展开，得到局部线性模型。',
+    AB: '线性模型的核心矩阵；A 描述系统动态，B 描述控制输入对状态的作用。',
+    ctrl: '基于 (A, B) 设计控制律，求得反馈增益或控制器参数。',
+    K: '反馈增益矩阵，负责把状态偏差变成修正量 Δu。',
+    ff: '来自配平结果的前馈量 u₀，负责“顶住大头”，让飞机先待在目标状态附近。',
+    sum: '最终控制指令合成节点：u = u₀ + Δu。',
+    plant: '实际飞行器/被控对象，接收合成后的控制输入。'
+  };
+
+  function rr(ctx, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
   }
-  c.addEventListener('click',e=>{const rect=c.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;for(const b of blocks)if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){det.innerHTML=`<span style="color:${b.col};font-weight:600">${b.text}</span>: ${details[b.id]||''}`;return}});
+
+  function drawBox(ctx, n){
+    ctx.fillStyle = n.color + '14';
+    ctx.strokeStyle = n.color + '66';
+    ctx.lineWidth = 1.8;
+    rr(ctx, n.x, n.y, n.w, n.h, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = n.color;
+    ctx.font = '600 12px "LXGW WenKai"';
+    ctx.fillText(n.title, n.x + n.w / 2, n.y + n.h / 2 - 8);
+    if(n.sub){
+      ctx.fillStyle = n.color + 'cc';
+      ctx.font = '500 10px "IBM Plex Mono"';
+      ctx.fillText(n.sub, n.x + n.w / 2, n.y + n.h / 2 + 12);
+    }
+  }
+
+  function drawCircle(ctx, n){
+    ctx.beginPath();
+    ctx.arc(n.cx, n.cy, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = n.color + 'b0';
+    ctx.strokeStyle = n.color + 'cc';
+    ctx.lineWidth = 1.8;
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 16px "IBM Plex Mono"';
+    ctx.fillText(n.title, n.cx, n.cy + 1);
+  }
+
+  function arrowHead(ctx, x1, y1, x2, y2, color){
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 9 * Math.cos(a - 0.38), y2 - 9 * Math.sin(a - 0.38));
+    ctx.lineTo(x2 - 9 * Math.cos(a + 0.38), y2 - 9 * Math.sin(a + 0.38));
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function route(ctx, pts, color, width){
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width || 2;
+    ctx.stroke();
+    const p1 = pts[pts.length - 2];
+    const p2 = pts[pts.length - 1];
+    arrowHead(ctx, p1[0], p1[1], p2[0], p2[1], color);
+  }
+
+  function label(ctx, x, y, text, color){
+    ctx.font = '600 10px "IBM Plex Mono"';
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+  }
+
+  function hitNode(mx, my){
+    for(const [id, n] of Object.entries(nodes)){
+      if(n.type === 'rect'){
+        if(mx >= n.x && mx <= n.x + n.w && my >= n.y && my <= n.y + n.h) return id;
+      }else{
+        const dx = mx - n.cx, dy = my - n.cy;
+        if(dx * dx + dy * dy <= n.r * n.r) return id;
+      }
+    }
+    return null;
+  }
+
+  function draw(){
+    const ctx = initC(c);
+    ctx.fillStyle = '#080b12';
+    ctx.fillRect(0, 0, W, H);
+
+    const guide = 'rgba(136,146,168,.34)';
+    const plantPath = 'rgba(86,204,242,.36)';
+    const ffPath = 'rgba(232,169,58,.42)';
+    const fbPath = 'rgba(61,220,132,.40)';
+
+    route(ctx, [[170, 90], [170, 146]], guide, 2);
+    route(ctx, [[230, 90], [280, 90], [280, 224], [170, 224], [170, 246]], guide, 2);
+
+    route(ctx, [[260, 174], [310, 174], [310, 188], [350, 188]], plantPath, 2.2);
+    route(ctx, [[260, 274], [310, 274], [310, 208], [350, 208]], plantPath, 2.2);
+    route(ctx, [[560, 198], [650, 198]], plantPath, 2.2);
+
+    route(ctx, [[725, 230], [725, 260]], guide, 2);
+    route(ctx, [[725, 320], [725, 313], [480, 313], [480, 288]], fbPath, 2.2);
+    route(ctx, [[480, 338], [480, 352], [470, 352]], fbPath, 2.2);
+
+    route(ctx, [[170, 302], [170, 330], [335, 330], [335, 348]], ffPath, 2.2);
+    route(ctx, [[420, 376], [446, 376]], ffPath, 2.6);
+    route(ctx, [[494, 376], [650, 376]], guide, 2.4);
+
+    ctx.textAlign = 'left';
+    label(ctx, 355, 142, '→ PLANT 建模路径', '#56ccf2');
+    label(ctx, 235, 332, '→ CONTROLLER 前馈路径', '#e8a93a');
+    label(ctx, 560, 286, '→ CONTROLLER 反馈路径', '#3ddc84');
+
+    drawBox(ctx, nodes.trim);
+    drawBox(ctx, nodes.x0);
+    drawBox(ctx, nodes.u0);
+    drawBox(ctx, nodes.lin);
+    drawBox(ctx, nodes.AB);
+    drawBox(ctx, nodes.ctrl);
+    drawBox(ctx, nodes.K);
+    drawBox(ctx, nodes.ff);
+    drawCircle(ctx, nodes.sum);
+    drawBox(ctx, nodes.plant);
+  }
+
+  c.addEventListener('click', e => {
+    const r = c.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    const id = hitNode(mx, my);
+    if(!id) return;
+    const n = nodes[id];
+    det.innerHTML = '<span style="color:' + n.color + ';font-weight:700">' + n.title + '</span>：' + details[id];
+  });
+
   draw();
 })();
 
@@ -757,44 +875,153 @@ updateTable();updateTrim();
 // GAIN SCHEDULING ARCHITECTURE
 // ══════════════════════════════════════
 (function(){
-  const c=document.getElementById('gsCanvas'),W=900,H=380;c.style.width=W+'px';c.style.height=H+'px';
-  function draw(){
-    const ctx=initC(c);ctx.fillStyle='#080b12';ctx.fillRect(0,0,W,H);
-    const blocks=[
-      {x:20,y:80,w:110,h:55,text:'飞行条件',sub:'V, H, Ma',col:'#8694aa'},
-      {x:180,y:30,w:130,h:45,text:'配平表',sub:'u₀(V,H)',col:'#e8a93a'},
-      {x:180,y:115,w:130,h:45,text:'增益表',sub:'K(V,H)',col:'#3ddc84'},
-      {x:400,y:30,w:36,h:36,text:'+',sub:'',col:'#fff'},
-      {x:370,y:155,w:100,h:40,text:'×',sub:'K·Δx',col:'#3ddc84'},
-      {x:520,y:70,w:36,h:36,text:'Σ',sub:'',col:'#fff'},
-      {x:620,y:62,w:120,h:50,text:'舵机 / 发动机',sub:'执行机构',col:'#ff6b6b'},
-      {x:620,y:160,w:130,h:55,text:'飞行器',sub:'ẋ=f(x,u)',col:'#56ccf2'},
-      {x:400,y:240,w:120,h:40,text:'传感器',sub:'IMU/AHRS',col:'#c084fc'},
-      {x:180,y:240,w:100,h:40,text:'x − x₀',sub:'状态偏差',col:'#ffc857'},
-    ];
-    ctx.strokeStyle='rgba(136,146,168,.25)';ctx.lineWidth=1.5;
-    function ln(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
-    function hd(x,y,a){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7*Math.cos(a-.35),y-7*Math.sin(a-.35));ctx.lineTo(x-7*Math.cos(a+.35),y-7*Math.sin(a+.35));ctx.closePath();ctx.fillStyle='rgba(136,146,168,.35)';ctx.fill()}
-    ln(130,100,180,52);hd(180,52,Math.atan2(52-100,50));ln(130,115,180,137);hd(180,137,0);
-    ln(310,52,400,48);hd(400,48,0);ctx.font='600 9px "IBM Plex Mono"';ctx.fillStyle='rgba(232,169,58,.6)';ctx.fillText('u₀ (前馈)',330,42);
-    ln(310,137,370,170);hd(370,170,Math.atan2(33,-60));
-    ln(470,170,538,106);hd(538,106,Math.atan2(-64,68));ctx.fillStyle='rgba(61,220,132,.6)';ctx.fillText('Δu (反馈)',475,148);
-    ln(556,88,620,87);hd(620,87,0);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillText('u₀+Δu',560,78);
-    ln(680,112,680,160);hd(680,160,Math.PI/2);ln(620,190,520,260);hd(520,256,Math.atan2(66,-100));
-    ctx.fillStyle='rgba(192,132,252,.5)';ctx.fillText('x (实测)',320,252);
-    ln(400,260,280,260);hd(280,260,Math.PI);ln(230,240,390,195);hd(390,195,Math.atan2(-45,160));
-    blocks.forEach(b=>{
-      ctx.fillStyle=b.col+'15';ctx.strokeStyle=b.col+'44';ctx.lineWidth=1.5;ctx.beginPath();
-      if(['Σ','+','×'].includes(b.text))ctx.arc(b.x+b.w/2,b.y+b.h/2,b.w/2,0,Math.PI*2);else ctx.roundRect(b.x,b.y,b.w,b.h,5);
-      ctx.fill();ctx.stroke();ctx.font='600 11px "LXGW WenKai"';ctx.fillStyle=b.col;ctx.textAlign='center';ctx.textBaseline='middle';
-      if(b.sub&&!['Σ','+','×'].includes(b.text)){ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2-7);ctx.font='400 9px "IBM Plex Mono"';ctx.fillStyle=b.col+'88';ctx.fillText(b.sub,b.x+b.w/2,b.y+b.h/2+9)}
-      else{ctx.font='600 14px "IBM Plex Mono"';ctx.fillText(b.text,b.x+b.w/2,b.y+b.h/2+1)}
-      ctx.textAlign='left';ctx.textBaseline='alphabetic';
-    });
-    ctx.font='600 10px "IBM Plex Mono"';
-    ctx.fillStyle='#e8a93a';ctx.fillRect(20,330,30,3);ctx.fillText('前馈路径 (来自配平)',58,334);
-    ctx.fillStyle='#3ddc84';ctx.fillRect(20,350,30,3);ctx.fillText('反馈路径 (来自线性化→控制设计)',58,354);
+  const c = document.getElementById('gsCanvas');
+  const W = 900, H = 380;
+  c.style.width = W + 'px';
+  c.style.height = H + 'px';
+
+  const nodes = {
+    fc:      {type:'rect',   x:40,  y:110, w:150, h:64, title:'飞行条件',        sub:'V, H, Ma',                 color:'#8694aa'},
+    sched:   {type:'rect',   x:240, y:44,  w:190, h:60, title:'配平 / 基准表',   sub:'x₀(V,H),  u₀(V,H)',       color:'#e8a93a'},
+    gain:    {type:'rect',   x:240, y:166, w:190, h:60, title:'增益表',          sub:'K(V,H)',                   color:'#3ddc84'},
+    sum:     {type:'circle', cx:610, cy:110, r:26, title:'Σ',                    sub:'',                         color:'#3ddc84'},
+    mult:    {type:'circle', cx:520, cy:220, r:26, title:'×',                    sub:'',                         color:'#3ddc84'},
+    sub:     {type:'rect',   x:260, y:270, w:130, h:52, title:'Δx = x − x₀',     sub:'状态偏差',                 color:'#ffc857'},
+    sensor:  {type:'rect',   x:500, y:270, w:170, h:52, title:'传感器',          sub:'IMU / AHRS',               color:'#c084fc'},
+    act:     {type:'rect',   x:720, y:82,  w:140, h:56, title:'舵机 / 发动机',    sub:'执行机构',                 color:'#ff6b6b'},
+    plant:   {type:'rect',   x:720, y:196, w:140, h:60, title:'飞行器',          sub:'ẋ = f(x, u)',              color:'#56ccf2'}
+  };
+
+  function rr(ctx, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
   }
+
+  function drawRect(ctx, n){
+    ctx.fillStyle = n.color + '14';
+    ctx.strokeStyle = n.color + '66';
+    ctx.lineWidth = 1.8;
+    rr(ctx, n.x, n.y, n.w, n.h, 10);
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = n.color;
+    ctx.font = '600 12px "LXGW WenKai"';
+    ctx.fillText(n.title, n.x + n.w/2, n.y + n.h/2 - 8);
+    if(n.sub){
+      ctx.fillStyle = n.color + 'cc';
+      ctx.font = '500 10px "IBM Plex Mono"';
+      ctx.fillText(n.sub, n.x + n.w/2, n.y + n.h/2 + 12);
+    }
+  }
+
+  function drawCircle(ctx, n){
+    ctx.beginPath();
+    ctx.arc(n.cx, n.cy, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = n.color + 'b0';
+    ctx.strokeStyle = n.color + 'cc';
+    ctx.lineWidth = 1.8;
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 17px "IBM Plex Mono"';
+    ctx.fillText(n.title, n.cx, n.cy + 1);
+  }
+
+  function arrowHead(ctx, x1, y1, x2, y2, color){
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 9 * Math.cos(a - 0.38), y2 - 9 * Math.sin(a - 0.38));
+    ctx.lineTo(x2 - 9 * Math.cos(a + 0.38), y2 - 9 * Math.sin(a + 0.38));
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function route(ctx, pts, color, width){
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width || 2;
+    ctx.stroke();
+    const p1 = pts[pts.length - 2];
+    const p2 = pts[pts.length - 1];
+    arrowHead(ctx, p1[0], p1[1], p2[0], p2[1], color);
+  }
+
+  function label(ctx, x, y, text, color){
+    ctx.font = '600 10px "IBM Plex Mono"';
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+  }
+
+  function draw(){
+    const ctx = initC(c);
+    ctx.fillStyle = '#080b12';
+    ctx.fillRect(0, 0, W, H);
+
+    const neutral = 'rgba(136,146,168,.30)';
+    const ff = 'rgba(232,169,58,.75)';
+    const fb = 'rgba(61,220,132,.78)';
+
+    route(ctx, [[190, 142], [215, 142], [215, 74], [240, 74]], neutral, 2);
+    route(ctx, [[190, 142], [215, 142], [215, 196], [240, 196]], neutral, 2);
+
+    route(ctx, [[430, 74], [520, 74], [520, 110], [584, 110]], ff, 2.6);
+    label(ctx, 500, 66, 'u₀（前馈）', '#e8a93a');
+
+    route(ctx, [[335, 104], [335, 250], [325, 250], [325, 270]], neutral, 2);
+    label(ctx, 344, 244, 'x₀（基准）', '#e8a93a');
+
+    route(ctx, [[430, 196], [460, 196], [460, 220], [494, 220]], fb, 2.4);
+    label(ctx, 438, 186, 'K(V,H)', '#3ddc84');
+
+    route(ctx, [[390, 296], [460, 296], [460, 246], [520, 246]], neutral, 2.2);
+    label(ctx, 422, 286, 'Δx', '#ffc857');
+
+    route(ctx, [[520, 194], [520, 156], [610, 156], [610, 136]], fb, 2.6);
+    label(ctx, 554, 146, 'Δu（反馈）', '#3ddc84');
+
+    route(ctx, [[636, 110], [720, 110]], neutral, 2.6);
+    label(ctx, 646, 98, 'u = u₀ + Δu', '#cdd6e4');
+
+    route(ctx, [[790, 138], [790, 196]], neutral, 2.2);
+    route(ctx, [[720, 226], [690, 226], [690, 296], [670, 296]], neutral, 2.2);
+    label(ctx, 598, 286, 'x（实测）', '#c084fc');
+
+    route(ctx, [[500, 296], [390, 296]], neutral, 2.2);
+
+    drawRect(ctx, nodes.fc);
+    drawRect(ctx, nodes.sched);
+    drawRect(ctx, nodes.gain);
+    drawRect(ctx, nodes.sub);
+    drawRect(ctx, nodes.sensor);
+    drawRect(ctx, nodes.act);
+    drawRect(ctx, nodes.plant);
+    drawCircle(ctx, nodes.mult);
+    drawCircle(ctx, nodes.sum);
+
+    ctx.fillStyle = '#e8a93a';
+    ctx.fillRect(42, 346, 34, 4);
+    ctx.font = '600 11px "LXGW WenKai"';
+    ctx.fillText('前馈路径（来自配平）', 86, 350);
+
+    ctx.fillStyle = '#3ddc84';
+    ctx.fillRect(42, 364, 34, 4);
+    ctx.fillText('反馈路径（来自线性化 → 控制设计）', 86, 368);
+  }
+
   draw();
 })();
 
