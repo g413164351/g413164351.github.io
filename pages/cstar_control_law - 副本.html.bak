@@ -162,48 +162,6 @@ p strong, li strong { color: var(--text); }
   color: var(--text2);
 }
 
-/* Info box for explanations */
-.info-box {
-  background: var(--bg2);
-  border-left: 3px solid var(--accent);
-  border-radius: 8px;
-  padding: 1.5rem 1.8rem;
-  margin: 2rem 0;
-}
-.info-box h4 {
-  color: var(--accent);
-  font-size: 1rem;
-  margin-bottom: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.info-box p { font-size: 0.92rem; margin-bottom: 0.8rem; }
-.info-box p:last-child { margin-bottom: 0; }
-.nz-table {
-  width: 100%;
-  margin-top: 1rem;
-  font-size: 0.85rem;
-  border-collapse: collapse;
-}
-.nz-table th, .nz-table td {
-  padding: 0.6rem 0.8rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-.nz-table th {
-  color: var(--accent2);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.nz-table td { color: var(--text2); }
-.nz-table td:first-child {
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--accent);
-}
-
 /* Flow diagram */
 .flow {
   display: flex;
@@ -442,54 +400,30 @@ footer {
 <div class="container">
   <div class="section-num">01 — 基本概念</div>
   <h2>什么是 C* 控制律？</h2>
-  <p>C*(读作 C-Star)是一种专为飞机<strong>纵向飞行控制</strong>设计的复合控制准则,广泛应用于现代电传操纵(Fly-By-Wire)系统中。</p>
+  <p>C*（读作 C-Star）是一种专为飞机<strong>纵向飞行控制</strong>设计的复合控制准则，广泛应用于现代电传操纵（Fly-By-Wire）系统中。</p>
 
   <div class="card-grid">
     <div class="card">
       <div class="card-icon">🐢</div>
       <h4>低速飞行</h4>
-      <p>飞行员对<strong>俯仰角速度 \(q\)</strong> 更敏感,操纵主要表现为速率指令型响应。</p>
+      <p>飞行员对<strong>俯仰角速度 \(q\)</strong> 更敏感，操纵主要表现为速率指令型响应。</p>
     </div>
     <div class="card">
       <div class="card-icon">🚀</div>
       <h4>高速飞行</h4>
-      <p>飞行员对<strong>法向过载 \(n_z\)</strong>(g 值)更敏感,操纵主要表现为过载指令型响应。</p>
+      <p>飞行员对<strong>法向过载 \(n_z\)</strong>（g 值）更敏感，操纵主要表现为过载指令型响应。</p>
     </div>
   </div>
 
-  <!-- 新增:法向过载科普 -->
-  <div class="info-box">
-    <h4>💡 名词解释:什么是"法向过载" \(n_z\)?</h4>
-    <p><strong>一句话理解:</strong>法向过载就是你坐在飞机里"被座椅向上推的力"是自身体重的多少倍。它是一个<strong>无量纲</strong>的比值,单位通常写作"g"。</p>
-    <p><strong>定义式:</strong></p>
-    <p style="text-align:center; font-family:'JetBrains Mono', monospace; color:var(--text); font-size:1.05rem;">
-      \(n_z = \dfrac{L}{m \cdot g}\) &nbsp;&nbsp;=&nbsp;&nbsp; 升力 ÷ 自身重力
-    </p>
-    <p>其中 \(L\) 是飞机当前升力,\(m\) 是飞机质量,\(g\) 是重力加速度。"法向"意指<strong>垂直于飞机机体纵轴</strong>(对飞行员而言就是头顶到屁股那个方向)。</p>
-
-    <p><strong>用日常感受来类比:</strong></p>
-    <table class="nz-table">
-      <tr><th>\(n_z\) 值</th><th>身体感受</th><th>飞行场景</th></tr>
-      <tr><td>1.0 g</td><td>正常体重,座椅给你"一份"支撑力</td><td>平直巡航 / 地面静止</td></tr>
-      <tr><td>0 g</td><td>失重漂浮</td><td>抛物线飞行 / 自由落体</td></tr>
-      <tr><td>1.5 g</td><td>身体变沉,像被压进座椅</td><td>民航客机较急的拉起</td></tr>
-      <tr><td>2.5 g</td><td>明显沉重,抬手费力</td><td>过山车顶部 / 民航最大限值</td></tr>
-      <tr><td>9 g</td><td>需要抗荷服防止晕厥</td><td>战斗机急转弯</td></tr>
-      <tr><td>−1 g</td><td>被安全带向上拽</td><td>飞机推杆下俯</td></tr>
-    </table>
-
-    <p style="margin-top:1rem;"><strong>为什么 C* 要用它?</strong>因为飞行员在高速飞行时,真正"感觉到"的不是飞机转得多快,而是<strong>身体被压得多重</strong>。用 \(n_z\) 作为控制目标,能让操纵手感直接对应飞行员的生理感受,既舒适又安全(不会让乘客超过 2.5 g 的舒适上限)。</p>
-  </div>
-
-  <p>为了让飞行员在<strong>全速域</strong>内获得统一的手感体验,C* 将两者融合为一个单一的控制变量:</p>
+  <p>为了让飞行员在<strong>全速域</strong>内获得统一的手感体验，C* 将两者融合为一个单一的控制变量：</p>
 
   <div class="formula-card">
     <div class="formula">
       <span class="hl">C*</span> = <span class="hl2">n<sub>z</sub></span> + <span class="hl3">V<sub>co</sub></span> · <span class="hl2">q</span>
     </div>
     <div class="formula-note">
-      其中 V<sub>co</sub> 为交叉速度(Crossover Velocity),通常取 ≈ 124 m/s(约 240 kt)<br>
-      当空速 &lt; V<sub>co</sub> 时,q 的权重大;当空速 &gt; V<sub>co</sub> 时,n<sub>z</sub> 的权重大
+      其中 V<sub>co</sub> 为交叉速度（Crossover Velocity），通常取 ≈ 124 m/s（约 240 kt）<br>
+      当空速 &lt; V<sub>co</sub> 时，q 的权重大；当空速 &gt; V<sub>co</sub> 时，n<sub>z</sub> 的权重大
     </div>
   </div>
 </div>
@@ -500,7 +434,7 @@ footer {
 <div class="container">
   <div class="section-num">02 — 系统架构</div>
   <h2>C* 在控制回路中的位置</h2>
-  <p>理解 C* 与 PID 的关系,关键在于认清它们分属控制系统的<strong>不同层级</strong>。</p>
+  <p>理解 C* 与 PID 的关系，关键在于认清它们分属控制系统的<strong>不同层级</strong>。</p>
 
   <div class="flow">
     <div class="flow-node upstream">飞行员<br>拉杆 δ<sub>stick</sub><div class="flow-label">输入</div></div>
@@ -517,15 +451,15 @@ footer {
   </div>
 
   <p style="text-align:center; font-size:0.8rem; color:var(--text2); margin-top:-0.5rem;">
-    ↻ 反馈回路:传感器测量 n<sub>z</sub> 和 q,合成 C*<sub>fbk</sub> 回送至比较环节
+    ↻ 反馈回路：传感器测量 n<sub>z</sub> 和 q，合成 C*<sub>fbk</sub> 回送至比较环节
   </p>
 
   <h3>三个层级</h3>
   <table class="comp-table">
     <tr><th>层级</th><th>角色</th><th>职责</th></tr>
-    <tr><td><strong>策略层(C*)</strong></td><td>上游 — 定义目标</td><td>将杆位映射为 C*<sub>cmd</sub>,将传感器数据融合为 C*<sub>fbk</sub>,产生误差 e</td></tr>
-    <tr><td><strong>算法层(PID)</strong></td><td>中游 — 消除误差</td><td>根据 e 计算舵面偏转指令 u = K<sub>p</sub>e + K<sub>i</sub>∫e + K<sub>d</sub>ė</td></tr>
-    <tr><td><strong>物理层(作动器)</strong></td><td>下游 — 执行指令</td><td>液压系统驱动升降舵,改变飞机姿态</td></tr>
+    <tr><td><strong>策略层（C*）</strong></td><td>上游 — 定义目标</td><td>将杆位映射为 C*<sub>cmd</sub>，将传感器数据融合为 C*<sub>fbk</sub>，产生误差 e</td></tr>
+    <tr><td><strong>算法层（PID）</strong></td><td>中游 — 消除误差</td><td>根据 e 计算舵面偏转指令 u = K<sub>p</sub>e + K<sub>i</sub>∫e + K<sub>d</sub>ė</td></tr>
+    <tr><td><strong>物理层（作动器）</strong></td><td>下游 — 执行指令</td><td>液压系统驱动升降舵，改变飞机姿态</td></tr>
   </table>
 </div>
 </section>
@@ -535,21 +469,21 @@ footer {
 <div class="container">
   <div class="section-num">03 — 核心区别</div>
   <h2>C* 与 PID 的本质区别</h2>
-  <p>一句话概括:<strong>C* 是"控制什么",PID 是"怎么控制"</strong>。</p>
+  <p>一句话概括：<strong>C* 是"控制什么"，PID 是"怎么控制"</strong>。</p>
 
   <table class="comp-table">
     <tr><th>维度</th><th>C* 控制律</th><th>PID 控制器</th></tr>
-    <tr><td>本质</td><td>控制<strong>准则</strong>(Criterion)</td><td>控制<strong>算法</strong>(Algorithm)</td></tr>
-    <tr><td>回答的问题</td><td>"飞行品质应该达到什么标准?"</td><td>"误差信号如何转化为执行量?"</td></tr>
+    <tr><td>本质</td><td>控制<strong>准则</strong>（Criterion）</td><td>控制<strong>算法</strong>（Algorithm）</td></tr>
+    <tr><td>回答的问题</td><td>"飞行品质应该达到什么标准？"</td><td>"误差信号如何转化为执行量？"</td></tr>
     <tr><td>领域特异性</td><td>航空飞行控制专用</td><td>通用控制方法</td></tr>
     <tr><td>关注对象</td><td>n<sub>z</sub> + V<sub>co</sub>·q 的复合指标</td><td>任意误差信号 e(t)</td></tr>
-    <tr><td>可替代性</td><td>可换为其他准则(如 C*U、γ*)</td><td>可换为其他算法(如 LQR、H∞)</td></tr>
-    <tr><td>在回路中的位置</td><td>上游(定义 e 的含义)+ 反馈侧</td><td>中游(处理 e,输出 u)</td></tr>
+    <tr><td>可替代性</td><td>可换为其他准则（如 C*U、γ*）</td><td>可换为其他算法（如 LQR、H∞）</td></tr>
+    <tr><td>在回路中的位置</td><td>上游（定义 e 的含义）+ 反馈侧</td><td>中游（处理 e，输出 u）</td></tr>
   </table>
 
   <div class="formula-card" style="text-align:left;">
-    <p style="color:var(--text); margin-bottom:0.5rem;"><strong>为什么 C* 不可能在 PID 下游?</strong></p>
-    <p style="font-size:0.9rem;">如果 C* 在 PID 下游,意味着 PID 先输出信号后 C* 才处理——但 PID 必须<strong>先知道"差多少"</strong>(即 C* 的误差)才能决定"给多少舵角"。因果关系不允许 C* 后置。</p>
+    <p style="color:var(--text); margin-bottom:0.5rem;"><strong>为什么 C* 不可能在 PID 下游？</strong></p>
+    <p style="font-size:0.9rem;">如果 C* 在 PID 下游，意味着 PID 先输出信号后 C* 才处理——但 PID 必须<strong>先知道"差多少"</strong>（即 C* 的误差）才能决定"给多少舵角"。因果关系不允许 C* 后置。</p>
   </div>
 </div>
 </section>
@@ -559,20 +493,20 @@ footer {
 <div class="container">
   <div class="section-num">04 — 实例推演</div>
   <h2>空客 A320 巡航拉杆爬升</h2>
-  <p>假设飞机在巡航状态,飞行员向后拉杆请求爬升。以下为控制系统的工作流程:</p>
+  <p>假设飞机在巡航状态，飞行员向后拉杆请求爬升。以下为控制系统的工作流程：</p>
 
   <div class="card-grid">
     <div class="card">
-      <h4>① 指令生成(上游)</h4>
+      <h4>① 指令生成（上游）</h4>
       <p>飞行员拉杆 → FLCC 计算得 C*<sub>cmd</sub> = 2.0</p>
     </div>
     <div class="card">
       <h4>② 反馈计算</h4>
-      <p>传感器测得 n<sub>z</sub>=1.0g,q=0 → C*<sub>fbk</sub> = 1.0 + 124×0 = 1.0</p>
+      <p>传感器测得 n<sub>z</sub>=1.0g，q=0 → C*<sub>fbk</sub> = 1.0 + 124×0 = 1.0</p>
     </div>
     <div class="card">
       <h4>③ PID 处理</h4>
-      <p>误差 e = 2.0 − 1.0 = 1.0 → PID 输出:升降舵上偏 5°</p>
+      <p>误差 e = 2.0 − 1.0 = 1.0 → PID 输出：升降舵上偏 5°</p>
     </div>
     <div class="card">
       <h4>④ 执行响应</h4>
@@ -587,7 +521,7 @@ footer {
 <div class="container">
   <div class="section-num">05 — 交互仿真</div>
   <h2>C* + PID 控制回路仿真</h2>
-  <p>调节参数,观察 C* 控制律如何通过 PID 驱动飞机响应飞行员的拉杆指令。</p>
+  <p>调节参数，观察 C* 控制律如何通过 PID 驱动飞机响应飞行员的拉杆指令。</p>
 
   <div class="sim-panel">
     <div class="sim-controls">
@@ -657,20 +591,24 @@ function runSim() {
   const Kp = parseFloat($('kpSlider').value);
   const Ki = parseFloat($('kiSlider').value);
   const Kd = parseFloat($('kdSlider').value);
-  const Vco = 124;
+  const Vco = 124; // m/s crossover velocity (used normalized)
   const dt = 0.02;
-  const steps = 500;
+  const steps = 500; // 10 seconds
 
-  let nz = 1.0;
-  let q = 0.0;
-  let de = 0.0;
+  // State
+  let nz = 1.0;   // normal load factor (g)
+  let q = 0.0;    // pitch rate (rad/s conceptual, shown as deg/s)
+  let de = 0.0;   // elevator deflection deg
   let integral = 0;
   let prevErr = 0;
 
+  // History
   const hCstar = [], hNz = [], hDe = [], hCmd = [];
 
   for (let i = 0; i < steps; i++) {
-    const Cfbk = nz + 0.12 * q;
+    // C* feedback (Vco·q normalized so units work together)
+    // We treat q in consistent units: Vco factor already embedded
+    const Cfbk = nz + 0.12 * q; // simplified weighting
 
     const err = Ccmd - Cfbk;
     integral += err * dt;
@@ -678,12 +616,15 @@ function runSim() {
     const deriv = (err - prevErr) / dt;
     prevErr = err;
 
+    // PID output → elevator command
     de = Kp * err + Ki * integral + Kd * deriv;
-    de = Math.max(-25, Math.min(25, de));
+    de = Math.max(-25, Math.min(25, de)); // saturate
 
-    const qDot = de * 0.8 - q * 2.0;
+    // Simplified aircraft response
+    // elevator → pitch rate change, pitch rate → load factor
+    const qDot = de * 0.8 - q * 2.0; // elevator effectiveness + damping
     q += qDot * dt;
-    const nzDot = q * 3.0 - (nz - 1.0) * 1.5;
+    const nzDot = q * 3.0 - (nz - 1.0) * 1.5; // pitch rate drives nz, with restoring
     nz += nzDot * dt;
 
     hCstar.push(Cfbk);
@@ -694,6 +635,7 @@ function runSim() {
 
   drawChart(hCstar, hNz, hDe, hCmd, Ccmd);
 
+  // Final readouts
   const last = steps - 1;
   $('rCstar').textContent = hCstar[last].toFixed(2);
   $('rNz').textContent = hNz[last].toFixed(2);
@@ -716,6 +658,7 @@ function drawChart(hCstar, hNz, hDe, hCmd, Ccmd) {
 
   ctx.clearRect(0, 0, W, H);
 
+  // Compute y range
   const all = [...hCstar, ...hNz, ...hCmd];
   let yMin = Math.min(...all, ...hDe.map(d => d * 0.1)) - 0.3;
   let yMax = Math.max(...all, ...hDe.map(d => d * 0.1)) + 0.3;
@@ -723,6 +666,7 @@ function drawChart(hCstar, hNz, hDe, hCmd, Ccmd) {
   const xScale = i => pad.l + (i / hCstar.length) * pw;
   const yScale = v => pad.t + (1 - (v - yMin) / (yMax - yMin)) * ph;
 
+  // Grid
   ctx.strokeStyle = '#1e293b';
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
@@ -735,6 +679,7 @@ function drawChart(hCstar, hNz, hDe, hCmd, Ccmd) {
     ctx.fillText(val.toFixed(1), pad.l - 6, y + 3);
   }
 
+  // Time labels
   ctx.textAlign = 'center';
   for (let s = 0; s <= 10; s += 2) {
     const x = xScale(s / 10 * hCstar.length);
@@ -753,14 +698,17 @@ function drawChart(hCstar, hNz, hDe, hCmd, Ccmd) {
     ctx.stroke();
   }
 
+  // Cmd reference (dashed)
   ctx.setLineDash([6, 4]);
   drawLine(hCmd, '#f472b6', 1.5);
   ctx.setLineDash([]);
 
-  drawLine(hDe, '#fbbf24', 1.2, v => v * 0.1);
+  // Lines
+  drawLine(hDe, '#fbbf24', 1.2, v => v * 0.1); // scale elevator for display
   drawLine(hNz, '#34d399', 1.5);
   drawLine(hCstar, '#38bdf8', 2.5);
 
+  // Labels
   ctx.font = '11px Noto Sans SC, sans-serif';
   ctx.fillStyle = '#38bdf8';
   ctx.fillText('C*fbk', xScale(hCstar.length) - 30, yScale(hCstar[hCstar.length - 1]) - 8);
@@ -781,6 +729,7 @@ function resetSim() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// Auto run on load
 window.addEventListener('load', () => setTimeout(runSim, 300));
 window.addEventListener('resize', runSim);
 </script>
