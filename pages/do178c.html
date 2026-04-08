@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DO-178C 深度解析 — 机载软件适航认证标准</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-alt: #161f33;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-green: #10b981;
+  --accent-purple: #8b5cf6;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #1e293b;
+  --glow-blue: rgba(59,130,246,0.15);
+  --glow-cyan: rgba(6,182,212,0.12);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* ====== HERO ====== */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(59,130,246,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(6,182,212,0.08) 0%, transparent 60%),
+    var(--bg-primary);
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(255,255,255,0.02) 59px, rgba(255,255,255,0.02) 60px),
+    repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(255,255,255,0.02) 59px, rgba(255,255,255,0.02) 60px);
+  pointer-events: none;
+}
+
+.hero-content { text-align: center; z-index: 2; padding: 2rem; }
+
+.hero-badge {
+  display: inline-block;
+  padding: 0.4rem 1.4rem;
+  border: 1px solid var(--accent-cyan);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--accent-cyan);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+  animation: fadeDown 0.8s ease-out;
+}
+
+.hero h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #e2e8f0 0%, #3b82f6 50%, #06b6d4 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  animation: fadeUp 1s ease-out;
+}
+
+.hero-sub {
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  color: var(--text-secondary);
+  margin-top: 1.5rem;
+  font-weight: 300;
+  animation: fadeUp 1s ease-out 0.2s both;
+}
+
+.hero-meta {
+  display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;
+  margin-top: 3rem;
+  animation: fadeUp 1s ease-out 0.4s both;
+}
+
+.hero-meta-item {
+  display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+}
+
+.hero-meta-item .label { font-size: 0.7rem; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+.hero-meta-item .value { font-family: 'JetBrains Mono'; font-size: 1rem; color: var(--accent-cyan); }
+
+.scroll-hint {
+  position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  animation: bounce 2s infinite;
+  color: var(--text-muted); font-size: 0.8rem; text-align: center;
+}
+.scroll-hint::after { content: '↓'; display: block; font-size: 1.4rem; margin-top: 0.3rem; }
+
+/* ====== NAV ====== */
+.toc {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.8rem 0;
+  overflow-x: auto;
+}
+
+.toc-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: flex; gap: 0.5rem; padding: 0 1rem;
+  white-space: nowrap;
+}
+
+.toc a {
+  color: var(--text-muted); text-decoration: none;
+  font-size: 0.78rem; padding: 0.4rem 0.9rem;
+  border-radius: 6px; transition: all 0.3s;
+  letter-spacing: 0.5px;
+}
+.toc a:hover { color: var(--accent-cyan); background: var(--glow-cyan); }
+
+/* ====== MAIN ====== */
+main { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+
+.section {
+  margin-top: 5rem;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.section-label {
+  font-family: 'JetBrains Mono';
+  font-size: 0.7rem;
+  color: var(--accent-blue);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+
+.section h2 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  line-height: 1.3;
+}
+
+.section p, .section li {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 2;
+}
+
+.section p + p { margin-top: 1rem; }
+
+/* ====== CARDS ====== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-blue);
+  box-shadow: 0 12px 40px rgba(59,130,246,0.1);
+}
+
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.card:hover::before { opacity: 1; }
+
+.card-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+
+.card p { font-size: 0.92rem; color: var(--text-secondary); line-height: 1.75; }
+
+/* ====== DAL TABLE ====== */
+.dal-table-wrap {
+  overflow-x: auto;
+  margin-top: 2rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+thead { background: var(--bg-card-alt); }
+thead th {
+  padding: 1rem 1.2rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--accent-blue);
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+tbody tr:hover { background: rgba(59,130,246,0.04); }
+
+.dal-badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono';
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.dal-a { background: rgba(239,68,68,0.15); color: #f87171; }
+.dal-b { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.dal-c { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.dal-d { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.dal-e { background: rgba(16,185,129,0.15); color: #34d399; }
+
+/* ====== PROCESS FLOW ====== */
+.flow {
+  display: flex;
+  gap: 0;
+  margin: 2.5rem 0;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.flow-step {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 1.5rem 1.2rem;
+  min-width: 150px;
+  position: relative;
+}
+
+.flow-num {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 0.8rem;
+  font-family: 'JetBrains Mono';
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.flow-step h4 { font-size: 0.85rem; margin-bottom: 0.4rem; }
+.flow-step p { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
+
+.flow-step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -12px; top: 1.7rem;
+  color: var(--accent-blue);
+  font-size: 1.2rem;
+}
+
+/* ====== OBJECTIVE TABLE ====== */
+.obj-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.obj-item {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-blue);
+  padding: 1.2rem 1.4rem;
+  border-radius: 0 10px 10px 0;
+  transition: border-color 0.3s;
+}
+.obj-item:hover { border-color: var(--accent-cyan); }
+
+.obj-item h4 { font-size: 0.95rem; margin-bottom: 0.4rem; }
+.obj-item p { font-size: 0.82rem; color: var(--text-muted); }
+
+/* ====== SUPPLEMENT CARDS ====== */
+.supp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.2rem;
+  margin-top: 2rem;
+}
+
+.supp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.8rem;
+  text-align: center;
+  transition: transform 0.3s, border-color 0.3s;
+}
+.supp-card:hover { transform: translateY(-3px); border-color: var(--accent-purple); }
+
+.supp-card .supp-name {
+  font-family: 'JetBrains Mono';
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-purple);
+  margin-bottom: 0.5rem;
+}
+
+.supp-card .supp-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.6rem; }
+.supp-card p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; }
+
+/* ====== HIGHLIGHT BOX ====== */
+.highlight-box {
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(6,182,212,0.06));
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 14px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.highlight-box h3 {
+  color: var(--accent-cyan);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.highlight-box ul {
+  list-style: none;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 0.6rem;
+}
+
+.highlight-box li {
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+}
+
+.highlight-box li::before {
+  content: '✦';
+  color: var(--accent-cyan);
+  margin-right: 0.6rem;
+}
+
+/* ====== TIMELINE ====== */
+.timeline {
+  position: relative;
+  margin: 2.5rem 0 2.5rem 1.5rem;
+  padding-left: 2.5rem;
+  border-left: 2px solid var(--border);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 2.5rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -2.85rem; top: 0.3rem;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  border: 3px solid var(--bg-primary);
+}
+
+.timeline-item .year {
+  font-family: 'JetBrains Mono';
+  font-size: 0.8rem;
+  color: var(--accent-amber);
+  margin-bottom: 0.3rem;
+}
+
+.timeline-item h4 { font-size: 1rem; margin-bottom: 0.3rem; }
+.timeline-item p { font-size: 0.88rem; color: var(--text-muted); }
+
+/* ====== COMPARE ====== */
+.compare-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.compare-col {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+}
+
+.compare-col h3 {
+  font-family: 'JetBrains Mono';
+  font-size: 1.1rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-col ul { list-style: none; }
+.compare-col li {
+  padding: 0.5rem 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.compare-col li::before { content: '•'; color: var(--accent-blue); margin-right: 0.6rem; }
+
+/* ====== FOOTER ====== */
+footer {
+  text-align: center;
+  padding: 3rem 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ====== ANIMATIONS ====== */
+@keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes bounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 768px) {
+  .compare-wrap { grid-template-columns: 1fr; }
+  .flow { flex-direction: column; align-items: center; }
+  .flow-step:not(:last-child)::after { content: '↓'; position: static; display: block; margin-top: 0.5rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">航空电子软件安全标准</div>
+    <h1>DO-178C</h1>
+    <p class="hero-sub">机载系统与设备软件审定考虑<br>Software Considerations in Airborne Systems and Equipment Certification</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <span class="label">发布机构</span>
+        <span class="value">RTCA SC-205</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="label">发布年份</span>
+        <span class="value">2011.12</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="label">前序标准</span>
+        <span class="value">DO-178B (1992)</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="label">欧洲对应</span>
+        <span class="value">ED-12C</span>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint">向下滚动开始探索</div>
+</section>
+
+<!-- ============ TOC ============ -->
+<nav class="toc">
+  <div class="toc-inner">
+    <a href="#overview">概述</a>
+    <a href="#history">发展历程</a>
+    <a href="#dal">软件等级 DAL</a>
+    <a href="#lifecycle">软件生命周期</a>
+    <a href="#processes">核心过程</a>
+    <a href="#objectives">目标体系</a>
+    <a href="#supplements">技术补充</a>
+    <a href="#vs178b">对比 DO-178B</a>
+    <a href="#certification">认证要点</a>
+    <a href="#faq">常见问题</a>
+  </div>
+</nav>
+
+<!-- ============ MAIN ============ -->
+<main>
+
+  <!-- 概述 -->
+  <section class="section" id="overview">
+    <div class="section-label">Chapter 01</div>
+    <h2>什么是 DO-178C？</h2>
+    <p>DO-178C 是由美国航空无线电技术委员会（RTCA）发布的国际标准，全称为<strong>《机载系统与设备合格审定中的软件考虑》</strong>。它为航空机载软件的开发、验证和审定提供了一套系统化的指导框架，是全球民用航空领域最权威的软件适航标准。</p>
+    <p>该标准被美国联邦航空管理局（FAA）、欧洲航空安全局（EASA）以及中国民用航空局（CAAC）等全球主要适航当局所采纳，作为航空软件适航审查的核心依据。任何安装在民用飞机上的软件——从飞行控制计算机到座舱娱乐系统——都需要依据 DO-178C 进行开发和认证。</p>
+
+    <div class="highlight-box">
+      <h3>DO-178C 的核心理念</h3>
+      <ul>
+        <li>基于目标（Objective-based）而非规定性方法</li>
+        <li>软件严格度与系统安全性影响挂钩</li>
+        <li>强调过程的可追溯性与可重复性</li>
+        <li>独立验证与确认（IV&V）的分离原则</li>
+        <li>全生命周期质量保证与配置管理</li>
+        <li>通过软件计划确保合规可预期</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 发展历程 -->
+  <section class="section" id="history">
+    <div class="section-label">Chapter 02</div>
+    <h2>发展历程</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="year">1980 年代</div>
+        <h4>DO-178 初版发布</h4>
+        <p>随着数字航空电子系统的兴起，业界首次意识到需要专门的软件适航标准。RTCA 发布了 DO-178 的最初版本。</p>
+      </div>
+      <div class="timeline-item">
+        <div class="year">1985 年</div>
+        <h4>DO-178A 发布</h4>
+        <p>第一次重大修订，引入了更结构化的软件开发和验证过程。</p>
+      </div>
+      <div class="timeline-item">
+        <div class="year">1992 年</div>
+        <h4>DO-178B 发布</h4>
+        <p>里程碑式版本。引入五级软件保证等级（DAL A-E）和基于目标的合规方法，成为此后近 20 年全球航空软件认证的事实标准。</p>
+      </div>
+      <div class="timeline-item">
+        <div class="year">2005 年</div>
+        <h4>启动 DO-178C 修订</h4>
+        <p>RTCA SC-205 和 EUROCAE WG-71 联合启动修订工作，旨在应对模型驱动开发、面向对象技术和形式化方法等新技术挑战。</p>
+      </div>
+      <div class="timeline-item">
+        <div class="year">2011 年 12 月</div>
+        <h4>DO-178C 正式发布</h4>
+        <p>连同四份技术补充文件一并发布，标志着航空软件标准进入新时代。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DAL -->
+  <section class="section" id="dal">
+    <div class="section-label">Chapter 03</div>
+    <h2>软件设计保证等级（DAL）</h2>
+    <p>DO-178C 的核心概念之一是<strong>设计保证等级（Design Assurance Level, DAL）</strong>。软件的 DAL 由系统安全性评估（SSA）过程确定，取决于该软件失效对飞机和乘客可能造成的最严重后果。DAL 越高，要求完成的目标越多、验证越严格。</p>
+
+    <div class="dal-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>等级</th>
+            <th>失效影响</th>
+            <th>失效概率要求</th>
+            <th>目标数</th>
+            <th>独立性要求</th>
+            <th>典型应用</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="dal-badge dal-a">Level A</span></td>
+            <td>灾难性（Catastrophic）</td>
+            <td>≤ 10⁻⁹ / 飞行小时</td>
+            <td>71</td>
+            <td>最高独立性</td>
+            <td>飞行控制、自动驾驶、发动机控制 FADEC</td>
+          </tr>
+          <tr>
+            <td><span class="dal-badge dal-b">Level B</span></td>
+            <td>危险/严重（Hazardous）</td>
+            <td>≤ 10⁻⁷ / 飞行小时</td>
+            <td>69</td>
+            <td>高独立性</td>
+            <td>GPS导航、电气管理</td>
+          </tr>
+          <tr>
+            <td><span class="dal-badge dal-c">Level C</span></td>
+            <td>重大（Major）</td>
+            <td>≤ 10⁻⁵ / 飞行小时</td>
+            <td>62</td>
+            <td>中等独立性</td>
+            <td>通信系统、气象雷达</td>
+          </tr>
+          <tr>
+            <td><span class="dal-badge dal-d">Level D</span></td>
+            <td>轻微（Minor）</td>
+            <td>≤ 10⁻³ / 飞行小时</td>
+            <td>26</td>
+            <td>基本独立性</td>
+            <td>乘客广播、舱内照明控制</td>
+          </tr>
+          <tr>
+            <td><span class="dal-badge dal-e">Level E</span></td>
+            <td>无影响（No Effect）</td>
+            <td>无要求</td>
+            <td>0</td>
+            <td>无要求</td>
+            <td>座舱娱乐（IFE）、部分维护辅助工具</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 软件生命周期 -->
+  <section class="section" id="lifecycle">
+    <div class="section-label">Chapter 04</div>
+    <h2>软件生命周期过程</h2>
+    <p>DO-178C 定义了三类过程共同构成完整的软件生命周期：<strong>开发过程</strong>（产出软件产品）、<strong>整体过程</strong>（贯穿全生命周期的支撑活动）和<strong>验证过程</strong>（确认正确性）。</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <h4>系统需求</h4>
+        <p>来自系统级分配<br>(ARP 4754A)</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <h4>软件需求</h4>
+        <p>高层需求<br>HLR</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <h4>软件设计</h4>
+        <p>低层需求<br>LLR + 架构</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <h4>编码</h4>
+        <p>源代码<br>实现</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <h4>集成</h4>
+        <p>软件构建<br>与集成</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">6</div>
+        <h4>验证</h4>
+        <p>评审、分析<br>与测试</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">7</div>
+        <h4>认证联络</h4>
+        <p>SOI 审查<br>合规证明</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 核心过程 -->
+  <section class="section" id="processes">
+    <div class="section-label">Chapter 05</div>
+    <h2>核心过程详解</h2>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background:rgba(59,130,246,0.12);color:var(--accent-blue);">📋</div>
+        <h3>软件计划过程</h3>
+        <p>制定五份关键计划文档（PSAC、SDP、SVP、SCMP、SQAP），定义项目的开发策略、工具、标准和合规路径。这是认证联络的起点。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(245,158,11,0.12);color:var(--accent-amber);">⚙️</div>
+        <h3>软件需求过程</h3>
+        <p>将系统需求分配转化为高层需求（HLR），确保需求准确、一致、可验证、可追溯。需求是一切后续活动的基础。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(139,92,246,0.12);color:var(--accent-purple);">🏗️</div>
+        <h3>软件设计过程</h3>
+        <p>将 HLR 细化为低层需求（LLR）和软件架构，描述数据流、控制流和组件接口。设计必须满足所有高层需求。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(16,185,129,0.12);color:var(--accent-green);">💻</div>
+        <h3>编码过程</h3>
+        <p>依据 LLR 和编码标准编写源代码。需遵循编码规则，确保代码可读、可维护，并且与低层需求一致。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(6,182,212,0.12);color:var(--accent-cyan);">🔗</div>
+        <h3>集成过程</h3>
+        <p>将编译后的对象代码加载到目标硬件上，完成软件-硬件集成，并确认可执行目标代码与开发环境中的一致性。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(239,68,68,0.12);color:var(--accent-red);">🔍</div>
+        <h3>验证过程</h3>
+        <p>通过评审、分析和测试三种手段验证每一级产物。包括需求验证、设计验证、代码验证和集成测试，覆盖结构覆盖率分析。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(245,158,11,0.12);color:var(--accent-amber);">📁</div>
+        <h3>配置管理过程</h3>
+        <p>对所有软件生命周期数据进行标识、基线化、变更控制和状态记录。确保任何已批准的配置项都可追溯和复现。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(59,130,246,0.12);color:var(--accent-blue);">✅</div>
+        <h3>质量保证过程</h3>
+        <p>独立于开发团队，对过程合规性和产物符合性进行持续监控审计，发现问题并跟踪至关闭。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(16,185,129,0.12);color:var(--accent-green);">✈️</div>
+        <h3>认证联络过程</h3>
+        <p>与适航当局（DER/ODA/EASA）保持沟通，提交 PSAC，参加阶段审查（SOI），最终提交软件完成摘要（SAS）和 SCI。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 目标体系 -->
+  <section class="section" id="objectives">
+    <div class="section-label">Chapter 06</div>
+    <h2>关键目标（Objectives）示例</h2>
+    <p>DO-178C 采用基于目标的合规框架。标准中 Annex A 的表格列出了所有目标，并按 DAL 标注适用性和独立性要求。以下列举部分核心目标：</p>
+
+    <div class="obj-grid">
+      <div class="obj-item">
+        <h4>A-1</h4>
+        <p>软件需求与系统需求的一致性与可追溯性</p>
+      </div>
+      <div class="obj-item">
+        <h4>A-2</h4>
+        <p>高层需求的准确性与一致性已得到验证</p>
+      </div>
+      <div class="obj-item">
+        <h4>A-3</h4>
+        <p>HLR 符合软件需求标准</p>
+      </div>
+      <div class="obj-item">
+        <h4>A-4</h4>
+        <p>HLR 可追溯到系统需求</p>
+      </div>
+      <div class="obj-item">
+        <h4>A-5</h4>
+        <p>算法的准确性和行为已验证</p>
+      </div>
+      <div class="obj-item">
+        <h4>A-6</h4>
+        <p>低层需求与高层需求的一致性</p>
+      </div>
+      <div class="obj-item">
+        <h4>A-7</h4>
+        <p>源代码符合 LLR 和架构</p>
+      </div>
+      <div class="obj-item">
+        <h4>Table A-6</h4>
+        <p>基于需求的测试覆盖已完成</p>
+      </div>
+      <div class="obj-item">
+        <h4>Table A-7</h4>
+        <p>结构覆盖率（SC/DC/MC/DC）达标</p>
+      </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top: 2rem;">
+      <h3>结构覆盖率等级对照</h3>
+      <ul>
+        <li><strong>Level A</strong> — MC/DC（修改条件/判定覆盖）</li>
+        <li><strong>Level B</strong> — DC（判定覆盖）</li>
+        <li><strong>Level C</strong> — SC（语句覆盖）</li>
+        <li><strong>Level D</strong> — 无结构覆盖要求</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 技术补充 -->
+  <section class="section" id="supplements">
+    <div class="section-label">Chapter 07</div>
+    <h2>四大技术补充文件</h2>
+    <p>DO-178C 的重要创新之一是引入了四份独立的技术补充文件，用于指导特定技术领域的软件开发与验证。当项目采用了相关技术时，应在 PSAC 中声明适用的补充文件。</p>
+
+    <div class="supp-grid">
+      <div class="supp-card">
+        <div class="supp-name">DO-330</div>
+        <div class="supp-title">软件工具鉴定</div>
+        <p>定义了开发和验证工具的鉴定准则和等级（TQL 1-5），确保工具不会在开发过程中引入未检测到的错误。</p>
+      </div>
+      <div class="supp-card">
+        <div class="supp-name">DO-331</div>
+        <div class="supp-title">基于模型的开发与验证</div>
+        <p>为 Model-Based Development & Verification（MB-D&V）提供指南，涵盖模型的开发标准、仿真验证和模型到代码的可追溯性。</p>
+      </div>
+      <div class="supp-card">
+        <div class="supp-name">DO-332</div>
+        <div class="supp-title">面向对象技术</div>
+        <p>针对 OOT（面向对象技术）的特有风险（如继承、多态、动态分派）提供额外的验证目标和指南。</p>
+      </div>
+      <div class="supp-card">
+        <div class="supp-name">DO-333</div>
+        <div class="supp-title">形式化方法</div>
+        <p>允许使用形式化规格和形式化证明作为验证手段的替代或补充，在某些场景下可替代部分测试活动。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 对比 DO-178B -->
+  <section class="section" id="vs178b">
+    <div class="section-label">Chapter 08</div>
+    <h2>DO-178C vs DO-178B</h2>
+    <p>DO-178C 并非对 DO-178B 的颠覆，而是一次务实的演进。核心框架和 DAL 体系保持不变，但在关键领域做出了重要改进。</p>
+
+    <div class="compare-wrap">
+      <div class="compare-col">
+        <h3 style="color:var(--accent-amber);">DO-178B (1992)</h3>
+        <ul>
+          <li>无工具鉴定的独立标准</li>
+          <li>不覆盖模型驱动开发</li>
+          <li>未考虑面向对象技术</li>
+          <li>不支持形式化方法作为替代验证</li>
+          <li>参数数据项（PDI）处理不明确</li>
+          <li>"活动"（Activities）导向的描述风格</li>
+          <li>工具鉴定仅在附录中简要提及</li>
+        </ul>
+      </div>
+      <div class="compare-col">
+        <h3 style="color:var(--accent-cyan);">DO-178C (2011)</h3>
+        <ul>
+          <li>DO-330 专门处理工具鉴定</li>
+          <li>DO-331 提供 MBD&V 完整指南</li>
+          <li>DO-332 覆盖 OOT 特有挑战</li>
+          <li>DO-333 允许形式化方法替代测试</li>
+          <li>明确 PDI 处理要求</li>
+          <li>"目标"（Objectives）导向的表述风格</li>
+          <li>更灵活、可扩展的技术补充机制</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 认证要点 -->
+  <section class="section" id="certification">
+    <div class="section-label">Chapter 09</div>
+    <h2>认证联络与审查阶段</h2>
+    <p>DO-178C 的合规不是自我声明，而需通过与适航当局的正式认证联络过程来证明。这一过程通常围绕四个软件审查节点（SOI）展开：</p>
+
+    <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+      <div class="card" style="text-align:center;">
+        <h3 style="color:var(--accent-blue); font-family:'JetBrains Mono'; font-size:1.3rem;">SOI #1</h3>
+        <p style="font-weight:600; margin-bottom:0.5rem;">计划审查</p>
+        <p>审查 PSAC、SDP、SVP、SCMP、SQAP 等计划文件的完整性和合理性。</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <h3 style="color:var(--accent-cyan); font-family:'JetBrains Mono'; font-size:1.3rem;">SOI #2</h3>
+        <p style="font-weight:600; margin-bottom:0.5rem;">开发审查</p>
+        <p>审查需求、设计和编码过程产物，确认过程执行与计划一致。</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <h3 style="color:var(--accent-purple); font-family:'JetBrains Mono'; font-size:1.3rem;">SOI #3</h3>
+        <p style="font-weight:600; margin-bottom:0.5rem;">验证审查</p>
+        <p>审查测试用例、测试结果、覆盖率分析和问题报告。</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <h3 style="color:var(--accent-green); font-family:'JetBrains Mono'; font-size:1.3rem;">SOI #4</h3>
+        <p style="font-weight:600; margin-bottom:0.5rem;">最终审查</p>
+        <p>审查 SAS（软件完成摘要）、SCI（软件配置索引）和 SECI，确认所有目标已满足。</p>
+      </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top:2.5rem;">
+      <h3>关键交付物清单</h3>
+      <ul>
+        <li><strong>PSAC</strong> — 软件合格审定计划</li>
+        <li><strong>SDP</strong> — 软件开发计划</li>
+        <li><strong>SVP</strong> — 软件验证计划</li>
+        <li><strong>SCMP</strong> — 软件配置管理计划</li>
+        <li><strong>SQAP</strong> — 软件质量保证计划</li>
+        <li><strong>SRS</strong> — 软件需求规格</li>
+        <li><strong>SDD</strong> — 软件设计描述</li>
+        <li><strong>SAS</strong> — 软件完成摘要</li>
+        <li><strong>SCI</strong> — 软件配置索引</li>
+        <li><strong>SECI</strong> — 软件生命周期环境配置索引</li>
+        <li><strong>PR / SCR</strong> — 问题报告 / 软件变更请求</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="section-label">Chapter 10</div>
+    <h2>常见问题</h2>
+
+    <div class="card-grid" style="grid-template-columns: 1fr;">
+      <div class="card">
+        <h3>DO-178C 是法律法规吗？</h3>
+        <p>不是。DO-178C 本身是一份行业指南文件（Guidance），但被 FAA（通过 AC 20-115D）和 EASA（通过 AMC 20-115D）等适航当局作为可接受的符合性方法（Acceptable Means of Compliance）引用，因此在实际认证中具有准强制性。</p>
+      </div>
+      <div class="card">
+        <h3>DAL 等级由谁决定？</h3>
+        <p>DAL 由系统安全性评估过程（参照 ARP 4754A / ARP 4761）确定，并分配给相应的软件功能。系统工程师和安全工程师通过功能危险评估（FHA）和故障树分析（FTA）等方法确定每个功能的失效影响等级。</p>
+      </div>
+      <div class="card">
+        <h3>Level E 的软件需要做什么？</h3>
+        <p>DO-178C 对 Level E 软件不设任何目标。但开发者仍需在 PSAC 中声明该软件为 Level E，并通过配置管理标识它。适航当局可能会审查 Level E 的判定是否合理。</p>
+      </div>
+      <div class="card">
+        <h3>什么是 MC/DC？</h3>
+        <p>MC/DC（Modified Condition / Decision Coverage，修改条件/判定覆盖）是 DO-178C 对 Level A 软件要求的最严格结构覆盖准则。它要求证明每个条件都能独立影响判定结果，是航空软件测试中最具挑战性的覆盖指标之一。</p>
+      </div>
+      <div class="card">
+        <h3>开源软件可以用在机载系统中吗？</h3>
+        <p>理论上可以，但必须满足 DO-178C 对"先前开发的软件"（Previously Developed Software）的所有要求，包括完整的需求追溯、代码审查、覆盖率分析等。这通常意味着需要投入与重新开发相当甚至更多的验证工作。</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>DO-178C 学习参考材料 · 仅供教学用途 · 标准原文请参阅 RTCA 官方出版物</p>
+</footer>
+
+</body>
+</html>
