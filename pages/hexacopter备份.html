@@ -401,10 +401,7 @@ footer{
           M1 失效 → 保留全部 5 桨 → 在线切换混控矩阵
         </p>
         <p style="font-size:.85rem;color:var(--text2);line-height:1.8">
-          原始分配矩阵 \(B\)（4×6）删去失效列得到 \(B_5\)（4×5），通过加权伪逆求解 \(u_5 = B_5^\dagger \, v_{\text{cmd}}\)。推荐搭配 <strong>Relaxed Yaw</strong> 方案——放弃航向锁定，只控制 \(\phi, \theta, T\)，允许机体缓慢自旋。
-        </p>
-        <p style="font-size:.82rem;color:var(--text2);line-height:1.8;margin-top:.7rem;padding:.7rem .9rem;background:rgba(0,229,255,.05);border-left:2px solid var(--accent);border-radius:3px">
-          <strong style="color:var(--accent)">推力如何重分配？</strong> M1 在机头前方失效后，前方升力缺失会让机体低头。正确的补偿方式是：<span style="color:#ff6e40;font-weight:600">M4（对称后方）降速</span> 以抵消俯仰力矩，同时 <span style="color:#76ff03;font-weight:600">M2、M6（前侧）增速</span> 补回前方升力缺口；M3、M5（后侧）略降以维持滚转对称。剩余 CW/CCW 反扭矩无法配平，因此放弃 yaw 控制，换取三通道（roll/pitch/高度）可解。
+          原始分配矩阵 \(B\)（4×6）删去失效列得到 \(B_5\)（4×5），通过加权伪逆求解 \(u_5 = B_5^\dagger \, v_{\text{cmd}}\)。推荐搭配 <strong>Relaxed Yaw</strong> 方案——放弃航向锁定，仅控制 \(\phi, \theta, T\)，允许机体缓慢自旋。
         </p>
         <div class="pros-cons">
           <div class="pros">
@@ -621,56 +618,33 @@ function renderHex(scenario){
 
   html += body;
 
-  // Strategy B: physically correct thrust redistribution after M1 (front/CW) fails
-  // - M2, M6 (front-side pair): INCREASE  → compensate lost front lift
-  // - M4 (opposite / back): DECREASE     → cancel the pitch-down moment
-  // - M3, M5 (back-side pair): slight decrease → keep roll symmetry
-  // Yaw is relaxed (spin accepted) because CW/CCW count is 2:3.
-  const stratBAdjust = {2:'up', 6:'up', 4:'down', 3:'down-lite', 5:'down-lite'};
-
   // Draw motors
   motors.forEach(m=>{
     const isFailed = failed.includes(m.id);
     const isDisabled = disabled.includes(m.id);
     const isActive = !isFailed && !isDisabled;
 
-    // Determine per-motor adjustment under strategy B
-    const adj = (scenario==='stratB' && isActive) ? (stratBAdjust[m.id] || 'normal') : 'normal';
-
-    // Baseline color always reflects rotation direction (CW=cyan, CCW=green)
-    // Strategy B up/down is conveyed by rings, arrows, and spin speed — NOT by fill color
-    let fillColor;
-    if(!isActive){
-      fillColor = isFailed ? '#ff1744' : '#444';
-    } else {
-      fillColor = m.cw ? '#00e5ff' : '#76ff03';
-    }
+    let fillColor = isActive ? (m.cw ? '#00e5ff' : '#76ff03') : isFailed ? '#ff1744' : '#444';
     let opacity = isActive ? 1 : (isFailed ? 0.7 : 0.4);
-    let adjRing = '';
+    let ringSize = 26;
+    let boostRing = '';
 
-    // Strategy B adjustment rings: outward = boost, inward = reduce
-    if(adj==='up'){
-      adjRing = `<circle cx="${m.x}" cy="${m.y}" r="32" fill="none" stroke="#76ff03" stroke-width="1.5" opacity=".55" stroke-dasharray="4 3">
-        <animateTransform attributeName="transform" type="rotate" from="0 ${m.x} ${m.y}" to="${m.cw?'-':''}360 ${m.x} ${m.y}" dur="1.5s" repeatCount="indefinite"/>
-      </circle>
-      <text x="${m.x}" y="${m.y-38}" text-anchor="middle" fill="#76ff03" font-size="11" font-family="JetBrains Mono" font-weight="700">▲</text>`;
-    } else if(adj==='down'){
-      adjRing = `<circle cx="${m.x}" cy="${m.y}" r="18" fill="none" stroke="#ff6e40" stroke-width="1.5" opacity=".55" stroke-dasharray="3 3">
-        <animateTransform attributeName="transform" type="rotate" from="0 ${m.x} ${m.y}" to="${m.cw?'-':''}360 ${m.x} ${m.y}" dur="2.5s" repeatCount="indefinite"/>
-      </circle>
-      <text x="${m.x}" y="${m.y+42}" text-anchor="middle" fill="#ff6e40" font-size="11" font-family="JetBrains Mono" font-weight="700">▼</text>`;
-    } else if(adj==='down-lite'){
-      adjRing = `<circle cx="${m.x}" cy="${m.y}" r="20" fill="none" stroke="#ffb74d" stroke-width="1" opacity=".35" stroke-dasharray="2 3"/>`;
+    // Strategy B boost visualization
+    if(scenario==='stratB' && isActive){
+      // opposite-spin motors work harder
+      ringSize = 28;
+      if(!m.cw){ // CCW motors (minority CW lost) spin harder
+        boostRing = `<circle cx="${m.x}" cy="${m.y}" r="32" fill="none" stroke="${fillColor}" stroke-width="1.5" opacity=".4" stroke-dasharray="4 3">
+          <animateTransform attributeName="transform" type="rotate" from="0 ${m.x} ${m.y}" to="${m.cw?'-':''}360 ${m.x} ${m.y}" dur="1.5s" repeatCount="indefinite"/>
+        </circle>`;
+      }
     }
 
-    // spinning animation - speed reflects thrust level
+    // spinning animation
     let spin = '';
     if(isActive){
       const dir = m.cw ? '' : '-';
-      let dur = '0.9s';
-      if(adj==='up') dur = '0.55s';
-      else if(adj==='down') dur = '1.5s';
-      else if(adj==='down-lite') dur = '1.1s';
+      const dur = (scenario==='stratB' && !m.cw) ? '0.6s' : '0.9s';
       spin = `<animateTransform attributeName="transform" type="rotate" from="0 ${m.x} ${m.y}" to="${dir}360 ${m.x} ${m.y}" dur="${dur}" repeatCount="indefinite"/>`;
     }
 
@@ -699,7 +673,7 @@ function renderHex(scenario){
     }
 
     html += `<g opacity="${opacity}">
-      ${adjRing}
+      ${boostRing}
       <g>${blades}${spin}</g>
       <circle cx="${m.x}" cy="${m.y}" r="12" fill="${fillColor}" opacity=".2"/>
       <circle cx="${m.x}" cy="${m.y}" r="7" fill="${fillColor}"/>
