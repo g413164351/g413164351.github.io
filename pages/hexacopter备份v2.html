@@ -373,120 +373,8 @@ footer{
           M1 失效 → 主动关闭 M4（对面电机） → 4 桨飞行
         </p>
         <p style="font-size:.85rem;color:var(--text2);line-height:1.8">
-          CW/CCW 数量恢复 2:2，反扭矩静态平衡。但最大推力仅剩 \(4F_{\max}\)，悬停需要接近满油门，几乎没有操控余量。更关键的是——剩下 4 个桨构成的"虚拟四旋翼" <strong>和标准四旋翼完全不同</strong>。
+          CW/CCW 数量恢复 2:2，偏航容易平衡。但最大推力仅剩 \(4F_{\max}\)，悬停需要接近满油门，几乎没有操控余量。构成的"虚拟四旋翼"不是正交对称的，滚转和俯仰耦合严重。
         </p>
-
-        <div style="margin-top:1rem;padding:1rem 1.2rem;background:rgba(255,110,64,.06);border-left:2px solid var(--warn);border-radius:3px">
-          <p style="font-size:.85rem;color:var(--text);font-weight:600;margin-bottom:.6rem">⚠ 几何与旋向的"双重不对称"</p>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8;margin-bottom:.6rem">
-            停掉 M1、M4 后，剩下 M2、M3、M5、M6 排成一个 <strong>矩形</strong>（不是正方形）：左右窄、前后宽。它们的旋向分布是：
-          </p>
-
-          <div style="display:flex;justify-content:center;margin:.8rem 0">
-            <svg viewBox="-110 -110 220 220" width="200" height="200">
-              <!-- body -->
-              <circle cx="0" cy="0" r="14" fill="#1a2332" stroke="#2a3a4d" stroke-width="1.5"/>
-              <!-- arms -->
-              <line x1="0" y1="0" x2="65" y2="-37.5" stroke="#2a3a4d" stroke-width="2"/>
-              <line x1="0" y1="0" x2="65" y2="37.5" stroke="#2a3a4d" stroke-width="2"/>
-              <line x1="0" y1="0" x2="-65" y2="37.5" stroke="#2a3a4d" stroke-width="2"/>
-              <line x1="0" y1="0" x2="-65" y2="-37.5" stroke="#2a3a4d" stroke-width="2"/>
-              <!-- rectangle outline showing the "virtual quad" -->
-              <rect x="-65" y="-37.5" width="130" height="75" fill="none" stroke="#ff6e40" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
-              <!-- top edge: M6(CCW) - M2(CCW) same! -->
-              <line x1="-65" y1="-37.5" x2="65" y2="-37.5" stroke="#76ff03" stroke-width="2.5" opacity=".7"/>
-              <text x="0" y="-44" text-anchor="middle" fill="#76ff03" font-size="9" font-family="JetBrains Mono">CCW–CCW 同向</text>
-              <!-- bottom edge: M5(CW) - M3(CW) same! -->
-              <line x1="-65" y1="37.5" x2="65" y2="37.5" stroke="#00e5ff" stroke-width="2.5" opacity=".7"/>
-              <text x="0" y="54" text-anchor="middle" fill="#00e5ff" font-size="9" font-family="JetBrains Mono">CW–CW 同向</text>
-              <!-- M2 upper right CCW -->
-              <circle cx="65" cy="-37.5" r="8" fill="#76ff03"/>
-              <text x="80" y="-34" fill="#76ff03" font-size="9" font-family="JetBrains Mono">M2</text>
-              <!-- M3 lower right CW -->
-              <circle cx="65" cy="37.5" r="8" fill="#00e5ff"/>
-              <text x="80" y="40" fill="#00e5ff" font-size="9" font-family="JetBrains Mono">M3</text>
-              <!-- M5 lower left CW -->
-              <circle cx="-65" cy="37.5" r="8" fill="#00e5ff"/>
-              <text x="-95" y="40" fill="#00e5ff" font-size="9" font-family="JetBrains Mono">M5</text>
-              <!-- M6 upper left CCW -->
-              <circle cx="-65" cy="-37.5" r="8" fill="#76ff03"/>
-              <text x="-95" y="-34" fill="#76ff03" font-size="9" font-family="JetBrains Mono">M6</text>
-              <!-- failed M1, M4 markers -->
-              <g opacity=".4">
-                <circle cx="0" cy="-90" r="6" fill="none" stroke="#ff1744" stroke-width="1.5" stroke-dasharray="2 2"/>
-                <text x="0" y="-100" text-anchor="middle" fill="#ff1744" font-size="8" font-family="JetBrains Mono">M1✗</text>
-                <circle cx="0" cy="90" r="6" fill="none" stroke="#888" stroke-width="1.5" stroke-dasharray="2 2"/>
-                <text x="0" y="105" text-anchor="middle" fill="#888" font-size="8" font-family="JetBrains Mono">M4 停</text>
-              </g>
-            </svg>
-          </div>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8">
-            这和标准 X 型四旋翼完全相反——标准四旋翼的相邻桨一定旋向相反、对角桨同向，所以"对角加速"就能产生纯偏航力矩、"前两个加速"就能产生纯俯仰力矩。但这里：
-          </p>
-
-          <ul style="font-size:.82rem;color:var(--text2);line-height:1.9;margin-top:.5rem;padding-left:1.2rem">
-            <li><strong style="color:var(--warn)">前后边各是同旋向的"双胞胎"</strong>——前边 M6+M2 都是 CCW，后边 M5+M3 都是 CW。</li>
-            <li><strong style="color:var(--warn)">想俯仰必然引入偏航</strong>：要抬头就得让 M5+M3 增速，但它俩都是 CW，反扭矩同时增加，机体被迫向 CCW 方向偏航；要低头则反过来。<span class="math">τ<sub>θ</sub></span> 和 <span class="math">τ<sub>ψ</sub></span> 在控制矩阵里强耦合。</li>
-            <li><strong style="color:var(--warn)">想偏航必然引入俯仰</strong>：要顺时针偏航得让 CW 桨（M3+M5）减速、CCW 桨（M2+M6）增速，但 CW 全在后、CCW 全在前——结果机头被抬起来。yaw 命令变成了 pitch 命令。</li>
-            <li><strong style="color:#76ff03">滚转通道相对干净</strong>：左右两侧（M2+M3 vs M5+M6）每侧都各有一个 CW 一个 CCW，反扭矩自然抵消，所以单纯滚转还算解耦。</li>
-          </ul>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8;margin-top:.7rem">
-            数学上看，4 个执行器恰好等于 4 个自由度，控制分配矩阵 <span class="math">B<sub>4</sub></span> 是方阵但 <strong>条件数极差</strong>——某些方向的指令需要电机出极大力才能实现，很容易饱和。这就是"几何上是四旋翼，控制上完全不是四旋翼"的根源。
-          </p>
-        </div>
-
-        <div style="margin-top:1rem;padding:1rem 1.2rem;background:rgba(255,23,68,.06);border-left:2px solid var(--danger);border-radius:3px">
-          <p style="font-size:.85rem;color:var(--text);font-weight:600;margin-bottom:.6rem">🚨 更深一层：混控矩阵秩亏，根本不可控</p>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8">
-            把控制分配写成矩阵形式。设 4 个电机的转速增量为 \(\delta\omega_i\)，按 M6、M2、M5、M3 顺序（左前、右前、左后、右后）排列：
-          </p>
-
-          <div class="formula-block" style="margin:.8rem 0;font-size:.78rem">
-            <span class="label">控制分配</span>
-\[
-\begin{bmatrix} T \\ \tau_{\text{roll}} \\ \tau_{\text{pitch}} \\ \tau_{\text{yaw}} \end{bmatrix}
-\propto
-\begin{bmatrix}
-+1 & +1 & +1 & +1 \\
-+1 & -1 & +1 & -1 \\
-+1 & +1 & -1 & -1 \\
-+1 & +1 & -1 & -1
-\end{bmatrix}
-\begin{bmatrix} \delta\omega_{M6} \\ \delta\omega_{M2} \\ \delta\omega_{M5} \\ \delta\omega_{M3} \end{bmatrix}
-\]
-          </div>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8">
-            <strong style="color:var(--danger)">注意最后两行完全相同！</strong>俯仰行和偏航行一模一样，意味着 <span class="math">B<sub>4</sub></span> 的秩只有 <strong>3</strong>，而不是 4。这不是"耦合严重"，而是"<strong>根本无法解耦</strong>"——飞控算法找不到任何一组电机转速能同时独立满足俯仰和偏航指令。
-          </p>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8;margin-top:.7rem">
-            <strong style="color:var(--text)">为什么两行会一样？</strong>对照看：
-          </p>
-          <ul style="font-size:.81rem;color:var(--text2);line-height:1.85;margin-top:.4rem;padding-left:1.2rem">
-            <li><strong>俯仰指令</strong>（抬头）= 前排（M6+M2）增速 − 后排（M5+M3）减速</li>
-            <li><strong>偏航指令</strong>（CCW 自旋）= CCW 组（M6+M2）增速 − CW 组（M5+M3）减速</li>
-            <li>因为前排恰好就是 CCW 组、后排恰好就是 CW 组，<strong style="color:var(--danger)">两个指令使用的电机差分组合完全相同</strong>，飞控无从区分。</li>
-          </ul>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8;margin-top:.7rem">
-            <strong style="color:var(--text)">对照标准 X 型四旋翼</strong>（对角同向）：前左 CCW、前右 CW、后左 CW、后右 CCW。
-          </p>
-          <ul style="font-size:.81rem;color:var(--text2);line-height:1.85;margin-top:.4rem;padding-left:1.2rem">
-            <li>俯仰用"前排 vs 后排"差分——前排一 CW 一 CCW，反扭矩自动抵消，不影响偏航。</li>
-            <li>偏航用"对角线"差分——对角同向所以反扭矩同号叠加，但对角的几何力臂相互抵消，不影响俯仰。</li>
-            <li>混控矩阵秩 = 4，四个自由度完全解耦。</li>
-          </ul>
-
-          <p style="font-size:.82rem;color:var(--text2);line-height:1.8;margin-top:.7rem;padding:.6rem .8rem;background:rgba(255,23,68,.08);border-radius:3px">
-            <strong style="color:var(--danger)">结论：</strong>停掉 M1+M4 后剩下的"虚拟四旋翼"是 <strong>欠驱动且不可完全控制</strong> 的——油门 ✓、滚转 ✓、俯仰 ✗、偏航 ✗。想抬头必然自旋，想偏航必然俯仰。这是一种<strong>根本性的控制缺陷</strong>，不是调参可以解决的问题。所以 <strong>策略 A 在 M1/M4 这种"两个 CW、两个 CCW 但前后分组"的对桨上其实不可行</strong>，必须停的是另一组对桨（例如 M2+M5 或 M3+M6），才能恢复标准 X 型的对角同向布局。
-          </p>
-        </div>
-
         <div class="pros-cons">
           <div class="pros">
             <h5>优势</h5>
@@ -501,8 +389,8 @@ footer{
             <ul>
               <li>推力损失 33%，裕度极小</li>
               <li>推重比需 ≥ 2.5 才安全</li>
-              <li>俯仰 ↔ 偏航 强耦合（同旋向双胞胎）</li>
-              <li>控制分配矩阵条件数差，易饱和</li>
+              <li>滚转俯仰严重耦合</li>
+              <li>控制品质明显下降</li>
             </ul>
           </div>
         </div>
