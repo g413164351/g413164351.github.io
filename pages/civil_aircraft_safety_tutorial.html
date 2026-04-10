@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>民用飞机系统安全性设计与评估技术 · 教学讲义</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --primary:#0b3d91;
+  --primary-light:#1e88e5;
+  --accent:#d62828;
+  --soft:#f4f7fb;
+  --border:#dde3ec;
+  --text:#1a1a1a;
+  --muted:#5a6477;
+  --green:#0b8a3e;
+}
+*{box-sizing:border-box}
+body{
+  font-family:"Microsoft YaHei","PingFang SC","Helvetica Neue",sans-serif;
+  margin:0;color:var(--text);line-height:1.85;background:#fafbfd;
+}
+header{
+  background:linear-gradient(135deg,#0b3d91 0%,#1e88e5 100%);
+  color:#fff;padding:60px 40px;text-align:center;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+}
+header h1{margin:0;font-size:2.3em;letter-spacing:2px}
+header .sub{margin:12px 0 0;opacity:.92;font-size:1.1em;letter-spacing:1px}
+header .meta{margin-top:18px;font-size:.9em;opacity:.8}
+.container{display:flex;max-width:1340px;margin:0 auto}
+nav.toc{
+  width:280px;flex-shrink:0;padding:28px 20px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  background:#fff;border-right:1px solid var(--border);font-size:.93em;
+}
+nav.toc h3{color:var(--primary);margin-top:0;border-bottom:2px solid var(--primary);padding-bottom:10px;font-size:1.05em}
+nav.toc ol{padding-left:22px;margin:0}
+nav.toc li{margin:6px 0}
+nav.toc a{color:var(--text);text-decoration:none;display:block;padding:4px 0;border-radius:4px;transition:all .2s}
+nav.toc a:hover{color:var(--accent);padding-left:6px}
+main{flex:1;padding:40px 50px;max-width:1020px}
+section.chapter{
+  background:#fff;border:1px solid var(--border);border-radius:12px;
+  padding:35px 40px;margin-bottom:35px;box-shadow:0 2px 10px rgba(0,0,0,.04);
+}
+.chapter-intro{
+  background:linear-gradient(135deg,#e3f2fd 0%,#f0f7ff 100%);
+  border-left:5px solid var(--primary-light);
+  padding:18px 22px;margin:18px 0 25px;border-radius:0 8px 8px 0;
+  font-size:1.02em;
+}
+.chapter-intro strong{color:var(--primary)}
+h2{
+  color:var(--primary);border-left:6px solid var(--accent);
+  padding-left:16px;margin-top:0;font-size:1.65em;
+}
+h3{color:#0b3d91;margin-top:30px;font-size:1.22em;border-bottom:1px dashed #cdd6e3;padding-bottom:6px}
+h4{color:#333;margin:18px 0 8px;font-size:1.05em}
+.tag{
+  display:inline-block;background:var(--accent);color:#fff;
+  font-size:.7em;padding:3px 12px;border-radius:14px;margin-left:12px;vertical-align:middle;letter-spacing:1px;
+}
+.tag.brief{background:#888}
+.tag.core{background:var(--green)}
+.box{
+  background:var(--soft);border-left:4px solid var(--primary);
+  padding:16px 20px;margin:16px 0;border-radius:0 6px 6px 0;
+}
+.box.warn{border-left-color:var(--accent);background:#fff5f5}
+.box.tip{border-left-color:var(--green);background:#f1fbf4}
+.box.example{border-left-color:#f39c12;background:#fffbf0}
+.box .label{display:block;font-weight:bold;color:var(--primary);margin-bottom:6px;font-size:.95em}
+.box.warn .label{color:var(--accent)}
+.box.tip .label{color:var(--green)}
+.box.example .label{color:#d68910}
+table{
+  width:100%;border-collapse:collapse;margin:18px 0;font-size:.94em;
+}
+table th,table td{
+  border:1px solid var(--border);padding:10px 14px;text-align:left;vertical-align:top;
+}
+table th{background:var(--primary);color:#fff;font-weight:600}
+table tr:nth-child(even){background:#fafcff}
+ul,ol{padding-left:26px}
+li{margin:6px 0}
+code{background:#eef2f7;padding:2px 7px;border-radius:4px;font-size:.9em;color:#c0392b}
+.formula{
+  background:#fafbfd;padding:16px;border:1px dashed #aac;
+  border-radius:8px;margin:14px 0;text-align:center;
+}
+.flow{display:flex;flex-wrap:wrap;gap:14px;margin:18px 0}
+.flow .step{
+  flex:1;min-width:160px;
+  background:linear-gradient(135deg,var(--primary-light),var(--primary));
+  color:#fff;padding:14px;border-radius:8px;text-align:center;font-size:.95em;
+  position:relative;box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+.flow .step::after{
+  content:"▶";position:absolute;right:-14px;top:50%;
+  transform:translateY(-50%);color:var(--primary);font-size:1.1em;
+}
+.flow .step:last-child::after{content:""}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:8px 18px;margin:12px 0;background:#fafbfd;padding:14px 18px;border-radius:8px;border:1px solid #e8edf3}
+.kv dt{font-weight:bold;color:var(--primary)}
+.kv dd{margin:0}
+footer{
+  text-align:center;padding:30px;color:var(--muted);
+  border-top:1px solid var(--border);background:#fff;
+}
+.q{
+  background:#fff8e7;border-left:4px solid #f39c12;
+  padding:12px 18px;margin:14px 0;border-radius:0 6px 6px 0;font-style:italic;
+}
+.q::before{content:"❓ ";font-style:normal}
+@media(max-width:900px){
+  nav.toc{display:none}
+  main{padding:25px 20px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>民用飞机系统安全性设计与评估技术</h1>
+  <p class="sub">System Safety Design & Assessment for Civil Aircraft</p>
+  <p class="meta">教学讲义 · 基于 CCAR-25.1309 / SAE ARP4754A / ARP4761</p>
+</header>
+
+<div class="container">
+
+<nav class="toc">
+  <h3>📚 课程目录</h3>
+  <ol>
+    <li><a href="#ch1">第1章 绪论</a></li>
+    <li><a href="#ch2">第2章 规章与工业标准</a></li>
+    <li><a href="#ch3">第3章 安全性设计与评估体系</a></li>
+    <li><a href="#ch4">第4章 功能危险性评估 FHA</a></li>
+    <li><a href="#ch5">第5章 初步系统安全性评估 PSSA</a></li>
+    <li><a href="#ch6">第6章 系统安全性评估 SSA</a></li>
+    <li><a href="#ch7">第7章 概率计算分析工具</a></li>
+    <li><a href="#ch8">第8章 FMEA / FMES</a></li>
+    <li><a href="#ch9">第9章 特定风险分析</a></li>
+    <li><a href="#ch10">第10章 区域安全性分析</a></li>
+    <li><a href="#ch11">第11章 共模分析</a></li>
+    <li><a href="#ch12">第12章 相关其他内容</a></li>
+    <li><a href="#ch13">第13章 工作管理与规划</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 第1章 ============ -->
+<section class="chapter" id="ch1">
+  <h2>第1章 绪论<span class="tag core">基础</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 一架现代民航客机有数百万个零件、上百个系统，任何一个失效都可能酿成灾难。如何系统化地保证"飞机足够安全"？这就是"系统安全性"这门学科要回答的问题。本章为整本书铺路，先把一系列绕不开的术语、为什么需要这门学科、它从何而来又走向何方，讲清楚。
+  </div>
+
+  <h3>1.1 为什么需要"系统安全性"？</h3>
+  <p>早期的飞机设计依赖"试飞-坠机-改进"的经验循环，安全性靠事后吸取教训。但现代民机有以下特征：</p>
+  <ul>
+    <li><b>系统极度复杂</b>：一架 C919 拥有约 100 个系统，数千万行机载软件代码，单靠经验已无法预测所有失效组合；</li>
+    <li><b>失效后果极严重</b>：一次空难可造成数百人死亡，公众与监管对安全的容忍度趋近于零；</li>
+    <li><b>必须事前证明</b>：飞机要拿到型号合格证（TC），必须在<b>首飞之前</b>用分析手段证明其足够安全，而不能"飞起来再说"。</li>
+  </ul>
+  <p>因此发展出了一整套<b>"用工程化方法、在设计阶段就预测并消除危险"</b>的学科——这就是"民机系统安全性设计与评估"。</p>
+
+  <h3>1.2 必须掌握的基本概念</h3>
+  <p>这些术语在后续每一章都会反复出现，含义务必准确：</p>
+  <table>
+    <tr><th>术语</th><th>含义解释</th></tr>
+    <tr>
+      <td><b>故障 Fault</b></td>
+      <td>部件处于"不正常"状态，但不一定立刻表现出来。例如电阻漂移、传感器零点偏移。它是失效的<b>原因</b>。</td>
+    </tr>
+    <tr>
+      <td><b>失效 Failure</b></td>
+      <td>系统/部件丧失了规定的功能。例如"液压泵不再产生压力"。它是故障的<b>表现</b>。</td>
+    </tr>
+    <tr>
+      <td><b>失效状态 Failure Condition</b></td>
+      <td>把一个或多个失效放回"飞机正在飞行"这个真实场景中所产生的后果。例如"巡航中双发停车"。它强调的是<b>对飞机和乘员的影响</b>，而不是单个部件坏了。</td>
+    </tr>
+    <tr>
+      <td><b>危险 Hazard</b></td>
+      <td>潜在的伤害源。可以来自系统内部（设计错误），也可以来自外部（鸟撞、雷击）。</td>
+    </tr>
+    <tr>
+      <td><b>风险 Risk</b></td>
+      <td>"事情发生的可能性 × 一旦发生有多严重"。安全性工程的目标就是把风险控制在可接受水平。</td>
+    </tr>
+    <tr>
+      <td><b>安全性 Safety</b></td>
+      <td>免于不可接受风险的状态。注意：绝对安全不存在，安全是一个"足够低的风险"概念。</td>
+    </tr>
+  </table>
+
+  <h3>1.3 失效状态的五个等级——全书的基准刻度</h3>
+  <p>适航规章用一把"尺子"衡量后果严重程度，把所有失效状态划分到五个等级，并对每一等级规定了允许出现的最大概率。这是安全性设计中的<b>"金科玉律"</b>：越严重的后果，发生概率必须越低。</p>
+  <table>
+    <tr><th>等级</th><th>对飞机/乘员的影响</th><th>定性目标</th><th>定量目标（每飞行小时）</th></tr>
+    <tr><td><b>灾难的</b><br>Catastrophic</td><td>阻止飞机继续安全飞行和着陆，通常意味着机毁人亡</td><td>极不可能</td><td>\(< 10^{-9}\)</td></tr>
+    <tr><td><b>危险的</b><br>Hazardous</td><td>显著降低飞机或机组的能力，少数乘员严重受伤或死亡</td><td>极微小可能</td><td>\(< 10^{-7}\)</td></tr>
+    <tr><td><b>较大的</b><br>Major</td><td>显著降低安全裕度或工作能力，乘员不适</td><td>微小可能</td><td>\(< 10^{-5}\)</td></tr>
+    <tr><td><b>较小的</b><br>Minor</td><td>稍微增加机组工作负担，不显著影响安全</td><td>可能</td><td>\(< 10^{-3}\)</td></tr>
+    <tr><td><b>无安全影响</b><br>NSE</td><td>对飞行安全无影响</td><td>—</td><td>无要求</td></tr>
+  </table>
+
+  <div class="box tip">
+    <span class="label">💡 直观理解 \(10^{-9}\) 是什么概念</span>
+    每飞行小时小于 \(10^{-9}\)，意味着<b>每十亿飞行小时才允许出现一次</b>。如果全球民机机队一年总共飞 1 亿小时，那么这种灾难性失效平均要"等十年"才会发生一次——这就是安全的工程化目标。
+  </div>
+
+  <h3>1.4 学科的发展脉络</h3>
+  <p>系统安全性学科经历了三个阶段的演进：</p>
+  <ul>
+    <li><b>经验阶段（1950 年代以前）</b>：靠飞行事故反推改进，没有系统化方法；</li>
+    <li><b>可靠性阶段（1960~1980 年代）</b>：引入故障率、MTBF 等指标，但只关注单个部件好不好，不关注"一坏会怎样"；</li>
+    <li><b>系统安全性阶段（1980 年代至今）</b>：以 ARP4754/ARP4761 为代表，从飞机功能出发自顶向下分析、自底向上验证，把安全性变成<b>可证明、可追溯</b>的工程过程。</li>
+  </ul>
+  <p>当前趋势：基于模型的安全性分析（MBSA）、与网络安全的融合、面向新构型（如电动飞机、eVTOL）的方法扩展。</p>
+</section>
+
+<!-- ============ 第2章 ============ -->
+<section class="chapter" id="ch2">
+  <h2>第2章 规章、咨询通告与工业标准<span class="tag">了解</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 民机安全性不是工程师"觉得安全"就行，必须满足<b>法律</b>。本章梳理"做安全性工作要听谁的"——包括强制性的适航规章（必须做）、咨询通告（推荐怎么做）和工业标准（业界公认的具体方法）。三者构成一个由"要求"到"方法"的完整体系。
+  </div>
+
+  <h3>2.1 我国适航法规的四级体系</h3>
+  <p>从顶到底依次约束力递减、具体性递增：</p>
+  <dl class="kv">
+    <dt>① 法律</dt><dd>《中华人民共和国民用航空法》——最高层，规定民航活动总框架</dd>
+    <dt>② 行政法规</dt><dd>《民用航空器适航管理条例》——国务院发布，建立适航审定制度</dd>
+    <dt>③ 规章 CCAR</dt><dd>由民航局发布，例如 <code>CCAR-25</code>《运输类飞机适航标准》——具有强制力</dd>
+    <dt>④ 咨询通告 AC</dt><dd>提供"可接受的符合性方法"（AMC），不强制但实际上是"标准答案"</dd>
+  </dl>
+
+  <h3>2.2 母条款 25.1309——一切的源头</h3>
+  <p>整本教材的核心法律依据就是 <b>CCAR/FAR 25.1309</b>。它对系统安全性提出了两条根本要求：</p>
+  <div class="box warn">
+    <span class="label">⚖️ 25.1309 的核心要求</span>
+    1. 任何<b>妨碍飞机继续安全飞行和着陆</b>的失效状态，发生的可能性必须是"<b>极不可能的</b>"（即 \(< 10^{-9}\)/FH）；<br>
+    2. 任何<b>降低飞机能力或机组应对能力</b>的失效状态，发生的可能性必须是"<b>不可能的</b>"。<br>
+    并且必须用<b>分析方法</b>证明上述要求得到了满足，必要时辅以试验。
+  </div>
+  <p>这看似简短，却给整个行业指明了方向——不是"飞得多了证明安全"，而是"在设计图纸上就要算出来安全"。后续所有 FHA、PSSA、SSA、FTA 等技术，本质上都是在回答一个问题：<b>"我怎么向局方证明我满足了 25.1309？"</b></p>
+
+  <h3>2.3 配套的工业标准——告诉你"具体怎么做"</h3>
+  <p>规章只说"要安全"，不说"具体步骤"。具体步骤由 SAE 和 RTCA 这样的国际标准化组织制定：</p>
+  <table>
+    <tr><th>标准编号</th><th>名称</th><th>解决什么问题</th></tr>
+    <tr><td><b>SAE ARP4754A</b></td><td>民用飞机和系统研制指南</td><td>规定整机/系统级研制流程，怎样确认和验证需求，怎样做研制保证</td></tr>
+    <tr><td><b>SAE ARP4761</b></td><td>安全性评估过程指南</td><td>规定 FHA、PSSA、SSA、CCA 等所有安全性技术的具体方法——本书的主要参考</td></tr>
+    <tr><td><b>RTCA DO-178C</b></td><td>机载软件适航</td><td>软件的研制保证</td></tr>
+    <tr><td><b>RTCA DO-254</b></td><td>机载电子硬件适航</td><td>复杂电子硬件的研制保证</td></tr>
+  </table>
+  <div class="box tip">三者关系一句话：<b>CCAR-25 是法律，AC25.1309 解释怎么满足，ARP4754A/4761 提供工程操作手册</b>。</div>
+</section>
+
+<!-- ============ 第3章 ============ -->
+<section class="chapter" id="ch3">
+  <h2>第3章 飞机系统安全性设计与评估体系<span class="tag core">核心</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 前两章告诉你"为什么"和"听谁的"，本章告诉你"整体怎么干"。它把飞机研制全过程中的所有安全性活动串成一条主线，形成一个 <b>"V 字形"</b>的工程框架——左侧从飞机级一路向下分配需求，右侧从部件级一路向上验证符合性。
+  </div>
+
+  <h3>3.1 安全性工作的总体规划</h3>
+  <p>安全性工作不是某个阶段单独完成的"附加任务"，而是<b>与飞机研制同步开展、持续迭代</b>的活动。其总体规划遵循以下原则：</p>
+  <ul>
+    <li><b>早介入</b>：从概念阶段就开始，而不是等到样机出来再补；</li>
+    <li><b>全覆盖</b>：从飞机级 → 系统级 → 子系统级 → 部件级，逐层落实；</li>
+    <li><b>双向闭环</b>：自顶向下分配需求（设计驱动），自底向上验证符合（证据回传）。</li>
+  </ul>
+
+  <h3>3.2 评估过程的"V 字模型"</h3>
+  <p>这是全书最重要的一张图，请务必记住：</p>
+  <div class="flow">
+    <div class="step">AFHA<br>飞机级功能危险性评估</div>
+    <div class="step">SFHA<br>系统级功能危险性评估</div>
+    <div class="step">PSSA<br>初步系统安全性评估</div>
+    <div class="step">SSA<br>系统安全性评估</div>
+  </div>
+  <p>用一句话理解每一步：</p>
+  <ul>
+    <li><b>FHA</b>："如果这个功能坏了会怎样？"——识别危险、分类后果</li>
+    <li><b>PSSA</b>："我设想的架构能不能满足这些后果对应的概率目标？"——分配需求</li>
+    <li><b>SSA</b>："最终设计真的达到那些目标了吗？"——验证符合</li>
+  </ul>
+
+  <h3>3.3 安全性需求的四个动作：目标 → 分配 → 确认 → 验证</h3>
+  <p>这是安全性工程中最容易混淆的四个词，请仔细区分：</p>
+  <table>
+    <tr><th>动作</th><th>含义</th><th>示例</th></tr>
+    <tr><td><b>目标</b></td><td>飞机层面要达到什么概率/严重度水平</td><td>"双发停车"必须 \(< 10^{-9}\)/FH</td></tr>
+    <tr><td><b>分配</b></td><td>把整机目标自顶向下分解到系统、子系统、部件</td><td>每台发动机自身的失效概率应 \(< 10^{-5}\)/FH</td></tr>
+    <tr><td><b>确认 Validation</b></td><td>检查这个需求"<b>定得对不对</b>"——是否完整、是否正确</td><td>有没有漏掉某种使用场景？分类有没有偏低？</td></tr>
+    <tr><td><b>验证 Verification</b></td><td>检查这个需求"<b>做到了没有</b>"——设计是否满足</td><td>用 FTA/试验证明实际概率确实 \(< 10^{-5}\)</td></tr>
+  </table>
+  <div class="box tip">
+    <span class="label">🎯 一句话区分确认与验证</span>
+    确认 = "<b>需求对不对？</b>"&nbsp;&nbsp;&nbsp;&nbsp;验证 = "<b>设计行不行？</b>"
+  </div>
+
+  <h3>3.4 研制保证等级 DAL——给"严谨程度"打分</h3>
+  <p>除了概率指标，对于复杂的硬件和软件，还需要用"<b>研制过程的严谨程度</b>"来防止设计错误。这个严谨程度就是 DAL（Development Assurance Level），按对应失效状态严重度分为五级：</p>
+  <table>
+    <tr><th>DAL 等级</th><th>对应失效状态</th><th>研制要求强度</th></tr>
+    <tr><td>A</td><td>Catastrophic</td><td>最严格——评审、测试、覆盖率全部最高</td></tr>
+    <tr><td>B</td><td>Hazardous</td><td>非常严格</td></tr>
+    <tr><td>C</td><td>Major</td><td>严格</td></tr>
+    <tr><td>D</td><td>Minor</td><td>一般</td></tr>
+    <tr><td>E</td><td>NSE</td><td>无特殊要求</td></tr>
+  </table>
+  <p>为什么需要 DAL？因为概率分析只能覆盖"<b>随机硬件失效</b>"，而软件 bug、设计错误这种"<b>系统性错误</b>"是没有概率的——只能靠过程严谨度来防止。</p>
+</section>
+
+<!-- ============ 第4章 ============ -->
+<section class="chapter" id="ch4">
+  <h2>第4章 功能危险性评估 FHA<span class="tag core">核心</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> FHA（Functional Hazard Assessment）是整个安全性评估流程的<b>第一步</b>，它要回答一个简单却重要的问题：<b>"如果这个功能没了，飞机会怎样？"</b> 它不关心具体怎么实现，只关心"功能丢了多严重"。FHA 的输出，将成为后续所有工作的基础。
+  </div>
+
+  <h3>4.1 FHA 要做什么</h3>
+  <p>FHA 的核心任务有四步：</p>
+  <ol>
+    <li><b>识别功能</b>：把飞机/系统的所有功能列清楚；</li>
+    <li><b>识别失效状态</b>：每个功能可能怎样"坏"——完全丢失、误动作、部分丢失、延迟……</li>
+    <li><b>分析影响</b>：每种失效状态在不同飞行阶段下对飞机和乘员意味着什么；</li>
+    <li><b>分类定级</b>：依据后果严重度，定为 Catastrophic / Hazardous / Major / Minor / NSE。</li>
+  </ol>
+  <p>关键点在于：FHA 是<b>"功能驱动"</b>而非"设备驱动"。在 FHA 阶段，工程师还不知道这个功能将由哪台计算机、哪根管路实现——他们只问"功能本身丢了行不行"。</p>
+
+  <h3>4.2 FHA 的两个层次：AFHA 与 SFHA</h3>
+  <p>FHA 不是只做一遍，而是分两个层级：</p>
+  <table>
+    <tr><th>类型</th><th>对象</th><th>开展时机</th><th>典型功能</th></tr>
+    <tr><td><b>AFHA</b><br>飞机级</td><td>飞机功能</td><td>概念设计阶段</td><td>"提供升力"、"控制飞行轨迹"、"为乘员提供可生存环境"</td></tr>
+    <tr><td><b>SFHA</b><br>系统级</td><td>各系统的功能</td><td>系统功能定义后</td><td>"提供刹车力"、"显示空速"、"维持座舱压力"</td></tr>
+  </table>
+  <p>AFHA 的结果会"分解"到各系统，成为各个 SFHA 的输入。两者构成一个"飞机 → 系统"的两层漏斗。</p>
+
+  <h3>4.3 失效状态的四种典型类型</h3>
+  <p>对每个功能，至少要考虑这四种失效模式，否则容易遗漏：</p>
+  <ul>
+    <li><b>功能丧失（Loss）</b>：功能完全没了，例如刹车完全失效</li>
+    <li><b>误动作（Malfunction）</b>：功能输出了错误的值，例如显示错误的空速</li>
+    <li><b>非指令动作（Inadvertent）</b>：没让它动它动了，例如自动收起落架</li>
+    <li><b>延迟动作</b>：动作发生但太晚，例如刹车响应慢于预期</li>
+  </ul>
+  <div class="box warn">
+    <span class="label">⚠️ 易错点</span>
+    "误动作"往往比"功能丧失"更危险！例如显示丢失，飞行员知道仪表坏了；而显示错误，飞行员可能据此做出致命决策。FHA 必须把这两种情况分开评估。
+  </div>
+
+  <h3>4.4 FHA 报告应包含什么</h3>
+  <ol>
+    <li>分析对象与边界</li>
+    <li>功能清单</li>
+    <li>每个功能的失效状态及其在各飞行阶段的影响</li>
+    <li>失效状态的分类等级及对应概率目标</li>
+    <li>分类的依据、假设和保守度</li>
+    <li>派生的安全性需求（对下游设计的输入）</li>
+  </ol>
+
+  <div class="box example">
+    <span class="label">📌 工程示例</span>
+    <b>功能</b>：起落架放下与锁定<br>
+    <b>失效状态</b>：在着陆阶段无法将起落架放下并锁定<br>
+    <b>影响</b>：飞机无法以正常构型着陆，可能机腹擦地，导致人员伤亡<br>
+    <b>分类</b>：Catastrophic<br>
+    <b>概率目标</b>：\(< 10^{-9}\)/FH<br>
+    <b>派生需求</b>：起落架系统应具备主放与应急放的独立通道
+  </div>
+</section>
+
+<!-- ============ 第5章 ============ -->
+<section class="chapter" id="ch5">
+  <h2>第5章 初步系统安全性评估 PSSA<span class="tag core">核心</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> FHA 告诉我们"目标是什么"，PSSA 则要回答"<b>我设想的这个系统架构，到底能不能达成这些目标？</b>" 它在系统设计早期、用初步的故障树等工具，反复试算和迭代架构，直到分析结果显示能满足 FHA 提出的全部安全性目标为止。可以把它理解为<b>"用算笔账的方式给架构方案做体检"</b>。
+  </div>
+
+  <h3>5.1 PSSA 的作用与目的</h3>
+  <p>PSSA 在飞机研制的初步设计阶段开展，主要做三件事：</p>
+  <ol>
+    <li><b>校核架构可行性</b>：验证候选架构能不能满足 FHA 的目标，如果不能就反过来改架构（增加冗余、增加监控等）；</li>
+    <li><b>导出下层安全性需求</b>：把整机/系统级的概率目标，分配到具体的子系统、部件、接口；</li>
+    <li><b>分配 DAL 等级</b>：给每个软硬件项目确定研制保证等级。</li>
+  </ol>
+  <p>PSSA 的精髓在于<b>"迭代"</b>——它不是一锤子买卖，而是和系统架构设计来回拉锯，直到方案能"算得过去"。</p>
+
+  <h3>5.2 PSSA 的输入与输出</h3>
+  <table>
+    <tr><th>输入</th><th>输出</th></tr>
+    <tr>
+      <td>
+        ① FHA 的失效状态及其分类<br>
+        ② 候选系统架构<br>
+        ③ 部件初步可靠性数据<br>
+        ④ 上一级 PSSA 分配下来的需求
+      </td>
+      <td>
+        ① 初步故障树（FTA）<br>
+        ② 子系统/部件层级的安全性需求<br>
+        ③ 软硬件 DAL 分配<br>
+        ④ 独立性、隔离、冗余要求<br>
+        ⑤ 派生需求（设计约束）
+      </td>
+    </tr>
+  </table>
+
+  <h3>5.3 PSSA 的典型分析过程</h3>
+  <div class="flow">
+    <div class="step">取一个失效状态</div>
+    <div class="step">建立故障树</div>
+    <div class="step">向下分配概率</div>
+    <div class="step">识别派生需求</div>
+    <div class="step">迭代架构</div>
+  </div>
+
+  <h3>5.4 工程示例：机轮刹车系统的概率分配</h3>
+  <p>FHA 给出"全部刹车功能丧失"的目标：</p>
+  <div class="formula">
+    \[ P_{\text{loss of all braking}} \le 10^{-9}\,/\text{FH} \]
+  </div>
+  <p>假设设计采用两个独立通道，且二者共因可忽略，则在 PSSA 阶段可建立简化故障树（顶事件 = 通道1失效 AND 通道2失效），按"与门"概率乘法分配：</p>
+  <div class="formula">
+    \[ P_{\text{channel}} \approx \sqrt{10^{-9}} \approx 3.16 \times 10^{-5}\,/\text{FH} \]
+  </div>
+  <p>这个 \(3.16 \times 10^{-5}\) 就成为<b>每个通道</b>的可靠性指标——下游设计师必须把单通道的失效概率做到这个水平之内。如果发现做不到，就必须改架构，比如改成三通道。</p>
+
+  <div class="box tip">
+    <span class="label">💡 PSSA 的本质</span>
+    PSSA 就像"项目预算"——飞机有总预算（FHA 目标），PSSA 把预算切给各部门（子系统），让大家"按预算花钱"。如果某个部门怎么都花不够，就得重新分预算或者改方案。
+  </div>
+</section>
+
+<!-- ============ 第6章 ============ -->
+<section class="chapter" id="ch6">
+  <h2>第6章 系统安全性评估 SSA<span class="tag core">核心</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 如果说 PSSA 是"开工前算预算"，那么 SSA（System Safety Assessment）就是"竣工后查账本"。它在系统设计基本完成后开展，用<b>真实的设计数据和成熟的失效率</b>，最终证明"我们这套系统真的满足了所有安全性需求"——这是给适航局方提交的最终证据。
+  </div>
+
+  <h3>6.1 SSA 的本质：从"目标"到"证据"</h3>
+  <p>SSA 与 PSSA 在方法上相似（都用 FTA、FMEA 等工具），但<b>性质完全不同</b>：</p>
+  <table>
+    <tr><th>对比项</th><th>PSSA（初步）</th><th>SSA（最终）</th></tr>
+    <tr><td>开展时机</td><td>设计早期，架构未冻结</td><td>设计完成、试验完成后</td></tr>
+    <tr><td>用什么数据</td><td>估计值、目标值、相似机型经验</td><td>真实试验数据、成熟可靠性数据</td></tr>
+    <tr><td>目的</td><td>导出需求、迭代架构</td><td>证明需求得到满足</td></tr>
+    <tr><td>方向</td><td>自顶向下分配</td><td>自底向上汇总验证</td></tr>
+    <tr><td>面向谁</td><td>内部设计师</td><td>适航局方审定</td></tr>
+  </table>
+
+  <h3>6.2 SSA 过程的主要工作</h3>
+  <ol>
+    <li><b>更新故障树</b>：用最终设计数据重新计算每个顶事件的概率；</li>
+    <li><b>汇总 FMEA / FMES</b>：把所有部件的故障模式分析结果整合，证明没有遗漏的"单点故障"；</li>
+    <li><b>开展共因分析（CCA）</b>：包括特定风险分析、共模分析、区域安全分析，证明"独立通道真的独立"；</li>
+    <li><b>编制符合性矩阵</b>：把每条安全性需求都对应到具体的证据上；</li>
+    <li><b>形成 SSA 报告</b>：作为飞机型号合格审定的核心文件之一。</li>
+  </ol>
+
+  <h3>6.3 SSA 的输出</h3>
+  <ul>
+    <li>最终故障树及定量概率分析结果</li>
+    <li>FMEA / FMES 汇总表</li>
+    <li>共因分析报告（CCA = PRA + ZSA + CMA）</li>
+    <li>对所有 FHA 失效状态的"<b>需求 → 证据</b>"映射表</li>
+    <li>剩余风险说明与可接受性论证</li>
+  </ul>
+
+  <div class="box warn">
+    <span class="label">⚠️ 容易搞混的地方</span>
+    PSSA 和 SSA 不是"两份文档"，而是"<b>同一份评估的两个时间点</b>"。PSSA 边设计边算、边算边改；SSA 在设计完成后定稿。两者的故障树结构往往非常相似，但所有数据都从"假设值"换成了"真实值"。
+  </div>
+</section>
+
+<!-- ============ 第7章 ============ -->
+<section class="chapter" id="ch7">
+  <h2>第7章 安全性概率计算分析工具<span class="tag core">核心</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 前面几章一直在说"算概率"，怎么算？本章介绍三种最核心的定量分析工具：<b>故障树分析（FTA）、相关图分析（DD）、马尔可夫分析</b>。它们各有所长，组合使用可以覆盖绝大多数民机系统的安全性建模需求。
+  </div>
+
+  <h3>7.1 故障树分析 FTA——最常用的工具</h3>
+  <p>FTA 是一种<b>自顶向下、演绎式</b>的分析方法。从一个不希望发生的"顶事件"出发（例如"双发停车"），用逻辑门一层层向下展开，找到所有可能导致它的基本事件组合。</p>
+
+  <h4>核心元素</h4>
+  <ul>
+    <li><b>顶事件</b>：要避免的失效状态，通常来自 FHA</li>
+    <li><b>基本事件</b>：不再展开的最底层故障，通常是部件的随机故障</li>
+    <li><b>与门 AND</b>：所有输入事件同时发生，输出才发生（用于建模冗余）</li>
+    <li><b>或门 OR</b>：任一输入事件发生，输出就发生（用于建模单点链路）</li>
+  </ul>
+
+  <h4>概率计算公式</h4>
+  <p>独立基本事件经过<b>与门</b>，输出概率为各事件概率乘积：</p>
+  <div class="formula">
+    \[ P_{\text{AND}} = \prod_{i=1}^{n} P_i \]
+  </div>
+  <p>独立事件经过<b>或门</b>，当各 \(P_i\) 较小时（通常 \(< 0.1\)），可近似为求和：</p>
+  <div class="formula">
+    \[ P_{\text{OR}} \approx \sum_{i=1}^{n} P_i \]
+  </div>
+
+  <h4>关键概念：最小割集</h4>
+  <p><b>割集</b>是能让顶事件发生的基本事件组合；<b>最小割集</b>是其中"再去掉任何一个就不成立"的最简组合。最小割集的"阶数"（包含的事件数）非常重要：</p>
+  <ul>
+    <li><b>1 阶割集</b>：单点故障——这是<b>设计禁忌</b>，必须消除；</li>
+    <li><b>2 阶割集</b>：需要两个事件同时发生才能导致顶事件——通常是冗余设计的产物；</li>
+    <li><b>更高阶</b>：安全性更好，但也意味着更高的成本和复杂度。</li>
+  </ul>
+
+  <h3>7.2 相关图分析（Dependence Diagram）</h3>
+  <p>相关图本质上是 FTA 的<b>"对偶"</b>表示——它用"成功路径"而非"失效路径"来表达系统结构，类似可靠性框图。它和 FTA 在数学上等价，但在某些情况下（例如系统天然以"通路"形式描述时）更直观。</p>
+
+  <h3>7.3 马尔可夫分析——处理时序与修复</h3>
+  <p>FTA 有一个隐含假设：所有事件相互独立、不考虑时间。但有些问题它处理不了：</p>
+  <ul>
+    <li>系统有"<b>状态切换</b>"，比如主用→备用→失效</li>
+    <li>故障可以被<b>修复</b>，故障率与修复率交织</li>
+    <li>事件之间存在<b>时序依赖</b>——A 必须先于 B</li>
+  </ul>
+  <p>这时就需要马尔可夫模型。它把系统建模为一组"状态"，状态之间用"转移率"连接。任意时刻 \(t\) 的状态概率向量 \(\mathbf{P}(t)\) 满足微分方程：</p>
+  <div class="formula">
+    \[ \frac{d\mathbf{P}(t)}{dt} = \mathbf{P}(t)\,\mathbf{Q} \]
+  </div>
+  <p>其中 \(\mathbf{Q}\) 是<b>转移率矩阵</b>，对角元素为离开该状态的总速率（取负），非对角元素为状态间的转移率（如故障率 \(\lambda\) 或修复率 \(\mu\)）。</p>
+
+  <div class="box tip">
+    <span class="label">🔧 工程实践中的搭配使用</span>
+    <b>FTA</b> 处理整体逻辑和大架构；<b>马尔可夫</b> 处理某个带修复或带状态切换的子系统；最后把马尔可夫算出的"等效失效概率"作为基本事件喂给 FTA。这种"FTA + Markov"组合是民机安全性建模的标准做法。
+  </div>
+</section>
+
+<!-- ============ 第8章 ============ -->
+<section class="chapter" id="ch8">
+  <h2>第8章 故障模式及影响分析 FMEA / FMES<span class="tag core">核心</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> FTA 是"自顶向下"问"什么会导致这个后果？"，FMEA 则是<b>"自底向上"</b>问"<b>这个部件坏了，会引发什么后果？</b>" 二者方向相反、互为补充。FMEA 是发现"漏掉的失效模式"、确认"没有未识别的单点故障"的最有效手段。
+  </div>
+
+  <h3>8.1 FMEA 与 FMES 是什么关系</h3>
+  <table>
+    <tr><th>缩写</th><th>全称</th><th>作用</th></tr>
+    <tr><td><b>FMEA</b></td><td>Failure Mode and Effects Analysis</td><td>对每个部件的每个故障模式逐一分析其影响</td></tr>
+    <tr><td><b>FMES</b></td><td>Failure Mode and Effects Summary</td><td>把 FMEA 中"<b>影响相同</b>"的故障模式合并，作为 FTA 的基本事件输入</td></tr>
+  </table>
+  <p>简言之：FMEA 是细账，FMES 是把细账按"对系统影响"汇总后的总账。</p>
+
+  <h3>8.2 FMEA 的基本原则</h3>
+  <ul>
+    <li><b>单一故障假设</b>：每次只假设一个部件的一个故障模式发生（多重故障由 FTA 处理）；</li>
+    <li><b>穷尽故障模式</b>：每个部件可能的全部故障模式都要考虑，例如电阻的"开路、短路、漂移"三种；</li>
+    <li><b>逐级影响</b>：故障影响要分"<b>本级、上一级、最终</b>"三个层次描述。</li>
+  </ul>
+
+  <h3>8.3 FMEA 的分析步骤</h3>
+  <ol>
+    <li><b>确定分析层级</b>：分析做到部件级还是 LRU 级</li>
+    <li><b>列出部件清单</b>并编码（建立追溯关系）</li>
+    <li><b>识别故障模式</b>：每个部件可能怎么坏</li>
+    <li><b>分析故障原因</b>：磨损、老化、过载、设计缺陷……</li>
+    <li><b>逐级评估影响</b>：本级影响 → 上一级影响 → 飞机级最终影响</li>
+    <li><b>识别检测手段</b>：是否有 BIT、监控、机组指示</li>
+    <li><b>提出补偿措施</b>：冗余、降级模式、机组程序</li>
+    <li><b>记录失效率数据来源</b>：MIL-HDBK-217、FMD-2016、217Plus 等</li>
+  </ol>
+
+  <h3>8.4 FMEA 表格的典型字段</h3>
+  <table>
+    <tr><th>字段</th><th>说明</th></tr>
+    <tr><td>部件编号 / 名称</td><td>追溯标识</td></tr>
+    <tr><td>功能</td><td>该部件承担什么功能</td></tr>
+    <tr><td>故障模式</td><td>怎么坏的</td></tr>
+    <tr><td>故障原因</td><td>为什么坏</td></tr>
+    <tr><td>本级影响</td><td>对本部件的影响</td></tr>
+    <tr><td>上一级影响</td><td>对子系统/系统的影响</td></tr>
+    <tr><td>最终影响</td><td>对飞机/乘员的影响</td></tr>
+    <tr><td>检测手段</td><td>能否被检测到</td></tr>
+    <tr><td>补偿措施</td><td>冗余、应急程序等</td></tr>
+    <tr><td>故障率</td><td>来源数据</td></tr>
+    <tr><td>严重度</td><td>对应 FHA 等级</td></tr>
+  </table>
+
+  <div class="box tip">
+    <span class="label">🔄 FTA 与 FMEA 互为补充</span>
+    FTA 容易遗漏底层故障，FMEA 容易看不到组合后果。两者必须配合：用 FTA 算概率、找架构问题，用 FMEA 验证"<b>没有底层故障被漏掉</b>"。任何安全性评估都不能只做其中一个。
+  </div>
+</section>
+
+<!-- ============ 第9章 ============ -->
+<section class="chapter" id="ch9">
+  <h2>第9章 特定风险分析 PRA<span class="tag">了解</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 前面分析的失效都是"系统内部坏了"。但飞机还要面对来自<b>外部</b>的、能一次性破坏多个系统的事件——比如发动机叶片飞出来打到油箱，或者鸟撞穿透挡风玻璃。这类事件叫"特定风险（Particular Risk）"，必须单独评估，因为它会让原本"独立"的冗余通道同时失效。
+  </div>
+
+  <h3>9.1 什么是特定风险</h3>
+  <p>特定风险是指<b>独立于飞机系统失效而存在</b>的外部事件，但它一旦发生，会对飞机多个部位/系统产生<b>共同影响</b>。常见特定风险包括：</p>
+  <ul>
+    <li>发动机非包容性转子失效（UERF, Uncontained Engine Rotor Failure）</li>
+    <li>机轮及轮胎失效（爆胎碎片击伤周围结构与系统）</li>
+    <li>鸟撞</li>
+    <li>雷击</li>
+    <li>HIRF（高强度辐射场）</li>
+    <li>冰雹、积冰</li>
+    <li>火灾、液体泄漏</li>
+  </ul>
+
+  <h3>9.2 以发动机非包容性转子失效为例</h3>
+  <p>发动机转子（风扇、压气机、涡轮）以极高转速旋转，一旦叶片或轮盘破裂飞出，能击穿机身、油箱、液压管路、控制电缆。分析步骤大致为：</p>
+  <ol>
+    <li>定义碎片大小与扩散角（局方有规定的"<b>1/3 圆盘碎片</b>"和"<b>小碎片</b>"模型）；</li>
+    <li>从每台发动机出发，画出碎片可能击中的"<b>散布锥</b>"区域；</li>
+    <li>识别落入散布锥的所有关键设备/线路；</li>
+    <li>分析这些设备同时被击中后，飞机能否继续安全飞行；</li>
+    <li>必要时调整设备布置或加装防护板。</li>
+  </ol>
+
+  <h3>9.3 鸟撞与轮胎爆破分析</h3>
+  <p>类似地，鸟撞分析关注挡风玻璃、机翼前缘、发动机进气道等部位是否能承受规定能量的鸟体撞击；轮胎爆破分析关注高速滑跑/起飞时爆破碎片对机轮舱周围结构的影响。这些分析都属于"<b>外部事件 → 多系统共影响</b>"的研究。</p>
+</section>
+
+<!-- ============ 第10章 ============ -->
+<section class="chapter" id="ch10">
+  <h2>第10章 区域安全性分析 ZSA<span class="tag">了解</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 前面所有分析基本上都是在"系统/功能"维度，但<b>"安装"</b>本身也可能成为隐患——比如两根本应隔离的液压管走得太近，一根破了另一根也跟着受损。ZSA（Zonal Safety Analysis）就是按<b>飞机的物理区域</b>逐一巡检，确保没有这种"安装级隐患"。
+  </div>
+
+  <h3>10.1 ZSA 的核心思想</h3>
+  <p>ZSA 把飞机按物理区域划分（例如机鼻舱、电子设备舱、机翼前缘、发动机吊舱、起落架舱等），对每个区域内安装的所有设备、线路、管路进行<b>"邻居关系"</b>检查。</p>
+
+  <h3>10.2 主要检查内容</h3>
+  <ul>
+    <li><b>隔离与保护</b>：液压管路与电缆、燃油管路与点火源是否充分分离；</li>
+    <li><b>泄漏路径</b>：液压油/燃油如果泄漏，会不会流到电气接线盒或高温部件上；</li>
+    <li><b>磨损与振动</b>：管路、线束在振动环境中是否会与结构件相互磨损；</li>
+    <li><b>火灾扩散</b>：一处起火能否被防火墙阻隔；</li>
+    <li><b>维修可达性</b>：是否易导致维护错误（例如装反、漏装）。</li>
+  </ul>
+
+  <h3>10.3 ZSA 的输入与输出</h3>
+  <p>输入：飞机三维数模、安装图、各系统设备清单、相邻设备间隙数据。<br>输出：每个区域的检查清单与不符合项，以及对应的设计改进建议。</p>
+
+  <div class="box tip">ZSA 是<b>"图纸级"</b>的检查，它依赖于详细的安装设计已经完成，因此通常在 SSA 阶段开展。</div>
+</section>
+
+<!-- ============ 第11章 ============ -->
+<section class="chapter" id="ch11">
+  <h2>第11章 共模分析 CMA<span class="tag">了解</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 冗余设计的前提是"<b>各通道相互独立</b>"。但如果两个通道用了同一个软件、同一批次的硬件、放在同一个机舱里，那么"独立"就只是名义上的——一个软件 bug 可能让两个通道同时崩溃。共模分析（Common Mode Analysis）就是<b>识别这些"假独立"</b>的工作。
+  </div>
+
+  <h3>11.1 共模故障是什么</h3>
+  <p>共模故障（Common Mode Failure, CMF）指<b>由共同原因引起的、使多个理应独立的部件同时失效</b>的事件。它直接破坏冗余的有效性——FTA 中 \(P_{\text{AND}} = P_1 \times P_2\) 的乘法假设建立在独立性之上，而共模会让这个假设崩塌。</p>
+
+  <h3>11.2 共模故障的常见来源</h3>
+  <ul>
+    <li><b>共同设计错误</b>：相同的软件或硬件设计 bug；</li>
+    <li><b>共同制造缺陷</b>：来自同一批次的部件存在相同瑕疵；</li>
+    <li><b>共同环境影响</b>：高温、振动、EMI、湿气同时作用于多个部件；</li>
+    <li><b>共同维护错误</b>：同一名维护人员对所有冗余通道犯了同样错误；</li>
+    <li><b>共同电源/信号源</b>：冗余通道共用上游电源或时钟。</li>
+  </ul>
+
+  <h3>11.3 共模分析要做什么</h3>
+  <ol>
+    <li>识别系统中所有"<b>声明独立</b>"的通道；</li>
+    <li>对每对独立通道，列出它们之间所有可能的共同点（设计、硬件、软件、安装、环境、维护、电源…）；</li>
+    <li>判断这些共同点是否会导致同时失效；</li>
+    <li>对存在共模风险的部分提出隔离/差异化措施（如硬件不同型号、软件不同算法、物理隔离、不同维护人员）。</li>
+  </ol>
+  <p>共模分析与特定风险分析（PRA）、区域安全性分析（ZSA）合称<b>共因分析（CCA, Common Cause Analysis）</b>，是 SSA 的必备组成部分。</p>
+</section>
+
+<!-- ============ 第12章 ============ -->
+<section class="chapter" id="ch12">
+  <h2>第12章 与系统安全性相关的其他内容<span class="tag brief">概览</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 安全性评估的产物不仅仅是分析报告，它还会向外延伸出几项<b>必须随飞机一起交付</b>的工程文件——告诉机务"必须做哪些维护"、告诉航空公司"哪些设备坏了还能放行"、告诉电气工程师"线束本身也是个系统"。本章把这些"外延产物"集中介绍。
+  </div>
+
+  <h3>12.1 候选审定维修要求 CMR</h3>
+  <p>CMR（Candidate Certification Maintenance Requirements）是指：<b>通过安全性分析识别出的、必须强制执行</b>的维修任务。如果不做这些任务，飞机的安全性就无法维持。</p>
+  <p>典型场景：某个故障是<b>"潜在故障"</b>（即不做维护就无法被发现），如果不定期检查，它会和另一个故障组合形成灾难性后果。这种检查任务就必须固化为 CMR，写入飞机维护方案。</p>
+
+  <h3>12.2 主最低设备清单 MMEL</h3>
+  <p>MMEL（Master Minimum Equipment List）规定：<b>飞机上哪些设备失效后，仍允许飞机放行起飞</b>，以及在什么条件下放行。它是航空公司日常运行不可或缺的依据。</p>
+  <p>MMEL 的制定来自安全性评估的结果：只有那些"在该设备失效情况下仍能保持可接受安全水平"的项目，才能进入 MMEL。</p>
+
+  <h3>12.3 电气线路互联系统 EWIS</h3>
+  <p>EWIS（Electrical Wiring Interconnection System）把飞机上所有电气线路、连接器、绑扎件视为一个<b>独立系统</b>，对它单独开展安全性分析。原因是历史上多起空难（如 TWA800、瑞士航空 111）都源于线束老化、磨损、绝缘失效引发的火灾，而传统分析中线束往往被忽视。</p>
+  <p>EWIS 分析关注：线束老化、磨损、污染、过热、电弧故障的概率与影响，以及防火与隔离要求。</p>
+</section>
+
+<!-- ============ 第13章 ============ -->
+<section class="chapter" id="ch13">
+  <h2>第13章 安全性工作管理与规划<span class="tag brief">概览</span></h2>
+
+  <div class="chapter-intro">
+    <strong>本章在讲什么？</strong> 前面 12 章都在讲"<b>怎么做技术</b>"，本章讲"<b>怎么管这件事</b>"。再好的技术，如果组织混乱、节点滞后、文件缺失，最终也无法形成可向局方提交的合规证据。安全性工程本质上是一场<b>大规模、长周期、多专业协同</b>的项目管理实践。
+  </div>
+
+  <h3>13.1 安全性工作管理的要素</h3>
+  <ul>
+    <li><b>组织</b>：成立独立的安全性工作组，与设计、试验、制造、客服各部门接口；</li>
+    <li><b>计划</b>：制定《安全性工作计划 SPP》，明确范围、方法、节点、资源；</li>
+    <li><b>评审</b>：在每个研制阶段（PDR/CDR/TRR/TC）开展安全性评审；</li>
+    <li><b>变更控制</b>：任何设计变更都要回溯评估其对安全性分析的影响；</li>
+    <li><b>风险管理</b>：识别、跟踪、闭环所有"安全性相关问题项 SCI"。</li>
+  </ul>
+
+  <h3>13.2 安全性文件体系</h3>
+  <p>典型的安全性文件包括：</p>
+  <ul>
+    <li>安全性工作计划（SPP）</li>
+    <li>FHA 报告（AFHA + SFHA）</li>
+    <li>PSSA 报告</li>
+    <li>SSA 报告</li>
+    <li>CCA 报告（PRA + ZSA + CMA）</li>
+    <li>FMEA / FMES 表</li>
+    <li>CMR 清单</li>
+    <li>MMEL 提案</li>
+    <li>符合性矩阵（Compliance Matrix）</li>
+  </ul>
+
+  <h3>13.3 安全性活动与型号研制节点的对应</h3>
+  <table>
+    <tr><th>研制阶段</th><th>关键安全性活动</th></tr>
+    <tr><td>概念阶段</td><td>启动 AFHA</td></tr>
+    <tr><td>初步设计 (PDR)</td><td>完成 AFHA、启动 SFHA、开展 PSSA 初稿</td></tr>
+    <tr><td>详细设计 (CDR)</td><td>SFHA 完成、PSSA 完成、启动 SSA</td></tr>
+    <tr><td>试验试飞</td><td>SSA 数据更新、CCA 完成、CMR/MMEL 提案</td></tr>
+    <tr><td>型号合格审定 (TC)</td><td>SSA 终版、符合性矩阵交付局方</td></tr>
+    <tr><td>持续适航</td><td>跟踪在役故障、闭环改进</td></tr>
+  </table>
+
+  <div class="box warn">
+    <span class="label">⚠️ 一个朴素而重要的观点</span>
+    安全性<b>不是设计完成后再补的"作业"</b>，必须从概念阶段就开始、与设计并行迭代。否则到了 SSA 阶段才发现架构不满足目标，整个系统返工的代价是天文数字。
+  </div>
+</section>
+
+<!-- ============ 总结 ============ -->
+<section class="chapter">
+  <h2>📖 全书脉络与学习建议</h2>
+  <p>本书虽然章节众多，但本质上围绕<b>一条主线</b>和<b>一组工具</b>展开：</p>
+  <h3>主线（必须掌握）</h3>
+  <div class="flow">
+    <div class="step">FHA<br>识别危险</div>
+    <div class="step">PSSA<br>分配需求</div>
+    <div class="step">SSA<br>验证符合</div>
+  </div>
+
+  <h3>支撑工具（必须熟练）</h3>
+  <ul>
+    <li><b>FTA</b>：自顶向下，找原因</li>
+    <li><b>FMEA</b>：自底向上，看后果</li>
+    <li><b>Markov</b>：处理时序与修复</li>
+    <li><b>CCA（PRA/ZSA/CMA）</b>：处理共因与外部威胁</li>
+  </ul>
+
+  <h3>建议学习顺序</h3>
+  <ol>
+    <li>第 1~3 章打基础：术语、规章、整体框架——<b>必须先吃透</b>；</li>
+    <li>第 4~6 章抓主线：FHA → PSSA → SSA 是"灵魂三部曲"；</li>
+    <li>第 7、8 章练工具：FTA 和 FMEA 必须能动手算；</li>
+    <li>第 9~12 章补专题：CCA 三件套和 EWIS、CMR、MMEL；</li>
+    <li>第 13 章学管理：理解技术之外的工程组织与文件体系。</li>
+  </ol>
+
+  <div class="q">学完本书后，你应当能够回答：给我一个新的飞机系统，我能不能从头到尾走完一遍 FHA→PSSA→SSA，并向局方提交符合 25.1309 的证据？</div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  © 民用飞机系统安全性设计与评估技术 · 教学讲义 | 基于 ARP4754A / ARP4761 / CCAR-25.1309 编制
+</footer>
+</body>
+</html>
