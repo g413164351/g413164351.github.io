@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PX4 多旋翼混控器教学 · Multirotor Mixer</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- MathJax for math rendering -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+:root {
+  --bg: #f4efe6;
+  --bg-soft: #ebe3d5;
+  --ink: #1a1a1a;
+  --ink-soft: #3d3d3d;
+  --muted: #6b6458;
+  --accent: #c1440e;      /* PX4 橙 */
+  --accent-2: #0b3d5c;    /* 深海军蓝 */
+  --accent-3: #2a6e3f;    /* 墨绿色 */
+  --line: #1a1a1a;
+  --code-bg: #1f1a14;
+  --code-ink: #e8dfc8;
+  --code-kw: #e0a96d;
+  --code-str: #9cc587;
+  --code-com: #7c7466;
+  --code-num: #d77462;
+  --box-bg: #fff9ec;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Serif SC', 'Fraunces', Georgia, serif;
+  font-weight: 400;
+  line-height: 1.75;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(193, 68, 14, 0.04) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(11, 61, 92, 0.04) 0, transparent 40%);
+  background-attachment: fixed;
+}
+
+/* --- Header --- */
+.masthead {
+  border-bottom: 2px solid var(--line);
+  padding: 2.5rem 0 2rem;
+  margin-bottom: 3rem;
+  position: relative;
+}
+.masthead::before {
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: 0; right: 0;
+  border-bottom: 1px solid var(--line);
+}
+.masthead-inner {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.masthead .brand {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  font-size: 0.72rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.masthead h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-variation-settings: 'opsz' 144;
+  font-size: clamp(2.4rem, 5.5vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-top: 0.4rem;
+}
+.masthead h1 em {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 300;
+}
+.masthead .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: right;
+  letter-spacing: 0.05em;
+  line-height: 1.8;
+}
+
+/* --- Layout --- */
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 2rem 6rem;
+}
+
+/* --- TOC --- */
+.toc {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 1.8rem 0;
+  margin-bottom: 4rem;
+  background: var(--bg-soft);
+}
+.toc-inner {
+  max-width: 880px; margin: 0 auto; padding: 0 2rem;
+}
+.toc-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.toc ol {
+  list-style: none;
+  columns: 2;
+  column-gap: 2.5rem;
+}
+.toc li {
+  padding: 0.25rem 0;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 0.95rem;
+  break-inside: avoid;
+}
+.toc li::before {
+  content: counter(toc-counter, decimal-leading-zero);
+  counter-increment: toc-counter;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent);
+  margin-right: 0.8rem;
+  font-size: 0.8rem;
+}
+.toc ol { counter-reset: toc-counter; }
+.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px dotted var(--muted); }
+.toc a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* --- Section --- */
+section {
+  margin-bottom: 5rem;
+  scroll-margin-top: 2rem;
+}
+section.chapter {
+  position: relative;
+}
+.ch-num {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 5rem;
+  color: var(--accent);
+  opacity: 0.22;
+  line-height: 1;
+  position: absolute;
+  top: -1rem;
+  left: -5rem;
+  user-select: none;
+}
+@media (max-width: 1100px) {
+  .ch-num { position: static; font-size: 3rem; opacity: 0.5; display: block; margin-bottom: 0.5rem; }
+}
+h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: clamp(1.7rem, 3.2vw, 2.3rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--line);
+}
+h2 .sub {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  font-weight: 400;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+h3 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 1.35rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--accent-2);
+}
+h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 1.8rem;
+  margin-bottom: 0.7rem;
+}
+p { margin-bottom: 1rem; }
+p.lead {
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: var(--ink-soft);
+  font-weight: 300;
+  margin-bottom: 1.5rem;
+}
+strong { font-weight: 600; color: var(--ink); }
+em { font-style: italic; color: var(--accent-2); }
+
+/* --- Pullquote / callout --- */
+.pull {
+  border-left: 4px solid var(--accent);
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  margin: 1.8rem 0;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+}
+.note {
+  background: var(--box-bg);
+  border: 1px solid var(--line);
+  padding: 1.2rem 1.5rem;
+  margin: 1.8rem 0;
+  position: relative;
+  font-size: 0.97rem;
+}
+.note::before {
+  content: attr(data-label);
+  position: absolute;
+  top: -0.6rem;
+  left: 1rem;
+  background: var(--bg);
+  padding: 0 0.6rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.note.warn::before { color: var(--accent); }
+.note.tip { border-color: var(--accent-3); }
+.note.tip::before { color: var(--accent-3); }
+
+/* --- Code --- */
+pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  padding: 1.3rem 1.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.86rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border-left: 3px solid var(--accent);
+  tab-size: 4;
+}
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.92em;
+  background: rgba(193, 68, 14, 0.1);
+  padding: 0.08em 0.35em;
+  border-radius: 2px;
+  color: var(--accent);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+.tok-kw { color: var(--code-kw); font-weight: 500; }
+.tok-str { color: var(--code-str); }
+.tok-com { color: var(--code-com); font-style: italic; }
+.tok-num { color: var(--code-num); }
+.tok-fn { color: #7fb9d4; }
+
+/* --- Table / Matrix --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.93rem;
+}
+th, td {
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border-bottom: 2px solid var(--line);
+  background: var(--bg-soft);
+}
+td code { font-size: 0.85em; }
+
+/* --- Figures --- */
+figure {
+  margin: 2rem 0;
+  text-align: center;
+}
+figure svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+figcaption {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 0.8rem;
+  padding: 0 2rem;
+}
+figcaption b {
+  font-family: 'JetBrains Mono', monospace;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  margin-right: 0.5rem;
+  text-transform: uppercase;
+}
+
+/* --- Ordered list --- */
+ol.steps {
+  counter-reset: step;
+  list-style: none;
+  margin: 1.5rem 0;
+  padding-left: 0;
+}
+ol.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 3rem;
+  margin-bottom: 1.2rem;
+}
+ol.steps > li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 0; top: 0.2rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--accent);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  padding: 0.15rem 0.5rem;
+  min-width: 2.3rem;
+  text-align: center;
+}
+
+ul.bullets {
+  list-style: none;
+  margin: 1rem 0;
+  padding-left: 0;
+}
+ul.bullets > li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 0.6rem;
+}
+ul.bullets > li::before {
+  content: "▸";
+  position: absolute;
+  left: 0; top: 0;
+  color: var(--accent);
+}
+
+/* --- Interactive demo --- */
+.demo {
+  background: var(--bg-soft);
+  border: 2px solid var(--line);
+  padding: 2rem;
+  margin: 2.5rem 0;
+  position: relative;
+}
+.demo::before {
+  content: "INTERACTIVE · 动手试试";
+  position: absolute;
+  top: -0.7rem;
+  left: 1.2rem;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0.2rem 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+}
+.demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+@media (max-width: 700px) {
+  .demo-grid { grid-template-columns: 1fr; }
+}
+.demo-controls label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.05em;
+}
+.demo-controls label .val {
+  float: right;
+  color: var(--accent);
+  font-weight: 600;
+}
+.demo-controls input[type=range] {
+  width: 100%;
+  margin-bottom: 1.1rem;
+  accent-color: var(--accent);
+}
+.demo-controls select {
+  width: 100%;
+  padding: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  margin-bottom: 1rem;
+}
+.demo-output {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+.motor-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+.motor-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 60px;
+  align-items: center;
+  gap: 0.7rem;
+}
+.motor-row .lbl { font-size: 0.78rem; color: var(--muted); }
+.motor-row .val { text-align: right; font-weight: 600; }
+.bar-track {
+  height: 18px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-3) 0%, var(--accent) 70%, #b03100 100%);
+  transition: width 0.2s ease;
+}
+.bar-fill.sat {
+  background: repeating-linear-gradient(45deg, var(--accent) 0 6px, #7a2a08 6px 12px);
+}
+.demo-viz {
+  border-left: 1px solid var(--line);
+  padding-left: 1.5rem;
+}
+.diag-box {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 1rem;
+  margin-top: 1rem;
+  font-size: 0.82rem;
+}
+.diag-box .row {
+  display: flex; justify-content: space-between;
+  padding: 0.15rem 0;
+  border-bottom: 1px dotted var(--muted);
+}
+.diag-box .row:last-child { border: 0; }
+.diag-box .row .k { color: var(--muted); }
+.diag-box .row .v { font-weight: 600; color: var(--accent-2); }
+
+/* --- Matrix display --- */
+.matrix {
+  display: inline-block;
+  padding: 0.6rem 1rem;
+  border-left: 2px solid var(--ink);
+  border-right: 2px solid var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  margin: 0.5rem 0.5rem;
+  vertical-align: middle;
+}
+.matrix table { margin: 0; }
+.matrix td { border: none; padding: 0.1rem 0.7rem; text-align: right; }
+.matrix-expr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+.matrix-expr .op {
+  font-size: 1.6rem;
+  color: var(--accent);
+  font-family: 'Fraunces', serif;
+}
+
+/* --- Footer --- */
+footer {
+  border-top: 2px solid var(--line);
+  padding: 2rem 0;
+  margin-top: 4rem;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+footer .ornament {
+  color: var(--accent);
+  font-size: 1.3rem;
+  margin-bottom: 0.8rem;
+}
+
+/* --- Small helpers --- */
+.hl { background: linear-gradient(transparent 60%, rgba(193, 68, 14, 0.25) 60%); }
+.divider {
+  text-align: center;
+  margin: 3rem 0;
+  color: var(--accent);
+  font-size: 1.2rem;
+  letter-spacing: 1rem;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+@media (max-width: 700px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+.card {
+  background: var(--box-bg);
+  border: 1px solid var(--line);
+  padding: 1.2rem 1.3rem;
+}
+.card h5 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent-2);
+}
+
+/* --- Flow diagram --- */
+.flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin: 2rem 0;
+  align-items: center;
+}
+.flow-node {
+  background: var(--bg-soft);
+  border: 1.5px solid var(--line);
+  padding: 0.9rem 0.6rem;
+  text-align: center;
+  font-size: 0.82rem;
+}
+.flow-node.hot { background: var(--accent); color: var(--bg); }
+.flow-node .l1 { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; opacity: 0.7; margin-bottom: 0.2rem; }
+.flow-node .l2 { font-family: 'Fraunces', serif; font-weight: 600; }
+.flow-arrow {
+  color: var(--accent);
+  text-align: center;
+  font-size: 1.3rem;
+}
+@media (max-width: 700px) {
+  .flow { grid-template-columns: 1fr; }
+  .flow-arrow { transform: rotate(90deg); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.masthead, .toc, section { animation: fadeUp 0.6s ease both; }
+section:nth-child(n+2) { animation-delay: 0.1s; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div>
+      <div class="brand">PX4 · Flight Control · Teaching Dossier</div>
+      <h1>多旋翼<em>混控器</em><br>从零开始的完全指南</h1>
+    </div>
+    <div class="meta">
+      MULTIROTOR MIXER<br>
+      Ver. 1.0 · EDU<br>
+      基于 PX4 Autopilot 源码
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-inner">
+    <div class="toc-title">目录 · Contents</div>
+    <ol>
+      <li><a href="#ch1">什么是混控器？它在飞控中处于什么位置</a></li>
+      <li><a href="#ch2">物理基础：电机怎么产生姿态力矩</a></li>
+      <li><a href="#ch3">控制分配矩阵 P：混控的数学内核</a></li>
+      <li><a href="#ch4">不同机型的 P 矩阵</a></li>
+      <li><a href="#ch5">饱和问题：为什么事情会变复杂</a></li>
+      <li><a href="#ch6">核心算法之一：compute_desaturation_gain</a></li>
+      <li><a href="#ch7">核心算法之二：minimize_sat</a></li>
+      <li><a href="#ch8">三种混控模式的对比</a></li>
+      <li><a href="#ch9">Yaw 的特殊待遇：mix_yaw</a></li>
+      <li><a href="#ch10">完整流程：一个具体案例走一遍</a></li>
+      <li><a href="#ch11">交互式演示：动手感受一下</a></li>
+      <li><a href="#ch12">小结与扩展阅读</a></li>
+    </ol>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- ============================================================ -->
+<section id="ch1" class="chapter">
+  <span class="ch-num">01</span>
+  <h2><span class="sub">Chapter One</span>什么是混控器？</h2>
+
+  <p class="lead">
+    在我们打开代码之前，先把一个问题想清楚：当你推动遥控器的摇杆，让一架四旋翼向前飞的时候，
+    飞控究竟在背后做了什么？
+  </p>
+
+  <p>
+    飞控系统的任务可以粗略分成三层。最上层，<strong>遥控器</strong>或<strong>导航模块</strong>
+    给出飞手想要的东西——比如"我想要前倾 10 度"。中间层，<strong>姿态控制器</strong>
+    根据当前姿态和目标姿态，计算出需要的角加速度与推力：
+    \(\dot{p}_{sp}, \dot{q}_{sp}, \dot{r}_{sp}, T_{sp}\)
+    （即 roll、pitch、yaw 方向的角加速度，和垂直推力）。
+  </p>
+
+  <p>
+    可问题是——<span class="hl">飞机上并没有"roll 电机"或"pitch 电机"</span>。
+    只有四个（或六个、八个）均匀分布的电机，每个只会转。要让飞机产生向前的俯仰力矩，
+    必须让后面的电机转快一点、前面的慢一点；要产生偏航，需要改变顺/逆时针电机对的转速比例。
+    <strong>把一组抽象的"力矩 + 推力"需求，翻译成 N 个电机的具体油门量——这就是混控器要做的事。</strong>
+  </p>
+
+  <div class="flow">
+    <div class="flow-node">
+      <div class="l1">Input</div>
+      <div class="l2">遥控器<br>/导航</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="l1">Controller</div>
+      <div class="l2">姿态<br>控制器</div>
+    </div>
+    <div class="flow-arrow">→</div>
+  </div>
+  <div class="flow">
+    <div class="flow-node hot">
+      <div class="l1">This doc</div>
+      <div class="l2">混控器<br>MIXER</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="l1">Output</div>
+      <div class="l2">N 个<br>电机 PWM</div>
+    </div>
+    <div class="flow-arrow">→</div>
+  </div>
+
+  <p>
+    混控器的输入永远是 4 维的——roll、pitch、yaw、thrust。
+    输出是 N 维的——N 是电机数量（四旋翼 N=4，六旋翼 N=6，八旋翼 N=8）。
+    所以它的本质是一个<strong> 4 → N 的映射函数</strong>。
+  </p>
+
+  <div class="note tip" data-label="关键直觉">
+    你可以把混控器想成一个"翻译官"：姿态控制器说的是"我要向前倾"的抽象语言，
+    而电机只听"转多快"这种具体的语言。混控器的工作就是在两种语言之间做翻译，
+    并在翻译不可能"完美"时做出最合理的取舍。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch2" class="chapter">
+  <span class="ch-num">02</span>
+  <h2><span class="sub">Chapter Two</span>物理基础：电机怎么产生力矩</h2>
+
+  <p>
+    在聊数学之前，先把物理搞清楚。以一架最常见的<strong>四旋翼 X 型</strong>为例，
+    俯视时四个电机分布在正方形的四个角上。每个电机除了向下推空气产生向上的推力，
+    它本身的旋转还会产生<strong>反扭矩</strong>——就像直升机如果不装尾桨，机身会反着转。
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 600 360" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowH" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+          <path d="M0,0 L0,10 L10,5 Z" fill="#c1440e"/>
+        </marker>
+      </defs>
+      <!-- body cross -->
+      <line x1="120" y1="80" x2="480" y2="280" stroke="#1a1a1a" stroke-width="4"/>
+      <line x1="480" y1="80" x2="120" y2="280" stroke="#1a1a1a" stroke-width="4"/>
+      <!-- motors -->
+      <!-- M1 front-right: CCW (conventional PX4 index 1 = front right in quad_x) -->
+      <g>
+        <circle cx="480" cy="80" r="36" fill="#fff9ec" stroke="#1a1a1a" stroke-width="2.5"/>
+        <text x="480" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="18" font-weight="600">M1</text>
+        <path d="M 510 80 A 30 30 0 1 1 450 80" fill="none" stroke="#c1440e" stroke-width="2.5" marker-end="url(#arrowH)"/>
+        <text x="480" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#c1440e">CCW</text>
+      </g>
+      <!-- M2 back-left: CCW -->
+      <g>
+        <circle cx="120" cy="280" r="36" fill="#fff9ec" stroke="#1a1a1a" stroke-width="2.5"/>
+        <text x="120" y="286" text-anchor="middle" font-family="JetBrains Mono" font-size="18" font-weight="600">M2</text>
+        <path d="M 150 280 A 30 30 0 1 1 90 280" fill="none" stroke="#c1440e" stroke-width="2.5" marker-end="url(#arrowH)"/>
+        <text x="120" y="335" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#c1440e">CCW</text>
+      </g>
+      <!-- M3 front-left: CW -->
+      <g>
+        <circle cx="120" cy="80" r="36" fill="#fff9ec" stroke="#1a1a1a" stroke-width="2.5"/>
+        <text x="120" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="18" font-weight="600">M3</text>
+        <path d="M 90 80 A 30 30 0 1 0 150 80" fill="none" stroke="#0b3d5c" stroke-width="2.5" marker-end="url(#arrowH)"/>
+        <text x="120" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#0b3d5c">CW</text>
+      </g>
+      <!-- M4 back-right: CW -->
+      <g>
+        <circle cx="480" cy="280" r="36" fill="#fff9ec" stroke="#1a1a1a" stroke-width="2.5"/>
+        <text x="480" y="286" text-anchor="middle" font-family="JetBrains Mono" font-size="18" font-weight="600">M4</text>
+        <path d="M 450 280 A 30 30 0 1 0 510 280" fill="none" stroke="#0b3d5c" stroke-width="2.5" marker-end="url(#arrowH)"/>
+        <text x="480" y="335" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#0b3d5c">CW</text>
+      </g>
+      <!-- axes -->
+      <g stroke="#6b6458" stroke-width="1.5">
+        <line x1="300" y1="180" x2="300" y2="50" marker-end="url(#arrowH)"/>
+        <line x1="300" y1="180" x2="430" y2="180" marker-end="url(#arrowH)"/>
+      </g>
+      <text x="305" y="48" font-family="JetBrains Mono" font-size="12" fill="#6b6458">+x (前)</text>
+      <text x="440" y="175" font-family="JetBrains Mono" font-size="12" fill="#6b6458">+y (右)</text>
+      <circle cx="300" cy="180" r="5" fill="#1a1a1a"/>
+      <text x="285" y="200" font-family="JetBrains Mono" font-size="11" fill="#6b6458">+z 向下</text>
+    </svg>
+    <figcaption><b>Fig. 1</b>四旋翼 X 型布局（PX4 约定）：对角电机同向旋转以抵消反扭矩。</figcaption>
+  </figure>
+
+  <h3>力矩是怎么来的？</h3>
+
+  <ul class="bullets">
+    <li>
+      <strong>Roll（横滚）</strong>：让右侧电机（M1、M4）转慢一点、左侧（M2、M3）转快一点，
+      左侧推力更大，飞机就向右滚。
+    </li>
+    <li>
+      <strong>Pitch（俯仰）</strong>：让前侧电机（M1、M3）转慢、后侧（M2、M4）转快，
+      飞机就向前俯。
+    </li>
+    <li>
+      <strong>Yaw（偏航）</strong>：注意 M1、M2 是 CCW（逆时针），M3、M4 是 CW（顺时针）。
+      让一对同向电机整体转快，另一对转慢，它们的<em>反扭矩</em>不再平衡，机身就会绕 z 轴转。
+    </li>
+    <li>
+      <strong>Thrust（推力）</strong>：四个电机一起加减，飞机升降。
+    </li>
+  </ul>
+
+  <div class="pull">
+    关键观察：任何一个电机都同时参与四个轴的控制。<br>
+    我们需要一个矩阵，把这种"每个电机对每个轴的贡献"系统地描述出来。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch3" class="chapter">
+  <span class="ch-num">03</span>
+  <h2><span class="sub">Chapter Three</span>控制分配矩阵 P</h2>
+
+  <p>
+    把上一节的观察写成数学。定义：
+  </p>
+
+  <p>
+    \[
+      \mathbf{m} = \begin{bmatrix} \dot{p} \\ \dot{q} \\ \dot{r} \\ T \end{bmatrix}
+      \quad\text{（roll/pitch/yaw 角加速度 + 推力，归一化到 [-1,1]/[0,1]）}
+    \]
+    \[
+      \mathbf{u} = \begin{bmatrix} u_1 \\ u_2 \\ \vdots \\ u_N \end{bmatrix}
+      \quad\text{（每个电机的输出，归一化到 [0,1]）}
+    \]
+  </p>
+
+  <p>
+    那么混控的核心关系就是一个线性变换：
+  </p>
+
+  <p>\[ \boxed{\; \mathbf{u} = P \cdot \mathbf{m} \;} \]</p>
+
+  <p>
+    <strong>P 是一个 N×4 的矩阵，每一行对应一个电机，每一列对应一个控制轴。</strong>
+    第 i 行第 j 列的元素 \(P_{ij}\) 表示：<em>第 j 个控制轴变化 1 个单位时，第 i 个电机该变化多少</em>。
+  </p>
+
+  <p>直接上代码里的例子——四旋翼 X 型的 P 矩阵：</p>
+
+<pre><span class="tok-com"># quad_x</span>
+P1 = np.matrix([
+    [-<span class="tok-num">0.71</span>,  <span class="tok-num">0.71</span>,  <span class="tok-num">1.</span>,   <span class="tok-num">1.</span>  ],  <span class="tok-com"># M1  front-right, CCW</span>
+    [ <span class="tok-num">0.71</span>, -<span class="tok-num">0.71</span>,  <span class="tok-num">1.</span>,   <span class="tok-num">1.</span>  ],  <span class="tok-com"># M2  back-left,   CCW</span>
+    [ <span class="tok-num">0.71</span>,  <span class="tok-num">0.71</span>, -<span class="tok-num">1.</span>,   <span class="tok-num">1.</span>  ],  <span class="tok-com"># M3  front-left,  CW</span>
+    [-<span class="tok-num">0.71</span>, -<span class="tok-num">0.71</span>, -<span class="tok-num">1.</span>,   <span class="tok-num">1.</span>  ]]) <span class="tok-com"># M4  back-right,  CW</span>
+<span class="tok-com">#          roll    pitch    yaw  thrust</span>
+</pre>
+
+  <h3>逐列解读</h3>
+
+  <table>
+    <thead>
+      <tr><th>列</th><th>含义</th><th>解读</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>第 0 列 — roll</strong></td>
+        <td>[−0.71, 0.71, 0.71, −0.71]</td>
+        <td>M1、M4 在右（roll+1 应该让飞机向右滚，所以要降低右侧推力），所以是 <strong>负</strong>；M2、M3 在左，所以是<strong>正</strong>。0.71 ≈ sin(45°)，因为电机不在纯左右方向，而是 45° 角。</td>
+      </tr>
+      <tr>
+        <td><strong>第 1 列 — pitch</strong></td>
+        <td>[0.71, −0.71, 0.71, −0.71]</td>
+        <td>pitch+1 让飞机向前倾，后侧电机推力增加。M1、M3 在前为<strong>正</strong>、M2、M4 在后为<strong>负</strong>？<em>看仔细：这里的约定是 pitch 正方向需要前侧电机增加</em>——具体符号取决于 PX4 的坐标约定，这不影响我们理解矩阵结构。</td>
+      </tr>
+      <tr>
+        <td><strong>第 2 列 — yaw</strong></td>
+        <td>[1, 1, −1, −1]</td>
+        <td>CCW 电机（M1、M2）的反扭矩能产生 yaw+，所以<strong>正</strong>；CW 电机（M3、M4）给<strong>负</strong>。幅值都是 1。</td>
+      </tr>
+      <tr>
+        <td><strong>第 3 列 — thrust</strong></td>
+        <td>[1, 1, 1, 1]</td>
+        <td>所有电机对总推力贡献相同，都是 1。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note" data-label="为什么是 0.71 而不是 1">
+    0.71 是 \(\sin(45°) \approx \frac{\sqrt{2}}{2}\)。因为 X 型机架上，电机与前后、左右轴都成 45° 角，
+    所以它对 roll 和 pitch 的贡献都只有 \(\sin(45°)\) 那么大。如果换成 + 字型（四电机分别在前后左右轴上），
+    roll 列就会是 [1, −1, 0, 0]，pitch 列是 [0, 0, 1, −1]——反而更直观。
+  </div>
+
+  <h3>反方向：伪逆矩阵 B</h3>
+
+  <p>
+    如果我给出四个电机的转速 \(\mathbf{u}\)，想反推它们合起来产生了什么 \(\mathbf{m}\)，需要用 P 的<strong>伪逆</strong>：
+  </p>
+
+  <p>\[ \mathbf{m} = B \cdot \mathbf{u}, \qquad B = P^+ \]</p>
+
+  <p>
+    代码里就是：
+  </p>
+
+<pre>B = np.linalg.pinv(P)</pre>
+
+  <p>
+    这一步在混控器里其实不是<em>必须</em>的——P 已经足够把指令变成电机输出了。
+    但 B 在测试和调试时很有用，我们可以验证"混完之后真正分配出去的是什么"：
+    <code>m_new = B * u_new_sat</code>。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch4" class="chapter">
+  <span class="ch-num">04</span>
+  <h2><span class="sub">Chapter Four</span>不同机型的 P 矩阵</h2>
+
+  <p>代码里定义了五种机型的 P 矩阵。我们看一遍，你会发现它们有共同结构：</p>
+
+  <div class="two-col">
+    <div class="card">
+      <h5>quad_x — 四旋翼 X</h5>
+      <p>4 电机，X 型。最常见的航拍/穿越机布局。roll/pitch 列用 ±0.71。</p>
+    </div>
+    <div class="card">
+      <h5>quad_wide — 四旋翼 Wide</h5>
+      <p>4 电机，但机臂前后长、左右短。pitch 列是 ±0.71（类似 X），roll 列却是 ±0.5——因为左右更近、力臂小。</p>
+    </div>
+    <div class="card">
+      <h5>hex_x — 六旋翼 X</h5>
+      <p>6 电机呈六边形。能发现两个电机（0、1 号）位于正东西两侧，它们对 pitch 贡献为 0，roll 贡献为 ±1。</p>
+    </div>
+    <div class="card">
+      <h5>hex_cox — 共轴六旋翼</h5>
+      <p>3 组电机，每组 2 个上下共轴但反向旋转。所以看起来是 6 行，但 yaw 列交替 ±1。</p>
+    </div>
+    <div class="card">
+      <h5>octa_plus — 八旋翼 +</h5>
+      <p>8 电机。特点：yaw 列不是等幅的，前后两个单电机 yaw=−1，中间四个 X 方向电机 yaw=+1。</p>
+    </div>
+  </div>
+
+  <div class="pull">
+    换机型，其实就是换 P 矩阵。混控算法本身对机型完全无感。
+  </div>
+
+  <h3>一个很重要的性质</h3>
+
+  <p>
+    无论哪个机型，<strong>thrust 那一列永远全是 1</strong>（代码里所有 P 矩阵的最后一列都是 1）。
+    这说明推力指令对每个电机的贡献是相同的——直觉上也对，推力是所有电机"同增同减"的结果。
+  </p>
+
+  <p>
+    这个性质在后面非常关键：<em>当我们需要"在不改变 roll/pitch/yaw 的前提下调整电机输出"时，
+    thrust 列就是那个完美的"去饱和方向"</em>——因为沿着 [1,1,1,1] 方向移动，所有电机都加/减同一个数，
+    姿态力矩完全不变。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch5" class="chapter">
+  <span class="ch-num">05</span>
+  <h2><span class="sub">Chapter Five</span>饱和问题：为什么事情会变复杂</h2>
+
+  <p class="lead">
+    如果所有指令都合理、永远没有极端情况，那混控器只需要一行代码：<code>u = P * m</code>，
+    故事就结束了。可惜现实不是这样。
+  </p>
+
+  <p>
+    电机的 PWM 输出有物理边界——它不能倒着转，也不能转到无限快。在归一化之后，约束是：
+  </p>
+
+  <p>\[ 0 \leq u_i \leq 1 \quad \text{对所有 } i \]</p>
+
+  <p>
+    可是当姿态控制器要求非常激烈的机动时，算出来的 \(\mathbf{u}\) 很可能超出这个范围。
+    比如推力已经很大（比如 0.9），再叠加一个猛烈的 roll 指令，某个电机可能被要求输出 1.15——
+    <strong>电机不会长出新的翅膀，它只能给你 1.0</strong>。这就是"饱和"。
+  </p>
+
+  <h3>一个具体的例子</h3>
+
+  <p>
+    假设我们在 quad_x 上，给 \(\mathbf{m}_{sp} = [0.2,\ 0,\ 0,\ 0.9]^T\)——
+    0.9 的推力加上一点 roll。直接算：
+  </p>
+
+  <p>
+    \[
+      \mathbf{u} = P \cdot \mathbf{m}_{sp} = \begin{bmatrix}
+        -0.71\times 0.2 + 0.9 \\
+         0.71\times 0.2 + 0.9 \\
+         0.71\times 0.2 + 0.9 \\
+        -0.71\times 0.2 + 0.9
+      \end{bmatrix} = \begin{bmatrix} 0.758 \\ 1.042 \\ 1.042 \\ 0.758 \end{bmatrix}
+    \]
+  </p>
+
+  <p>
+    M2 和 M3 的要求都是 <strong>1.042</strong>——已经超上限了！
+    如果直接简单地把它们钉在 1.0，那么 M2、M3 实际输出比 M1、M4 多的只有 0.242，
+    而我们想要的 roll 需要的差值是 0.284。<strong>roll 就做不到了</strong>——
+    <span class="hl">姿态控制丢失</span>。这对稳定性是灾难性的。
+  </p>
+
+  <div class="note warn" data-label="核心问题">
+    当输出超出范围时，<strong>不能</strong>简单地 clip（截断），否则控制目标会悄悄偏离。
+    我们需要一种聪明的策略：让每个电机都回到合法区间，同时<em>尽量保留</em>我们最关心的那个控制目标。
+  </div>
+
+  <h3>去饱和的直觉：找一个"不痛不痒"的方向</h3>
+
+  <p>
+    对上面这个例子——如果我们把所有四个电机<strong>同时减去 0.042</strong>，会怎样？
+  </p>
+
+  <p>
+    \[
+      \mathbf{u}' = \begin{bmatrix} 0.716 \\ 1.000 \\ 1.000 \\ 0.716 \end{bmatrix}
+    \]
+  </p>
+
+  <p>
+    现在 M2、M3 恰好在上限，没有超。四个电机的相对差值完全不变，<strong>roll 完美保留</strong>。
+    代价是什么？总推力从 0.9 变成了 0.858——稍微降了一点。
+  </p>
+
+  <p>
+    我们<em>沿着推力方向</em>（也就是 P 的第 4 列 [1,1,1,1]）微调了输出，牺牲推力来换取姿态。
+    这就是去饱和算法的核心思想。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch6" class="chapter">
+  <span class="ch-num">06</span>
+  <h2><span class="sub">Chapter Six</span>核心算法一：compute_desaturation_gain</h2>
+
+  <p>
+    算法要做的事：给定一个可能饱和的电机输出向量 \(\mathbf{u}\)，和一个"去饱和向量" \(\mathbf{d}\)
+    （也就是我们愿意沿着它调整的方向），找一个标量增益 \(k\)，使得
+  </p>
+
+  <p>\[ \mathbf{u}' = \mathbf{u} + k \cdot \mathbf{d} \]</p>
+
+  <p>尽可能地不饱和。</p>
+
+  <h3>数学推导</h3>
+
+  <p>对每个电机 \(i\)，要让它回到 \([u_{min}, u_{max}]\) 内，需要：</p>
+
+  <p>\[
+    u_{min} \leq u_i + k \cdot d_i \leq u_{max}
+  \]</p>
+
+  <p>分开看两个不等式。定义：</p>
+
+  <ul class="bullets">
+    <li>下越界量：\(\Delta u^-_i = u_{min} - u_i\)（若 \(u_i &lt; u_{min}\)，这是正数，表示"需要往上抬这么多"）</li>
+    <li>上越界量：\(\Delta u^+_i = u_{max} - u_i\)（若 \(u_i &gt; u_{max}\)，这是负数，表示"需要往下压这么多"）</li>
+  </ul>
+
+  <p>对应代码：</p>
+
+<pre>d_u_sat_plus  = u_max - u   <span class="tok-com"># 上限还剩多少</span>
+d_u_sat_minus = u_min - u   <span class="tok-com"># 下限还差多少</span></pre>
+
+  <p>
+    然后，对每个电机，计算把它<strong>刚好拉回上限</strong>或<strong>刚好拉回下限</strong>所需的 \(k\) 值：
+  </p>
+
+  <p>\[
+    k_i^+ = \frac{u_{max} - u_i}{d_i} \quad (\text{if } d_i \ne 0),
+    \qquad k_i^- = \frac{u_{min} - u_i}{d_i}
+  \]</p>
+
+  <p>但代码很聪明，只记录<em>真正有意义</em>的 \(k\)：</p>
+
+<pre>if d_u_sat_minus[i] > <span class="tok-num">0.0</span>:      <span class="tok-com"># 只有真的越了下限才记</span>
+    k[2*i]   = d_u_sat_minus[i] / desaturation_vector[i]
+if d_u_sat_plus[i]  < <span class="tok-num">0.0</span>:      <span class="tok-com"># 只有真的越了上限才记</span>
+    k[2*i+1] = d_u_sat_plus[i]  / desaturation_vector[i]</pre>
+
+  <p>
+    其他情况 <code>k</code> 保持为 0（数组初始化时就是零）。为什么？
+    因为我们不希望"虽然没有饱和的电机，但为了让它更靠近中间"而强行去动——那样反而会把没饱和的电机推向饱和。
+  </p>
+
+  <h3>合成最终 k</h3>
+
+<pre>k_min = min(k)
+k_max = max(k)
+k = k_min + k_max   <span class="tok-com"># ← 最关键的一行</span>
+return k</pre>
+
+  <p>这一步非常微妙。让我来解释：</p>
+
+  <ul class="bullets">
+    <li>
+      <code>k_min</code> 是所有（负的）k 中最小的——它对应"最严重的上饱和"那个电机，
+      把它拉下来所需的最负的 k。
+    </li>
+    <li>
+      <code>k_max</code> 是所有（正的）k 中最大的——它对应"最严重的下饱和"那个电机，
+      把它抬上来所需的最正的 k。
+    </li>
+    <li>
+      <code>k = k_min + k_max</code>：两者相加，目的是<strong>把饱和分摊到两侧</strong>——
+      让最大的那个电机下降的同时，最小的那个电机也同等程度地上升，使剩余饱和对称分布。
+    </li>
+  </ul>
+
+  <div class="note tip" data-label="为什么不直接取平均">
+    直觉上你可能觉得应该是 <code>(k_min + k_max)/2</code>，但记住 <code>k_min ≤ 0 ≤ k_max</code>，
+    它们相加已经是"中点的两倍"，而代码在 <code>minimize_sat</code> 里会把它当成一次"完整的尝试"，
+    然后再用一次 0.5 的增益做第二轮修正。后面会讲这个两步法。
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg">
+      <!-- number line -->
+      <line x1="50" y1="130" x2="550" y2="130" stroke="#1a1a1a" stroke-width="2"/>
+      <!-- bounds -->
+      <line x1="150" y1="110" x2="150" y2="150" stroke="#0b3d5c" stroke-width="2"/>
+      <line x1="450" y1="110" x2="450" y2="150" stroke="#0b3d5c" stroke-width="2"/>
+      <text x="150" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0b3d5c">u_min=0</text>
+      <text x="450" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0b3d5c">u_max=1</text>
+
+      <!-- motors -->
+      <circle cx="110" cy="130" r="8" fill="#c1440e"/>
+      <text x="110" y="105" text-anchor="middle" font-family="JetBrains Mono" font-size="11">u₁=-0.2</text>
+      <text x="110" y="195" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c1440e">k= +0.2</text>
+
+      <circle cx="300" cy="130" r="8" fill="#2a6e3f"/>
+      <text x="300" y="105" text-anchor="middle" font-family="JetBrains Mono" font-size="11">u₂=0.5 ✓</text>
+      <text x="300" y="195" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#2a6e3f">k= 0 (未饱和)</text>
+
+      <circle cx="500" cy="130" r="8" fill="#c1440e"/>
+      <text x="500" y="105" text-anchor="middle" font-family="JetBrains Mono" font-size="11">u₃=1.1</text>
+      <text x="500" y="195" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c1440e">k= -0.1</text>
+
+      <text x="300" y="30" text-anchor="middle" font-family="Fraunces" font-size="14" font-style="italic" fill="#6b6458">
+        假设去饱和向量 d = [1,1,1] (均匀方向)
+      </text>
+      <text x="300" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#c1440e">
+        k = k_min + k_max = -0.1 + 0.2 = +0.1
+      </text>
+      <text x="300" y="220" text-anchor="middle" font-family="Fraunces" font-size="12" font-style="italic" fill="#6b6458">
+        → 所有电机同加 0.1：u' = [-0.1, 0.6, 1.2] ... 还有饱和，需要第二轮
+      </text>
+    </svg>
+    <figcaption><b>Fig. 2</b>单次去饱和增益的几何直觉：下边界欠 0.2，上边界超 0.1，加总为 +0.1 使饱和对称。</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch7" class="chapter">
+  <span class="ch-num">07</span>
+  <h2><span class="sub">Chapter Seven</span>核心算法二：minimize_sat</h2>
+
+  <p>
+    上一节的 \(k\) 只是<em>一次</em>尝试。如果饱和范围比输出范围还大（max(u) − min(u) &gt; u_max − u_min），
+    一次调整不够。<code>minimize_sat</code> 做了两步：
+  </p>
+
+<pre><span class="tok-kw">def</span> <span class="tok-fn">minimize_sat</span>(u, u_min, u_max, desaturation_vector):
+    k_1 = compute_desaturation_gain(u, u_min, u_max, desaturation_vector)
+    u_1 = u + k_1 * desaturation_vector   <span class="tok-com"># 第一次尝试</span>
+
+    k_2 = compute_desaturation_gain(u_1, u_min, u_max, desaturation_vector)
+    k_opt = k_1 + <span class="tok-num">0.5</span> * k_2             <span class="tok-com"># 再加半个修正</span>
+
+    u_prime = u + k_opt * desaturation_vector
+    <span class="tok-kw">return</span> u_prime</pre>
+
+  <ol class="steps">
+    <li>
+      <strong>第一次</strong>：用 \(k_1\) 调整，把饱和尽量对称化。
+      如果饱和可以完全消除，\(k_1\) 之后就不饱和了，第二次算出的 \(k_2=0\)。
+    </li>
+    <li>
+      <strong>第二次</strong>：如果还有残余饱和（说明饱和范围太宽、一次去不完），
+      再加 <code>0.5 * k_2</code> 做平衡——在剩下的上下越界之间取一个中点。
+    </li>
+  </ol>
+
+  <div class="note" data-label="为什么是 0.5">
+    第二次不能再用完整 \(k_2\)。否则会把"刚被拉到上限"的电机又推下去，
+    等于在两个越界之间来回振荡。取中点（0.5）意味着平分剩下的越界——
+    这是在不消除饱和的前提下<strong>最小化最大越界值</strong>的最优解。
+  </div>
+
+  <p>
+    这样，<code>minimize_sat</code> 就成了整个混控器的核心工具：给定一个"愿意牺牲的方向"，
+    它能以最优方式调整输出、把饱和降到最低。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch8" class="chapter">
+  <span class="ch-num">08</span>
+  <h2><span class="sub">Chapter Eight</span>三种混控模式的对比</h2>
+
+  <p>
+    混控器面对的不是单一饱和场景，而是"当事情无法两全时，我优先保什么"的哲学问题。
+    PX4 提供三种"哲学"：
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>模式</th><th>函数</th><th>推力能否升高</th><th>推力能否降低</th><th>优先级</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>none</strong><br>普通模式</td>
+        <td><code>normal_mode</code></td>
+        <td>❌ 绝对不</td>
+        <td>✓ 可以</td>
+        <td>推力 &gt; 姿态<br>（保飞手油门感）</td>
+      </tr>
+      <tr>
+        <td><strong>rp</strong><br>roll/pitch airmode</td>
+        <td><code>airmode_rp</code></td>
+        <td>✓ 为 r/p 可以</td>
+        <td>✓ 为 r/p 可以</td>
+        <td>roll/pitch &gt; thrust &gt; yaw</td>
+      </tr>
+      <tr>
+        <td><strong>rpy</strong><br>full airmode</td>
+        <td><code>airmode_rpy</code></td>
+        <td>✓ 为 r/p/y 都可以</td>
+        <td>✓</td>
+        <td>roll/pitch/yaw &gt; thrust</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>normal_mode — 保守派</h3>
+
+  <p>
+    代码思路是一连串"如果还饱和，就牺牲下一项"：
+  </p>
+
+<pre><span class="tok-kw">def</span> <span class="tok-fn">normal_mode</span>(m_sp, P, u_min, u_max):
+    <span class="tok-com"># 1. 先算 roll+pitch 产生的输出（yaw 暂不管）</span>
+    m_sp_no_yaw = m_sp.copy()
+    m_sp_no_yaw[<span class="tok-num">2</span>, <span class="tok-num">0</span>] = <span class="tok-num">0.0</span>
+    u = P * m_sp_no_yaw
+
+    <span class="tok-com"># 2. 尝试用 thrust 列去饱和，但只允许推力下降</span>
+    u_T = P[:, <span class="tok-num">3</span>]
+    u_prime = minimize_sat(u, u_min, u_max, u_T)
+    <span class="tok-kw">if</span> (u_prime > u).any():
+        u_prime = u                     <span class="tok-com"># ← 若要求推力升高则撤回</span>
+
+    <span class="tok-com"># 3. 如果还饱和，就减 roll/pitch 的幅度</span>
+    u_p_dot = P[:, <span class="tok-num">0</span>]                 <span class="tok-com"># roll 方向</span>
+    u_p2 = minimize_sat(u_prime, u_min, u_max, u_p_dot)
+    u_q_dot = P[:, <span class="tok-num">1</span>]                 <span class="tok-com"># pitch 方向</span>
+    u_p3 = minimize_sat(u_p2, u_min, u_max, u_q_dot)
+
+    <span class="tok-com"># 4. 最后把 yaw 拼回去</span>
+    u_final = mix_yaw(m_sp, u_p3, P, u_min, u_max)
+    <span class="tok-kw">return</span> (u, u_final)</pre>
+
+  <p>
+    核心约束在第 2 步那个 <code>if (u_prime &gt; u).any()</code>——
+    只要发现去饱和让<strong>任何一个</strong>电机输出变大（等价于推力上升），就整体作废，不动。
+    这是"不偷油门"的保证。
+  </p>
+
+  <p>
+    代价是：如果飞手给了很低油门，但同时要求很大的 roll，推力又不允许升高，
+    那飞机就会降到离地面更近——姿态会失控，"airmode off" 飞低油门容易掉就是这个原因。
+  </p>
+
+  <h3>airmode_rp — 中间派</h3>
+
+<pre><span class="tok-kw">def</span> <span class="tok-fn">airmode_rp</span>(m_sp, P, u_min, u_max):
+    m_sp_no_yaw = m_sp.copy()
+    m_sp_no_yaw[<span class="tok-num">2</span>, <span class="tok-num">0</span>] = <span class="tok-num">0.0</span>
+    u = P * m_sp_no_yaw
+
+    u_T = P[:, <span class="tok-num">3</span>]
+    u_prime = minimize_sat(u, u_min, u_max, u_T)   <span class="tok-com"># ← 允许推力双向</span>
+    u_final = mix_yaw(m_sp, u_prime, P, u_min, u_max)
+    <span class="tok-kw">return</span> (u, u_final)</pre>
+
+  <p>
+    和 normal_mode 几乎一样，但<strong>去掉了那个 <code>if</code> 判断</strong>——
+    这意味着为了保住 roll/pitch，推力可以自由地上升或下降。
+    低油门 + 大 roll 也不怕了，因为算法会自动把油门加一点来给 roll 留空间。
+  </p>
+
+  <p>
+    这就是"Airmode" 这个名字的由来：即使飞手给的油门是 0，空中（air）姿态控制仍然能生效。
+  </p>
+
+  <h3>airmode_rpy — 激进派</h3>
+
+<pre><span class="tok-kw">def</span> <span class="tok-fn">airmode_rpy</span>(m_sp, P, u_min, u_max):
+    u = P * m_sp                                   <span class="tok-com"># ← yaw 直接一起混</span>
+
+    u_T = P[:, <span class="tok-num">3</span>]
+    u_prime = minimize_sat(u, u_min, u_max, u_T)   <span class="tok-com"># 用 thrust 去饱和</span>
+
+    <span class="tok-com"># 若还饱和，用 yaw 做最后一次去饱和（而非像其他模式丢掉 yaw）</span>
+    u_T = P[:, <span class="tok-num">2</span>]
+    u_prime_yaw = minimize_sat(u_prime, u_min, u_max, u_T)
+
+    <span class="tok-kw">return</span> (u, u_prime_yaw)</pre>
+
+  <p>
+    和 rp 的区别是：yaw 一开始就和 roll/pitch 一起被算进 \(\mathbf{u}\)。
+    只有在饱和消不掉时，才牺牲 yaw。适合穿越机之类需要每一根轴都跟手的场景。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch9" class="chapter">
+  <span class="ch-num">09</span>
+  <h2><span class="sub">Chapter Nine</span>Yaw 的特殊待遇：mix_yaw</h2>
+
+  <p>
+    为什么 yaw 值得单独讲？因为相比 roll/pitch，yaw 的响应<strong>极其容易让电机饱和</strong>。
+  </p>
+
+  <p>
+    原因：roll/pitch 靠的是两个电机<em>反向</em>变化（一个加、一个减），对总推力影响小；
+    而 yaw 靠的是一组电机（CCW 那对）整体加速，另一组（CW）整体减速——
+    <strong>整半数的电机要同时增加输出</strong>。在油门已经很高时，这几乎一定撞上限。
+  </p>
+
+<pre><span class="tok-kw">def</span> <span class="tok-fn">mix_yaw</span>(m_sp, u, P, u_min, u_max):
+    <span class="tok-com"># 只取出 yaw 分量单独混</span>
+    m_sp_yaw_only = np.matlib.zeros(m_sp.size).T
+    m_sp_yaw_only[<span class="tok-num">2</span>, <span class="tok-num">0</span>] = m_sp[<span class="tok-num">2</span>, <span class="tok-num">0</span>]
+    u_p = u + P * m_sp_yaw_only
+
+    <span class="tok-com"># 第一步：允许上限多出 0.15（即最多推到 1.15），沿 yaw 方向去饱和</span>
+    u_r_dot = P[:, <span class="tok-num">2</span>]
+    u_pp = minimize_sat(u_p, u_min, u_max + <span class="tok-num">0.15</span>, u_r_dot)
+
+    <span class="tok-com"># 第二步：用 thrust 方向把超限的电机拉回 [0, u_max]</span>
+    u_T = P[:, <span class="tok-num">3</span>]
+    u_ppp = minimize_sat(u_pp, <span class="tok-num">0</span>, u_max, u_T)
+
+    <span class="tok-com"># 只允许降推力，不允许升</span>
+    <span class="tok-kw">if</span> (u_ppp > u_pp).any():
+        u_ppp = u_pp
+    <span class="tok-kw">return</span> u_ppp</pre>
+
+  <div class="note" data-label="+0.15 这个魔法数字">
+    这行 <code>u_max + 0.15</code> 非常关键。它不是说电机可以真输出 1.15——<strong>不行</strong>。
+    它的意思是：在"最终推力不能升高"的约束下，<em>临时</em>允许 yaw 对饱和的贡献多 15%，
+    这样就给了顶部油门一点 yaw 响应空间（否则油门推到顶时，yaw 就完全没反应了，飞手打舵没用）。
+    随后第二步再用 thrust 方向把真正越过 1.0 的电机压下来——以轻微降低总推力的代价。
+  </div>
+
+  <p>
+    最后那个 <code>if (u_ppp &gt; u_pp).any()</code> 保证：即使 yaw 要求需要推力升高，
+    也不允许——宁可降低 yaw 幅度，也不偷飞手的油门。这和 normal_mode 的哲学一致。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch10" class="chapter">
+  <span class="ch-num">10</span>
+  <h2><span class="sub">Chapter Ten</span>完整流程：一个具体案例走一遍</h2>
+
+  <p>
+    设定：四旋翼 X 型 (quad_x)，airmode_rp 模式，输入 \(\mathbf{m}_{sp} = [0.2,\ 0,\ 0.1,\ 0.9]^T\)
+    （轻微 roll + 轻微 yaw + 高油门）。我们一步步走。
+  </p>
+
+  <ol class="steps">
+    <li>
+      <strong>剥离 yaw，先算无 yaw 的输出</strong>
+      <p>
+        \(\mathbf{m}_{sp}' = [0.2,\ 0,\ 0,\ 0.9]^T\)
+      </p>
+      <p>
+        \(\mathbf{u} = P \cdot \mathbf{m}_{sp}' = [0.758,\ 1.042,\ 1.042,\ 0.758]^T\)
+      </p>
+      <p>
+        M2、M3 越了上限 0.042。
+      </p>
+    </li>
+
+    <li>
+      <strong>用 thrust 方向（[1,1,1,1]）做 minimize_sat</strong>
+      <p>
+        上边界还剩：\([0.242, -0.042, -0.042, 0.242]\)<br>
+        下边界要抬：\([-0.758, -1.042, -1.042, -0.758]\)（全都是负数，全部不记）
+      </p>
+      <p>
+        只有 M2、M3 上饱和，\(k = k_{min} + k_{max} = -0.042 + 0 = -0.042\)
+      </p>
+      <p>
+        第一次调整：\(\mathbf{u}_1 = \mathbf{u} + (-0.042)\cdot[1,1,1,1] = [0.716,\ 1.000,\ 1.000,\ 0.716]\)
+      </p>
+      <p>
+        已经没有饱和了，第二次 \(k_2 = 0\)，不需要修正。
+      </p>
+      <p>
+        \(\mathbf{u}_{prime} = [0.716,\ 1.000,\ 1.000,\ 0.716]\)
+      </p>
+    </li>
+
+    <li>
+      <strong>进入 mix_yaw</strong>
+      <p>
+        yaw 对应的 P 列是 [1, 1, −1, −1]，乘以 0.1：yaw 贡献 = [0.1, 0.1, −0.1, −0.1]
+      </p>
+      <p>
+        叠加：\(\mathbf{u}_p = [0.816,\ 1.100,\ 0.900,\ 0.616]\)
+      </p>
+      <p>
+        M2 越过 1.0 达到 1.100。mix_yaw 先允许到 1.15 做一次 yaw 方向去饱和——1.100 &lt; 1.15，未触发。
+      </p>
+      <p>
+        然后用 thrust 方向把 M2 拉回 [0, 1]：
+      </p>
+      <p>
+        \(k = -0.100\)，\(\mathbf{u}_{ppp} = [0.716,\ 1.000,\ 0.800,\ 0.516]\)
+      </p>
+    </li>
+
+    <li>
+      <strong>检查推力是否被偷偷抬高</strong>
+      <p>
+        \(\mathbf{u}_{ppp} \leq \mathbf{u}_{pp}\)，推力只降不升，通过。
+      </p>
+    </li>
+
+    <li>
+      <strong>输出 saturation clamp</strong>
+      <p>
+        把任何还在 [0, 1] 外的再强制 clip——本例中都在范围内，无需操作。
+      </p>
+      <p>
+        最终 \(\mathbf{u}_{final} = [0.716,\ 1.000,\ 0.800,\ 0.516]^T\)
+      </p>
+    </li>
+
+    <li>
+      <strong>验证：实际分配到了什么 m？</strong>
+      <p>
+        \(\mathbf{m}_{new} = B \cdot \mathbf{u}_{final}\) —— 会发现 roll 和 yaw 基本保留，
+        thrust 比原本 0.9 略低了一点（~0.758）。这正是 airmode_rp 的预期行为：
+        用一点推力的损失换取姿态的精确。
+      </p>
+    </li>
+  </ol>
+
+  <div class="pull">
+    整个流程归纳起来就是：先算理想输出 → 沿着愿意牺牲的方向做最小调整
+    → 按轴优先级依次降级 → 最后 clip。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch11" class="chapter">
+  <span class="ch-num">11</span>
+  <h2><span class="sub">Chapter Eleven</span>交互式演示</h2>
+
+  <p>
+    拖动滑块改变期望的 roll / pitch / yaw / thrust，切换模式，观察 quad_x 四个电机的实际输出。
+    <strong>红色斜纹</strong>表示该电机触发了饱和（输出被 clip 到 0 或 1）。
+  </p>
+
+  <div class="demo">
+    <div class="demo-grid">
+      <div class="demo-controls">
+        <label>模式 Mode
+          <select id="d-mode">
+            <option value="none">none (normal_mode)</option>
+            <option value="rp" selected>rp (airmode_rp)</option>
+            <option value="rpy">rpy (airmode_rpy)</option>
+          </select>
+        </label>
+        <label>机型 Frame
+          <select id="d-frame">
+            <option value="quad_x" selected>quad_x</option>
+            <option value="quad_wide">quad_wide</option>
+            <option value="hex_x">hex_x</option>
+          </select>
+        </label>
+        <label>roll setpoint (\(\dot{p}\)) <span class="val" id="d-roll-v">0.20</span>
+          <input type="range" id="d-roll" min="-1" max="1" step="0.01" value="0.2">
+        </label>
+        <label>pitch setpoint (\(\dot{q}\)) <span class="val" id="d-pitch-v">0.00</span>
+          <input type="range" id="d-pitch" min="-1" max="1" step="0.01" value="0">
+        </label>
+        <label>yaw setpoint (\(\dot{r}\)) <span class="val" id="d-yaw-v">0.10</span>
+          <input type="range" id="d-yaw" min="-1" max="1" step="0.01" value="0.1">
+        </label>
+        <label>thrust setpoint (T) <span class="val" id="d-thr-v">0.90</span>
+          <input type="range" id="d-thr" min="0" max="1" step="0.01" value="0.9">
+        </label>
+      </div>
+
+      <div class="demo-viz">
+        <h4>电机输出 Motor Outputs</h4>
+        <div class="motor-bars" id="d-bars"></div>
+
+        <h4 style="margin-top:1.3rem">分配回来的 m 向量</h4>
+        <div class="diag-box" id="d-alloc"></div>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top:1.2rem; font-size:0.93rem; color:var(--muted);">
+    <strong>建议试试的情况：</strong>油门拉到 1.0，然后加一点 roll/yaw，看看 none 和 rp/rpy 模式的差别；
+    或者油门 0.0 加 roll，感受 airmode 的救命效果。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="ch12" class="chapter">
+  <span class="ch-num">12</span>
+  <h2><span class="sub">Chapter Twelve</span>小结与扩展</h2>
+
+  <p>走到这里，我们回顾混控器的全貌：</p>
+
+  <ol class="steps">
+    <li>混控器是从 4 维指令（roll/pitch/yaw/thrust）到 N 维电机输出的映射。</li>
+    <li>核心工具是控制分配矩阵 P，每个机型有自己的 P。</li>
+    <li>理想情况下 \(\mathbf{u} = P \cdot \mathbf{m}\)，但现实中电机有上下限，会饱和。</li>
+    <li>饱和时不能简单 clip，否则控制目标丢失。</li>
+    <li><code>compute_desaturation_gain</code> + <code>minimize_sat</code> 提供了"沿某方向最小饱和调整"的数学工具。</li>
+    <li>不同模式（none / rp / rpy）通过选择<em>愿意牺牲的方向</em>体现不同的控制哲学。</li>
+    <li>Yaw 有单独的 <code>mix_yaw</code>，因为它最容易让电机饱和，有特殊的"允许 +0.15"策略。</li>
+  </ol>
+
+  <h3>更深层的问题</h3>
+
+  <ul class="bullets">
+    <li>
+      <strong>为什么 PX4 用这种启发式方法而不是解优化问题？</strong>
+      因为每个控制周期（250Hz / 1kHz）都要跑一次混控，标准 QP 求解器太慢。
+      这套代码本质上是对"约束最小二乘"的一个极快的近似解。
+    </li>
+    <li>
+      <strong>这套算法是最优的吗？</strong>
+      在合理假设下（P 秩为 4、去饱和向量方向合理），它能在<em>单个</em>饱和轴上给出全局最优解。
+      对多轴同时饱和情况，它是一个很好的次优解。PX4 一直在权衡"简单快"和"最优"。
+    </li>
+    <li>
+      <strong>扩展到非多旋翼呢？</strong>
+      对固定翼、VTOL、多轴飞行器，PX4 有另一套基于
+      <code>ControlAllocation</code> 类的更通用的框架，但核心思想是一样的：先 \(\mathbf{u} = P \mathbf{m}\)，
+      再用伪逆 + 饱和处理。建议读完这份教程后去看
+      <code>src/modules/control_allocator/</code> 里的代码。
+    </li>
+  </ul>
+
+  <div class="note tip" data-label="下一步">
+    试着自己推导一个 <strong>Y6（共轴三臂）</strong>的 P 矩阵，写一段测试代码跑一遍 <code>airmode_rp</code>。
+    看看你的直觉和代码输出是否一致。这是检验"真的懂了"的最好方法。
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="ornament">✦ ✦ ✦</div>
+  PX4 MULTIROTOR MIXER TEACHING DOSSIER · 基于 src/lib/mixer/MultirotorMixer 代码改写
+</footer>
+
+<script>
+// ---------- Frame matrices (rows: motors, cols: roll, pitch, yaw, thrust) ----------
+const FRAMES = {
+  quad_x: [
+    [-0.71,  0.71,  1.0,   1.0],
+    [ 0.71, -0.71,  1.0,   1.0],
+    [ 0.71,  0.71, -1.0,   1.0],
+    [-0.71, -0.71, -1.0,   1.0]
+  ],
+  quad_wide: [
+    [-0.5,   0.71,  0.77,  1.0],
+    [ 0.5,  -0.71,  1.0,   1.0],
+    [ 0.5,   0.71, -0.77,  1.0],
+    [-0.5,  -0.71, -1.0,   1.0]
+  ],
+  hex_x: [
+    [-1.0,    0.0,  -1.0,  1.0],
+    [ 1.0,    0.0,   1.0,  1.0],
+    [ 0.5,    0.87, -1.0,  1.0],
+    [-0.5,   -0.87,  1.0,  1.0],
+    [-0.5,    0.87,  1.0,  1.0],
+    [ 0.5,   -0.87, -1.0,  1.0]
+  ]
+};
+
+function matMulVec(A, v){
+  return A.map(row => row.reduce((s,a,i) => s + a*v[i], 0));
+}
+function vecAdd(a, b){ return a.map((x,i)=>x+b[i]); }
+function vecScale(a, k){ return a.map(x=>x*k); }
+function vecCopy(a){ return a.slice(); }
+function colOf(A, j){ return A.map(r => r[j]); }
+
+// ---------- algorithms ----------
+function computeDesatGain(u, u_min, u_max, d){
+  let k = new Array(u.length*2).fill(0);
+  for (let i=0; i<u.length; i++){
+    if (Math.abs(d[i]) < 1e-6) continue;
+    const d_minus = u_min - u[i];
+    const d_plus  = u_max - u[i];
+    if (d_minus > 0) k[2*i]   = d_minus / d[i];
+    if (d_plus  < 0) k[2*i+1] = d_plus  / d[i];
+  }
+  const kmin = Math.min(...k);
+  const kmax = Math.max(...k);
+  return kmin + kmax;
+}
+function minimizeSat(u, u_min, u_max, d){
+  const k1 = computeDesatGain(u, u_min, u_max, d);
+  const u1 = vecAdd(u, vecScale(d, k1));
+  const k2 = computeDesatGain(u1, u_min, u_max, d);
+  const k  = k1 + 0.5*k2;
+  return vecAdd(u, vecScale(d, k));
+}
+
+function mixYaw(m_sp, u, P, u_min, u_max){
+  const yawOnly = [0, 0, m_sp[2], 0];
+  const u_p = vecAdd(u, matMulVec(P, yawOnly));
+  const u_r_dot = colOf(P, 2);
+  const u_pp = minimizeSat(u_p, u_min, u_max + 0.15, u_r_dot);
+  const u_T = colOf(P, 3);
+  let u_ppp = minimizeSat(u_pp, 0, u_max, u_T);
+  if (u_ppp.some((v,i) => v > u_pp[i] + 1e-9)){
+    u_ppp = u_pp;
+  }
+  return u_ppp;
+}
+
+function airmodeRp(m_sp, P, u_min, u_max){
+  const m_no_yaw = [m_sp[0], m_sp[1], 0, m_sp[3]];
+  const u = matMulVec(P, m_no_yaw);
+  const u_T = colOf(P, 3);
+  const u_prime = minimizeSat(u, u_min, u_max, u_T);
+  const u_final = mixYaw(m_sp, u_prime, P, u_min, u_max);
+  return u_final;
+}
+function airmodeRpy(m_sp, P, u_min, u_max){
+  const u = matMulVec(P, m_sp);
+  let u_T = colOf(P, 3);
+  const u_prime = minimizeSat(u, u_min, u_max, u_T);
+  u_T = colOf(P, 2);
+  const u_prime_yaw = minimizeSat(u_prime, u_min, u_max, u_T);
+  return u_prime_yaw;
+}
+function normalMode(m_sp, P, u_min, u_max){
+  const m_no_yaw = [m_sp[0], m_sp[1], 0, m_sp[3]];
+  const u = matMulVec(P, m_no_yaw);
+  const u_T = colOf(P, 3);
+  let u_prime = minimizeSat(u, u_min, u_max, u_T);
+  if (u_prime.some((v,i) => v > u[i] + 1e-9)) u_prime = u;
+  const u_p_dot = colOf(P, 0);
+  const u_p2 = minimizeSat(u_prime, u_min, u_max, u_p_dot);
+  const u_q_dot = colOf(P, 1);
+  const u_p3 = minimizeSat(u_p2, u_min, u_max, u_q_dot);
+  return mixYaw(m_sp, u_p3, P, u_min, u_max);
+}
+
+// ---------- Matrix pseudoinverse via normal equations for simple use ----------
+// We only need rough B for display. Small 4-col matrix pinv:
+function transpose(M){
+  const r=M.length, c=M[0].length;
+  const T=Array.from({length:c},()=>new Array(r).fill(0));
+  for (let i=0;i<r;i++) for (let j=0;j<c;j++) T[j][i]=M[i][j];
+  return T;
+}
+function matMul(A,B){
+  const r=A.length, c=B[0].length, n=B.length;
+  const R=Array.from({length:r},()=>new Array(c).fill(0));
+  for (let i=0;i<r;i++) for (let j=0;j<c;j++){
+    let s=0; for (let k=0;k<n;k++) s+=A[i][k]*B[k][j]; R[i][j]=s;
+  }
+  return R;
+}
+function inverse4(M){
+  // Simple 4x4 inverse for PᵀP
+  const n=M.length;
+  const a=M.map(r=>r.slice());
+  const I=Array.from({length:n},(_,i)=>{const r=new Array(n).fill(0); r[i]=1; return r;});
+  for (let i=0;i<n;i++){
+    let pivot=a[i][i], p=i;
+    for (let k=i+1;k<n;k++) if (Math.abs(a[k][i])>Math.abs(pivot)){pivot=a[k][i]; p=k;}
+    if (Math.abs(pivot)<1e-12) return null;
+    [a[i],a[p]]=[a[p],a[i]]; [I[i],I[p]]=[I[p],I[i]];
+    const d=a[i][i];
+    for (let j=0;j<n;j++){a[i][j]/=d; I[i][j]/=d;}
+    for (let k=0;k<n;k++) if (k!==i){
+      const f=a[k][i];
+      for (let j=0;j<n;j++){a[k][j]-=f*a[i][j]; I[k][j]-=f*I[i][j];}
+    }
+  }
+  return I;
+}
+function pinv(P){
+  const Pt = transpose(P);
+  const PtP = matMul(Pt, P);
+  const inv = inverse4(PtP);
+  if (!inv) return null;
+  return matMul(inv, Pt);
+}
+
+// ---------- UI wiring ----------
+const $ = id => document.getElementById(id);
+const mode = $('d-mode'), frame = $('d-frame');
+const roll = $('d-roll'), pitch = $('d-pitch'), yaw = $('d-yaw'), thr = $('d-thr');
+const rollV = $('d-roll-v'), pitchV = $('d-pitch-v'), yawV = $('d-yaw-v'), thrV = $('d-thr-v');
+const bars = $('d-bars'), alloc = $('d-alloc');
+
+function fmt(x){ return (x>=0?' ':'')+x.toFixed(3); }
+
+function update(){
+  const m_sp = [+roll.value, +pitch.value, +yaw.value, +thr.value];
+  rollV.textContent = fmt(+roll.value);
+  pitchV.textContent = fmt(+pitch.value);
+  yawV.textContent = fmt(+yaw.value);
+  thrV.textContent = fmt(+thr.value);
+
+  const P = FRAMES[frame.value];
+  let u_raw;
+  if (mode.value === 'rpy') u_raw = airmodeRpy(m_sp, P, 0, 1);
+  else if (mode.value === 'rp') u_raw = airmodeRp(m_sp, P, 0, 1);
+  else u_raw = normalMode(m_sp, P, 0, 1);
+
+  // Saturate clip
+  const u_sat = u_raw.map(v => Math.max(0, Math.min(1, v)));
+
+  // Render bars
+  bars.innerHTML = '';
+  u_sat.forEach((v, i) => {
+    const saturated = (u_raw[i] < -1e-6 || u_raw[i] > 1 + 1e-6);
+    bars.insertAdjacentHTML('beforeend', `
+      <div class="motor-row">
+        <div class="lbl">M${i+1}</div>
+        <div class="bar-track"><div class="bar-fill${saturated?' sat':''}" style="width:${(v*100).toFixed(1)}%"></div></div>
+        <div class="val">${v.toFixed(3)}</div>
+      </div>
+    `);
+  });
+
+  // Compute allocated m
+  const B = pinv(P);
+  if (B){
+    const m_new = matMulVec(B, u_sat);
+    alloc.innerHTML = `
+      <div class="row"><span class="k">roll  (req)</span><span class="v">${fmt(m_sp[0])} → ${fmt(m_new[0])}</span></div>
+      <div class="row"><span class="k">pitch (req)</span><span class="v">${fmt(m_sp[1])} → ${fmt(m_new[1])}</span></div>
+      <div class="row"><span class="k">yaw   (req)</span><span class="v">${fmt(m_sp[2])} → ${fmt(m_new[2])}</span></div>
+      <div class="row"><span class="k">thr   (req)</span><span class="v">${fmt(m_sp[3])} → ${fmt(m_new[3])}</span></div>
+    `;
+  }
+}
+
+[mode, frame, roll, pitch, yaw, thr].forEach(el => {
+  el.addEventListener('input', update);
+  el.addEventListener('change', update);
+});
+update();
+</script>
+
+</body>
+</html>
