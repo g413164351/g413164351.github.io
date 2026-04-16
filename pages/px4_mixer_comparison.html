@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PX4 混控器架构演进：v1.13 前后对比</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #06080d;
+  --bg2: #0c1018;
+  --bg3: #111722;
+  --bg4: #182030;
+  --old: #f0a030;
+  --old-dim: rgba(240,160,48,0.10);
+  --old-border: rgba(240,160,48,0.22);
+  --new: #38bdf8;
+  --new-dim: rgba(56,189,248,0.10);
+  --new-border: rgba(56,189,248,0.22);
+  --green: #34d399;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --txt: #e1e7ef;
+  --txt2: #94a3b8;
+  --txt3: #5a6a80;
+  --border: rgba(148,163,184,0.07);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans SC','DM Sans',sans-serif;background:var(--bg);color:var(--txt);line-height:1.85;overflow-x:hidden;}
+code,.mono{font-family:'JetBrains Mono',monospace;}
+code{font-size:.86em;background:rgba(255,255,255,.06);padding:2px 7px;border-radius:5px;}
+
+.hero{position:relative;text-align:center;padding:72px 24px 56px;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 60% at 35% 50%,rgba(240,160,48,.05),transparent),radial-gradient(ellipse 50% 60% at 65% 50%,rgba(56,189,248,.05),transparent);}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.025) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse 70% 70% at center,black,transparent);}
+.hero-badge{position:relative;display:inline-flex;align-items:center;gap:8px;padding:5px 16px;border-radius:99px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--txt3);margin-bottom:28px;letter-spacing:.5px;animation:fadeD .7s ease both;}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.hero h1{position:relative;font-weight:900;font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-1px;line-height:1.3;margin-bottom:16px;animation:fadeD .7s ease .08s both;}
+.hero h1 .o{color:var(--old);}
+.hero h1 .n{color:var(--new);}
+.hero-sub{position:relative;font-size:16px;color:var(--txt2);max-width:620px;margin:0 auto;font-weight:300;animation:fadeD .7s ease .15s both;}
+.pills{position:relative;display:flex;gap:14px;justify-content:center;margin-top:28px;animation:fadeD .7s ease .22s both;flex-wrap:wrap;}
+.pill{display:flex;align-items:center;gap:7px;padding:8px 18px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;border:1px solid;}
+.pill.o{background:var(--old-dim);border-color:var(--old-border);color:var(--old);}
+.pill.n{background:var(--new-dim);border-color:var(--new-border);color:var(--new);}
+
+.container{max-width:1080px;margin:0 auto;padding:0 20px;}
+section{padding:56px 0;}
+.slabel{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:10px;}
+h2{font-weight:700;font-size:clamp(1.5rem,3vw,2rem);margin-bottom:20px;letter-spacing:-.5px;}
+h3{font-weight:700;font-size:1.1rem;margin-bottom:12px;}
+p.desc{color:var(--txt2);max-width:720px;margin-bottom:36px;font-size:15px;}
+
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:32px 28px;margin-bottom:24px;position:relative;overflow:hidden;}
+.card.o{border-left:3px solid var(--old);}
+.card.n{border-left:3px solid var(--new);}
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:5px;margin-bottom:16px;}
+.tag.o{background:var(--old-dim);color:var(--old);}
+.tag.n{background:var(--new-dim);color:var(--new);}
+
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+@media(max-width:800px){.vs{grid-template-columns:1fr;}}
+
+.cb{background:#080c14;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;}
+.cb-h{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--txt3);}
+.cb-h .dots{display:flex;gap:5px;}
+.cb-h .dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.07);}
+.cb-b{padding:16px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.75;color:#c9d1d9;white-space:pre;}
+.cm{color:#5c6a78;}
+.kw{color:#ff7b72;}
+.str{color:#a5d6ff;}
+.num{color:#79c0ff;}
+.ty{color:#ffa657;}
+.fn{color:#d2a8ff;}
+
+.ex{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;margin:20px 0;}
+.ex-title{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.ex-title .icon{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.ex-title.o{color:var(--old);}
+.ex-title.o .icon{background:var(--old-dim);}
+.ex-title.n{color:var(--new);}
+.ex-title.n .icon{background:var(--new-dim);}
+
+.result-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0;}
+.motor-val{text-align:center;padding:10px 8px;border-radius:8px;background:var(--bg4);border:1px solid var(--border);}
+.motor-val .label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--txt3);margin-bottom:4px;}
+.motor-val .val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;}
+.motor-val .val.ok{color:var(--green);}
+.motor-val .val.warn{color:var(--old);}
+.motor-val .val.bad{color:var(--red);}
+.motor-val .bar{height:4px;border-radius:2px;margin-top:6px;background:var(--bg);}
+.motor-val .bar-fill{height:100%;border-radius:2px;transition:width .5s;}
+
+.step-arrow{text-align:center;color:var(--txt3);font-size:20px;padding:6px 0;user-select:none;}
+
+.info{border-radius:10px;padding:20px 24px;margin:20px 0;border-left:3px solid;font-size:14px;line-height:1.85;color:var(--txt2);}
+.info strong{color:var(--txt);}
+.info.o{background:var(--old-dim);border-color:var(--old);}
+.info.n{background:var(--new-dim);border-color:var(--new);}
+.info.g{background:rgba(52,211,153,.06);border-color:var(--green);}
+
+.tw{border-radius:12px;border:1px solid var(--border);overflow:hidden;margin:28px 0;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px;}
+thead th{padding:14px 18px;text-align:left;font-weight:600;font-size:12px;letter-spacing:.5px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);}
+thead th:first-child{color:var(--txt3);}
+thead th:nth-child(2){color:var(--old);}
+thead th:nth-child(3){color:var(--new);}
+tbody td{padding:12px 18px;border-bottom:1px solid var(--border);color:var(--txt2);vertical-align:top;line-height:1.7;}
+tbody tr:last-child td{border-bottom:none;}
+tbody td:first-child{color:var(--txt);font-weight:500;}
+
+footer{text-align:center;padding:40px 24px;color:var(--txt3);font-size:12px;border-top:1px solid var(--border);}
+footer a{color:var(--new);text-decoration:none;}
+
+@keyframes fadeD{from{opacity:0;transform:translateY(-14px);}to{opacity:1;transform:translateY(0);}}
+.fi{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s ease;}
+.fi.v{opacity:1;transform:translateY(0);}
+
+.nstep{display:flex;gap:16px;margin:18px 0;}
+.nstep-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;margin-top:2px;}
+.nstep-num.o{background:var(--old-dim);color:var(--old);border:1px solid var(--old-border);}
+.nstep-num.n{background:var(--new-dim);color:var(--new);border:1px solid var(--new-border);}
+.nstep-body{flex:1;}
+.nstep-body p{font-size:14px;color:var(--txt2);margin-bottom:6px;}
+.nstep-body strong{color:var(--txt);}
+
+.hl-o{color:var(--old);font-weight:600;}
+.hl-n{color:var(--new);font-weight:600;}
+.hl-g{color:var(--green);font-weight:600;}
+.hl-r{color:var(--red);font-weight:600;}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(148,163,184,.12);border-radius:3px;}
+
+@media(max-width:600px){
+  .result-row{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-badge"><span class="dot"></span>PX4 Autopilot · Mixer Deep Dive</div>
+  <h1>从 <span class="o">Mixer</span> 到 <span class="n">Control Allocation</span></h1>
+  <p class="hero-sub">用一个四旋翼 X 构型的完整数值例子，手把手拆解两代混控架构的计算逻辑差异。</p>
+  <div class="pills">
+    <span class="pill o">≤ v1.12 · 旧版 Mixer</span>
+    <span class="pill n">≥ v1.13 · 新版 Control Allocation</span>
+  </div>
+</header>
+
+<!-- SCENARIO -->
+<section>
+<div class="container">
+  <div class="slabel fi">00 / Scenario</div>
+  <h2 class="fi">统一场景设定</h2>
+  <p class="desc fi">以下所有例子都基于同一个飞行场景，方便直接对比两套系统在同一输入下的行为差异。</p>
+
+  <div class="card fi" style="border-left-color:var(--purple);">
+    <div class="tag" style="background:rgba(167,139,250,.1);color:var(--purple);">✦ 场景</div>
+    <h3>四旋翼 X 构型 · 悬停中右倾修正</h3>
+    <p style="color:var(--txt2);font-size:14.5px;margin-bottom:16px;">一架标准 X 型四旋翼正在悬停，姿态控制器检测到需要向右滚转修正，同时保持俯仰、偏航稳定。控制器输出如下归一化指令：</p>
+
+    <div class="result-row">
+      <div class="motor-val"><div class="label">Roll</div><div class="val" style="color:var(--purple);">0.30</div><div style="font-size:11px;color:var(--txt3);margin-top:4px;">向右滚转</div></div>
+      <div class="motor-val"><div class="label">Pitch</div><div class="val" style="color:var(--txt2);">0.00</div><div style="font-size:11px;color:var(--txt3);margin-top:4px;">不俯仰</div></div>
+      <div class="motor-val"><div class="label">Yaw</div><div class="val" style="color:var(--txt2);">0.05</div><div style="font-size:11px;color:var(--txt3);margin-top:4px;">微量偏航</div></div>
+      <div class="motor-val"><div class="label">Thrust</div><div class="val" style="color:var(--green);">0.60</div><div style="font-size:11px;color:var(--txt3);margin-top:4px;">悬停油门</div></div>
+    </div>
+
+    <div style="display:flex;justify-content:center;padding:16px 0;">
+      <svg width="300" height="260" viewBox="0 0 300 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="150" y1="130" x2="60" y2="50" stroke="#2a3448" stroke-width="3" stroke-linecap="round"/>
+        <line x1="150" y1="130" x2="240" y2="50" stroke="#2a3448" stroke-width="3" stroke-linecap="round"/>
+        <line x1="150" y1="130" x2="60" y2="210" stroke="#2a3448" stroke-width="3" stroke-linecap="round"/>
+        <line x1="150" y1="130" x2="240" y2="210" stroke="#2a3448" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="150" cy="130" r="16" fill="#182030" stroke="#2a3448" stroke-width="2"/>
+        <text x="150" y="134" text-anchor="middle" fill="#5a6a80" font-family="JetBrains Mono" font-size="9" font-weight="600">X</text>
+        <circle cx="240" cy="50" r="26" fill="rgba(56,189,248,.08)" stroke="rgba(56,189,248,.3)" stroke-width="1.5"/>
+        <text x="240" y="46" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="11" font-weight="700">M1</text>
+        <text x="240" y="60" text-anchor="middle" fill="#5a6a80" font-family="JetBrains Mono" font-size="8">CCW ↺</text>
+        <text x="240" y="90" text-anchor="middle" fill="#5a6a80" font-family="Noto Sans SC" font-size="9">右前</text>
+        <circle cx="60" cy="210" r="26" fill="rgba(56,189,248,.08)" stroke="rgba(56,189,248,.3)" stroke-width="1.5"/>
+        <text x="60" y="206" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="11" font-weight="700">M2</text>
+        <text x="60" y="220" text-anchor="middle" fill="#5a6a80" font-family="JetBrains Mono" font-size="8">CCW ↺</text>
+        <text x="60" y="248" text-anchor="middle" fill="#5a6a80" font-family="Noto Sans SC" font-size="9">左后</text>
+        <circle cx="60" cy="50" r="26" fill="rgba(240,160,48,.08)" stroke="rgba(240,160,48,.3)" stroke-width="1.5"/>
+        <text x="60" y="46" text-anchor="middle" fill="#f0a030" font-family="JetBrains Mono" font-size="11" font-weight="700">M3</text>
+        <text x="60" y="60" text-anchor="middle" fill="#5a6a80" font-family="JetBrains Mono" font-size="8">CW ↻</text>
+        <text x="60" y="90" text-anchor="middle" fill="#5a6a80" font-family="Noto Sans SC" font-size="9">左前</text>
+        <circle cx="240" cy="210" r="26" fill="rgba(240,160,48,.08)" stroke="rgba(240,160,48,.3)" stroke-width="1.5"/>
+        <text x="240" y="206" text-anchor="middle" fill="#f0a030" font-family="JetBrains Mono" font-size="11" font-weight="700">M4</text>
+        <text x="240" y="220" text-anchor="middle" fill="#5a6a80" font-family="JetBrains Mono" font-size="8">CW ↻</text>
+        <text x="240" y="248" text-anchor="middle" fill="#5a6a80" font-family="Noto Sans SC" font-size="9">右后</text>
+        <text x="150" y="18" text-anchor="middle" fill="#3a4a60" font-family="Noto Sans SC" font-size="10">▲ 机头方向</text>
+      </svg>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- OLD MIXER -->
+<section style="background:var(--bg2);">
+<div class="container">
+  <div class="slabel fi">01 / Legacy Mixer</div>
+  <h2 class="fi">旧版混控器的计算过程 <span class="pill o" style="font-size:12px;vertical-align:middle;">≤ v1.12</span></h2>
+  <p class="desc fi">旧版的核心逻辑极其简洁：读取一张写死的权重表，然后做矩阵乘法。</p>
+
+  <div class="card o fi">
+    <div class="tag o">Step 1</div>
+    <h3>读取 <code>.mix</code> 文件中的权重表</h3>
+    <p style="color:var(--txt2);font-size:14px;margin-bottom:16px;">系统启动时，读取 <code>quad_x.main.mix</code> 文件。对于四旋翼 X 构型，<code>R: 4x</code> 语法会被展开为以下固定权重表：</p>
+
+    <div class="cb">
+      <div class="cb-h"><div class="dots"><span></span><span></span><span></span></div>quad_x.main.mix</div>
+      <div class="cb-b"><span class="cm"># 多旋翼混控器 —— 四旋翼 X 构型</span>
+<span class="kw">R:</span> <span class="ty">4x</span>
+
+<span class="cm"># roll_scale  pitch_scale  yaw_scale  deadband</span>
+<span class="num">10000 10000 10000 0</span>
+
+<span class="cm"># 解析后内部展开为 4×4 权重矩阵 W：</span>
+<span class="cm">#          Roll   Pitch   Yaw   Thrust</span>
+<span class="cm"># M1(右前)  -1.0   +1.0   -1.0   +1.0</span>
+<span class="cm"># M2(左后)  +1.0   -1.0   -1.0   +1.0</span>
+<span class="cm"># M3(左前)  +1.0   +1.0   +1.0   +1.0</span>
+<span class="cm"># M4(右后)  -1.0   -1.0   +1.0   +1.0</span></div>
+    </div>
+
+    <div class="info o">
+      <strong>注意：</strong>这张权重表在编译/启动后就固定在内存中，运行期间无法修改。每种机架对应一个唯一的 <code>.mix</code> 文件（quad_x、hex_x、octa_+……）。想换构型？换文件、重启。
+    </div>
+  </div>
+
+  <div class="card o fi">
+    <div class="tag o">Step 2</div>
+    <h3>线性加权求和 —— 直接矩阵乘法</h3>
+    <p style="color:var(--txt2);font-size:14px;margin-bottom:12px;">把控制器输出 <code>[roll, pitch, yaw, thrust]</code> 和权重矩阵相乘，就得到各电机输出：</p>
+
+    <div style="text-align:center;padding:16px 0;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--txt);">
+      motor[i] = W[i][0]×roll + W[i][1]×pitch + W[i][2]×yaw + W[i][3]×thrust
+    </div>
+
+    <p style="color:var(--txt2);font-size:14px;margin:12px 0 8px;">代入具体数值 <span class="hl-o">roll=0.30, pitch=0.00, yaw=0.05, thrust=0.60</span>：</p>
+
+    <div class="ex">
+      <div class="ex-title o"><div class="icon">▸</div>逐电机计算</div>
+
+      <div class="nstep">
+        <div class="nstep-num o">M1</div>
+        <div class="nstep-body">
+          <p><strong>右前 (CCW)：</strong><code>(-1.0)×0.30 + (+1.0)×0.00 + (-1.0)×0.05 + (+1.0)×0.60</code></p>
+          <p>= -0.30 + 0 - 0.05 + 0.60 = <span class="hl-g">0.25</span></p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num o">M2</div>
+        <div class="nstep-body">
+          <p><strong>左后 (CCW)：</strong><code>(+1.0)×0.30 + (-1.0)×0.00 + (-1.0)×0.05 + (+1.0)×0.60</code></p>
+          <p>= +0.30 + 0 - 0.05 + 0.60 = <span class="hl-g">0.85</span></p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num o">M3</div>
+        <div class="nstep-body">
+          <p><strong>左前 (CW)：</strong><code>(+1.0)×0.30 + (+1.0)×0.00 + (+1.0)×0.05 + (+1.0)×0.60</code></p>
+          <p>= +0.30 + 0 + 0.05 + 0.60 = <span class="hl-g">0.95</span></p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num o">M4</div>
+        <div class="nstep-body">
+          <p><strong>右后 (CW)：</strong><code>(-1.0)×0.30 + (-1.0)×0.00 + (+1.0)×0.05 + (+1.0)×0.60</code></p>
+          <p>= -0.30 + 0 + 0.05 + 0.60 = <span class="hl-g">0.35</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-arrow">↓</div>
+
+    <p style="color:var(--txt2);font-size:14px;margin-bottom:12px;"><strong>初始输出结果（范围 0~1）：</strong></p>
+    <div class="result-row">
+      <div class="motor-val"><div class="label">M1 右前</div><div class="val ok">0.25</div><div class="bar"><div class="bar-fill" style="width:25%;background:var(--green);"></div></div></div>
+      <div class="motor-val"><div class="label">M2 左后</div><div class="val ok">0.85</div><div class="bar"><div class="bar-fill" style="width:85%;background:var(--green);"></div></div></div>
+      <div class="motor-val"><div class="label">M3 左前</div><div class="val ok">0.95</div><div class="bar"><div class="bar-fill" style="width:95%;background:var(--green);"></div></div></div>
+      <div class="motor-val"><div class="label">M4 右后</div><div class="val ok">0.35</div><div class="bar"><div class="bar-fill" style="width:35%;background:var(--green);"></div></div></div>
+    </div>
+
+    <p style="color:var(--txt3);font-size:13px;margin-top:12px;">✅ 本例中所有电机都在 [0, 1] 范围内，无需饱和处理。左侧电机（M2、M3）转速更高以产生向右滚转的力矩——符合物理直觉。</p>
+  </div>
+
+  <div class="card o fi">
+    <div class="tag o">Step 3</div>
+    <h3>当电机饱和时 —— 启发式推力缩放</h3>
+    <p style="color:var(--txt2);font-size:14px;margin-bottom:12px;">如果控制指令更大（比如 <span class="hl-r">roll=0.50, thrust=0.75</span>），某些电机就会超限：</p>
+
+    <div class="ex">
+      <div class="ex-title o"><div class="icon">!</div>饱和场景计算</div>
+      <p style="font-size:13.5px;color:var(--txt2);margin-bottom:10px;">先正常计算：</p>
+
+      <div class="nstep">
+        <div class="nstep-num o">M1</div>
+        <div class="nstep-body"><p><code>(-1.0)×0.50 + 0 + (-1.0)×0.05 + (+1.0)×0.75</code> = <span class="hl-g">0.20</span></p></div>
+      </div>
+      <div class="nstep">
+        <div class="nstep-num o">M2</div>
+        <div class="nstep-body"><p><code>(+1.0)×0.50 + 0 + (-1.0)×0.05 + (+1.0)×0.75</code> = <span class="hl-r">1.20 ⚠</span></p></div>
+      </div>
+      <div class="nstep">
+        <div class="nstep-num o">M3</div>
+        <div class="nstep-body"><p><code>(+1.0)×0.50 + 0 + (+1.0)×0.05 + (+1.0)×0.75</code> = <span class="hl-r">1.30 ⚠</span></p></div>
+      </div>
+      <div class="nstep">
+        <div class="nstep-num o">M4</div>
+        <div class="nstep-body"><p><code>(-1.0)×0.50 + 0 + (+1.0)×0.05 + (+1.0)×0.75</code> = <span class="hl-g">0.30</span></p></div>
+      </div>
+
+      <div class="result-row" style="margin-top:16px;">
+        <div class="motor-val"><div class="label">M1</div><div class="val ok">0.20</div></div>
+        <div class="motor-val"><div class="label">M2</div><div class="val bad">1.20</div></div>
+        <div class="motor-val"><div class="label">M3</div><div class="val bad">1.30</div></div>
+        <div class="motor-val"><div class="label">M4</div><div class="val ok">0.30</div></div>
+      </div>
+
+      <div class="step-arrow">↓ 旧版处理策略 ↓</div>
+
+      <div class="nstep">
+        <div class="nstep-num o">1</div>
+        <div class="nstep-body">
+          <p><strong>等比缩小 roll/pitch/yaw 分量：</strong>最大超限量 0.30（M3 超了 1.0），将所有电机的姿态控制分量等比缩小，使最大值恰好 = 1.0。</p>
+          <p style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--old);">缩放因子 ≈ 0.77 → roll 实际效果被削弱为 0.38</p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num o">2</div>
+        <div class="nstep-body">
+          <p><strong>如果有电机低于下限：</strong>所有电机整体上移，保证 min(output) ≥ 0。</p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num o">3</div>
+        <div class="nstep-body">
+          <p><strong>最终输出：</strong></p>
+          <div class="result-row">
+            <div class="motor-val"><div class="label">M1</div><div class="val warn">0.36</div></div>
+            <div class="motor-val"><div class="label">M2</div><div class="val warn">0.95</div></div>
+            <div class="motor-val"><div class="label">M3</div><div class="val warn">1.00</div></div>
+            <div class="motor-val"><div class="label">M4</div><div class="val warn">0.41</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info o">
+      <strong>问题在哪？</strong>roll、pitch、yaw 被<strong>同比例缩小</strong>——即使 pitch=0 不需要保护，yaw 分量也被无差别削弱。系统无法说"我更在意推力而不是偏航"。对于标准四轴悬停还勉强能用，但对不对称构型（Y6、Tilt-rotor）或多轴冗余场景表现很差。
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- NEW CONTROL ALLOCATION -->
+<section>
+<div class="container">
+  <div class="slabel fi">02 / Control Allocation</div>
+  <h2 class="fi">新版控制分配的计算过程 <span class="pill n" style="font-size:12px;vertical-align:middle;">≥ v1.13</span></h2>
+  <p class="desc fi">新版把同一个问题建模成矩阵方程，用优化方法求解。同样的输入，思路完全不同。</p>
+
+  <div class="card n fi">
+    <div class="tag n">Step 1</div>
+    <h3>从几何参数构建效能矩阵 B</h3>
+    <p style="color:var(--txt2);font-size:14px;margin-bottom:12px;">不再读 <code>.mix</code> 文件，而是读取每个电机的<strong>物理参数</strong>（位置 x/y、推力系数、偏航系数），在运行时计算 B 矩阵。</p>
+
+    <div class="cb">
+      <div class="cb-h"><div class="dots"><span></span><span></span><span></span></div>参数系统（CA_ROTOR*）</div>
+      <div class="cb-b"><span class="cm"># 电机 0 (M1 右前)：</span>
+<span class="ty">CA_ROTOR0_PX</span> =  <span class="num">0.707</span>    <span class="cm"># x 位置（前为正）</span>
+<span class="ty">CA_ROTOR0_PY</span> =  <span class="num">0.707</span>    <span class="cm"># y 位置（右为正）</span>
+<span class="ty">CA_ROTOR0_KM</span> = <span class="num">-0.05</span>    <span class="cm"># 偏航力矩系数（CCW 为负）</span>
+
+<span class="cm"># 电机 1 (M2 左后)：</span>
+<span class="ty">CA_ROTOR1_PX</span> = <span class="num">-0.707</span>   <span class="ty">CA_ROTOR1_PY</span> = <span class="num">-0.707</span>   <span class="ty">CA_ROTOR1_KM</span> = <span class="num">-0.05</span>
+
+<span class="cm"># 电机 2 (M3 左前)：</span>
+<span class="ty">CA_ROTOR2_PX</span> =  <span class="num">0.707</span>   <span class="ty">CA_ROTOR2_PY</span> = <span class="num">-0.707</span>   <span class="ty">CA_ROTOR2_KM</span> =  <span class="num">0.05</span>
+
+<span class="cm"># 电机 3 (M4 右后)：</span>
+<span class="ty">CA_ROTOR3_PX</span> = <span class="num">-0.707</span>   <span class="ty">CA_ROTOR3_PY</span> =  <span class="num">0.707</span>   <span class="ty">CA_ROTOR3_KM</span> =  <span class="num">0.05</span></div>
+    </div>
+
+    <p style="color:var(--txt2);font-size:14px;margin:16px 0 8px;">代码根据这些物理参数，实时计算效能矩阵 <strong>B</strong>：</p>
+
+    <div class="cb">
+      <div class="cb-h"><div class="dots"><span></span><span></span><span></span></div>ActuatorEffectivenessRotors.cpp</div>
+      <div class="cb-b"><span class="cm">// 对每个电机 i，根据几何参数填 B 矩阵的第 i 列</span>
+B(<span class="num">0</span>, i) =  PY[i];    <span class="cm">// roll  力臂 = y 位置</span>
+B(<span class="num">1</span>, i) = -PX[i];    <span class="cm">// pitch 力臂 = -x 位置</span>
+B(<span class="num">2</span>, i) =  KM[i];    <span class="cm">// yaw   = 偏航力矩系数</span>
+B(<span class="num">3</span>, i) =  <span class="num">1.0</span>;      <span class="cm">// thrust = 每个电机都贡献推力</span></div>
+    </div>
+
+    <div class="ex">
+      <div class="ex-title n"><div class="icon">B</div>效能矩阵（代入数值后）</div>
+      <div style="overflow-x:auto;">
+        <table style="font-family:'JetBrains Mono',monospace;font-size:13px;border-collapse:separate;border-spacing:0;min-width:auto;">
+          <thead><tr>
+            <th style="padding:8px 14px;color:var(--txt3);font-weight:500;text-align:left;border:none;background:none;"></th>
+            <th style="padding:8px 14px;color:var(--new);font-weight:600;text-align:center;border:none;background:none;">M1 右前</th>
+            <th style="padding:8px 14px;color:var(--new);font-weight:600;text-align:center;border:none;background:none;">M2 左后</th>
+            <th style="padding:8px 14px;color:var(--new);font-weight:600;text-align:center;border:none;background:none;">M3 左前</th>
+            <th style="padding:8px 14px;color:var(--new);font-weight:600;text-align:center;border:none;background:none;">M4 右后</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:5px 14px;color:var(--txt);font-weight:600;border:none;">Roll</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">+0.707</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">−0.707</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">−0.707</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">+0.707</td></tr>
+            <tr><td style="padding:5px 14px;color:var(--txt);font-weight:600;border:none;">Pitch</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">−0.707</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">+0.707</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">−0.707</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">+0.707</td></tr>
+            <tr><td style="padding:5px 14px;color:var(--txt);font-weight:600;border:none;">Yaw</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">−0.05</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">−0.05</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">+0.05</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">+0.05</td></tr>
+            <tr><td style="padding:5px 14px;color:var(--txt);font-weight:600;border:none;">Thrust</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">1.0</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">1.0</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">1.0</td><td style="padding:5px 14px;text-align:center;color:var(--txt2);border:none;">1.0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:var(--txt3);margin-top:10px;">每列 = 一个电机对四个控制轴的贡献能力。例如 M1 的 Roll 行为 +0.707，表示 M1 转速提高时会产生正 roll（右倾）力矩。</p>
+    </div>
+
+    <div class="info n">
+      <strong>与旧版的根本区别：</strong>旧版 W 矩阵的值是人为写在 .mix 文件中的 ±1.0，新版 B 矩阵的值从电机物理位置<strong>自动计算</strong>。新增/移除一个电机只需改参数，B 矩阵下一拍自动更新。
+    </div>
+  </div>
+
+  <div class="card n fi">
+    <div class="tag n">Step 2</div>
+    <h3>伪逆法求解最优执行器输出</h3>
+    <p style="color:var(--txt2);font-size:14px;margin-bottom:12px;">已知期望控制量 <strong>v</strong> 和效能矩阵 <strong>B</strong>，求电机输出 <strong>u</strong> 使得 <strong>B · u = v</strong>。</p>
+
+    <div style="text-align:center;padding:16px 0;font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--new);">
+      u = B⁺ · v &nbsp;&nbsp; 其中 B⁺ = Bᵀ(BBᵀ)⁻¹
+    </div>
+
+    <p style="color:var(--txt2);font-size:14px;margin:12px 0 8px;">代入 <span class="hl-n">v = [0.30, 0.00, 0.05, 0.60]ᵀ</span> 求解：</p>
+
+    <div class="ex">
+      <div class="ex-title n"><div class="icon">▸</div>正常工况求解结果</div>
+      <div class="result-row">
+        <div class="motor-val"><div class="label">M1 右前</div><div class="val ok">0.26</div><div class="bar"><div class="bar-fill" style="width:26%;background:var(--new);"></div></div></div>
+        <div class="motor-val"><div class="label">M2 左后</div><div class="val ok">0.84</div><div class="bar"><div class="bar-fill" style="width:84%;background:var(--new);"></div></div></div>
+        <div class="motor-val"><div class="label">M3 左前</div><div class="val ok">0.94</div><div class="bar"><div class="bar-fill" style="width:94%;background:var(--new);"></div></div></div>
+        <div class="motor-val"><div class="label">M4 右后</div><div class="val ok">0.36</div><div class="bar"><div class="bar-fill" style="width:36%;background:var(--new);"></div></div></div>
+      </div>
+      <p style="font-size:12px;color:var(--txt3);margin-top:8px;">标准对称四轴在正常工况下，两套系统输出非常接近。<strong>真正的差距在饱和处理和非标构型。</strong></p>
+    </div>
+  </div>
+
+  <div class="card n fi">
+    <div class="tag n">Step 3</div>
+    <h3>当电机饱和时 —— 顺序去饱和 + 优先级</h3>
+    <p style="color:var(--txt2);font-size:14px;margin-bottom:12px;">同样的极端场景 <span class="hl-r">roll=0.50, thrust=0.75</span>，新版的处理完全不同：</p>
+
+    <div class="ex">
+      <div class="ex-title n"><div class="icon">!</div>Sequential Desaturation 算法</div>
+
+      <div class="nstep">
+        <div class="nstep-num n">1</div>
+        <div class="nstep-body">
+          <p><strong>初始伪逆求解：</strong></p>
+          <div class="result-row">
+            <div class="motor-val"><div class="label">M1</div><div class="val ok">0.18</div></div>
+            <div class="motor-val"><div class="label">M2</div><div class="val bad">1.22</div></div>
+            <div class="motor-val"><div class="label">M3</div><div class="val bad">1.32</div></div>
+            <div class="motor-val"><div class="label">M4</div><div class="val ok">0.28</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--red);margin-top:8px;">⚠ M2、M3 超限</p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num n">2</div>
+        <div class="nstep-body">
+          <p><strong>固定饱和执行器：</strong>将 M2 钳位到 1.0，M3 钳位到 1.0。计算残差控制量：</p>
+          <p style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--new);">v_残差 = v_期望 − B · u_已钳位</p>
+          <p>"M2、M3 被限制了，有一部分控制量没实现，这部分残差交给 M1、M4 补偿。"</p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num n">3</div>
+        <div class="nstep-body">
+          <p><strong>按优先级重新分配</strong>（这是核心差异！）：</p>
+          <div class="info n" style="margin:8px 0;padding:14px 18px;">
+            <span class="hl-n">优先级从高到低：Thrust → Roll/Pitch → Yaw</span><br>
+            如果推力和姿态不可兼得，<strong>先保推力</strong>（安全第一），再尽量保姿态。偏航最低优先级——可以暂时偏一点。
+          </div>
+          <p>用 M1、M4 的效能子矩阵，对残差控制量再次伪逆求解，迭代直到所有输出合法。</p>
+        </div>
+      </div>
+
+      <div class="nstep">
+        <div class="nstep-num n">4</div>
+        <div class="nstep-body">
+          <p><strong>最终输出：</strong></p>
+          <div class="result-row">
+            <div class="motor-val"><div class="label">M1</div><div class="val" style="color:var(--new);">0.30</div></div>
+            <div class="motor-val"><div class="label">M2</div><div class="val" style="color:var(--new);">1.00</div></div>
+            <div class="motor-val"><div class="label">M3</div><div class="val" style="color:var(--new);">1.00</div></div>
+            <div class="motor-val"><div class="label">M4</div><div class="val" style="color:var(--new);">0.40</div></div>
+          </div>
+          <p style="font-size:13px;color:var(--txt3);margin-top:8px;">推力得到了更好的保持，roll 被适度削减，yaw 被优先牺牲——这正是我们想要的。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="info n">
+      <strong>核心差异总结：</strong>旧版对所有姿态轴"一刀切"等比缩放；新版则——① 精确计算残差 ② 用数学最优方法重新分配 ③ 按优先级决定谁先被牺牲。激烈机动、阵风扰动、电机失效等场景下差距非常显著。
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- REAL-WORLD EXAMPLES -->
+<section style="background:var(--bg2);">
+<div class="container">
+  <div class="slabel fi">03 / Real-World Scenarios</div>
+  <h2 class="fi">三个实际场景对比</h2>
+  <p class="desc fi">不同拓扑和工况下，两套系统的具体行为差异。</p>
+
+  <div class="card fi" style="border-left-color:var(--red);">
+    <div class="tag" style="background:rgba(248,113,113,.1);color:var(--red);">场景 A · 电机失效</div>
+    <h3>Motor 3 突然停转</h3>
+    <div class="vs">
+      <div>
+        <p style="font-size:14px;color:var(--old);font-weight:600;margin-bottom:8px;">旧版</p>
+        <p style="font-size:13.5px;color:var(--txt2);">混控器<strong>完全不知道 M3 已经停了</strong>——权重表里 M3 的系数还在。系统继续给 M3 分配一个非零输出值，但实际产生不了推力。</p>
+        <p style="font-size:13.5px;color:var(--txt2);margin-top:8px;">姿态控制器只能通过反馈环路慢慢"追"偏差，响应滞后严重，飞行器剧烈抖动甚至翻转坠机。</p>
+        <div class="cb" style="margin-top:12px;">
+          <div class="cb-b" style="font-size:12px;padding:12px;"><span class="cm">// 权重表不变，系统浑然不知</span>
+M3_output = <span class="num">0.95</span>  <span class="cm">// 算出来发给 M3，但 M3 已死</span>
+<span class="cm">// 只能等反馈发现高度下降 → 姿态偏差 → 慢慢补</span></div>
+        </div>
+        <p style="font-size:13px;color:var(--red);margin-top:8px;">❌ 无前馈适应，依赖反馈纠错（通常来不及）</p>
+      </div>
+      <div>
+        <p style="font-size:14px;color:var(--new);font-weight:600;margin-bottom:8px;">新版</p>
+        <p style="font-size:13.5px;color:var(--txt2);">检测到 M3 失效后，将 B 矩阵中 M3 对应的列<strong>全部清零</strong>，用剩余 3 个电机的子矩阵重新计算伪逆。</p>
+        <p style="font-size:13.5px;color:var(--txt2);margin-top:8px;">系统在<strong>同一控制周期内</strong>就切换到 3 电机模式——自动放弃 yaw 控制（欠驱动），但保住推力和 roll/pitch。</p>
+        <div class="cb" style="margin-top:12px;">
+          <div class="cb-b" style="font-size:12px;padding:12px;"><span class="cm">// B 矩阵实时修改</span>
+B[:, <span class="num">2</span>] = [<span class="num">0, 0, 0, 0</span>]  <span class="cm">// M3 列清零</span>
+u = B_reduced⁺ · v   <span class="cm">// 用 3 电机重新求解</span>
+<span class="cm">// 同一拍完成，无需等待反馈</span></div>
+        </div>
+        <p style="font-size:13px;color:var(--green);margin-top:8px;">✅ 前馈级适应，亚毫秒响应</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card fi" style="border-left-color:var(--purple);">
+    <div class="tag" style="background:rgba(167,139,250,.1);color:var(--purple);">场景 B · VTOL 过渡</div>
+    <h3>多旋翼模式 → 固定翼模式</h3>
+    <div class="vs">
+      <div>
+        <p style="font-size:14px;color:var(--old);font-weight:600;margin-bottom:8px;">旧版</p>
+        <p style="font-size:13.5px;color:var(--txt2);">需要<strong>两套独立 mixer</strong>：mc_group 控制电机，fw_group 控制舵面。过渡期通过权重线性混合：</p>
+        <div class="cb" style="margin-top:8px;">
+          <div class="cb-b" style="font-size:12px;padding:12px;">out = w × mixer_mc(ctrl) + (<span class="num">1</span>-w) × mixer_fw(ctrl)
+<span class="cm">// 两个 mixer 各自独立，互不知道对方的饱和状态</span>
+<span class="cm">// 容易出现两边同时饱和互相抢资源</span></div>
+        </div>
+        <p style="font-size:13px;color:var(--red);margin-top:8px;">❌ 两套独立系统线性混合，易冲突</p>
+      </div>
+      <div>
+        <p style="font-size:14px;color:var(--new);font-weight:600;margin-bottom:8px;">新版</p>
+        <p style="font-size:13.5px;color:var(--txt2);"><strong>统一的 B 矩阵</strong>同时包含电机列和舵面列，过渡期间效能系数连续变化：</p>
+        <div class="cb" style="margin-top:8px;">
+          <div class="cb-b" style="font-size:12px;padding:12px;">B = [ <span class="ty">Motor1..4</span> | <span class="fn">Aileron Elevator Rudder</span> ]
+<span class="cm">//   效能×w 渐减    效能×(1-w) 渐增</span>
+<span class="cm">// 所有执行器在同一个优化问题内统一求解</span></div>
+        </div>
+        <p style="font-size:13px;color:var(--green);margin-top:8px;">✅ 统一优化，过渡平滑无冲突</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card fi" style="border-left-color:var(--green);">
+    <div class="tag" style="background:rgba(52,211,153,.1);color:var(--green);">场景 C · 自定义构型</div>
+    <h3>非标准三角形布局三轴无人机</h3>
+    <div class="vs">
+      <div>
+        <p style="font-size:14px;color:var(--old);font-weight:600;margin-bottom:8px;">旧版</p>
+        <p style="font-size:13.5px;color:var(--txt2);">没有现成的 R: 语法，需要<strong>手动计算权重</strong>，用 S: 逐行写 .mix 文件，刷固件，试飞，发现不对再改……</p>
+        <div class="cb" style="margin-top:8px;">
+          <div class="cb-b" style="font-size:12px;padding:12px;"><span class="cm"># 必须自己算每个系数</span>
+<span class="kw">S:</span> <span class="num">1 3</span>
+<span class="num">0 0  8000  8000  0  -10000  10000</span>
+<span class="num">0 1  8000  8000  0  -10000  10000</span>
+<span class="num">0 3 10000 10000  0  -10000  10000</span>
+<span class="cm"># 手算 → 写文件 → 刷固件 → 试飞 → 重来</span></div>
+        </div>
+        <p style="font-size:13px;color:var(--red);margin-top:8px;">❌ 需手算权重、刷固件、反复迭代</p>
+      </div>
+      <div>
+        <p style="font-size:14px;color:var(--new);font-weight:600;margin-bottom:8px;">新版</p>
+        <p style="font-size:13.5px;color:var(--txt2);">在 QGC 参数界面中填写每个电机的<strong>物理坐标和旋转方向</strong>，系统自动生成 B 矩阵：</p>
+        <div class="cb" style="margin-top:8px;">
+          <div class="cb-b" style="font-size:12px;padding:12px;"><span class="ty">CA_ROTOR_COUNT</span> = <span class="num">3</span>
+<span class="ty">CA_ROTOR0_PX</span> =  <span class="num">1.0</span>    <span class="cm"># 前方电机</span>
+<span class="ty">CA_ROTOR0_PY</span> =  <span class="num">0.0</span>
+<span class="ty">CA_ROTOR1_PX</span> = <span class="num">-0.5</span>    <span class="cm"># 左后电机</span>
+<span class="ty">CA_ROTOR1_PY</span> = <span class="num">-0.87</span>
+<span class="ty">CA_ROTOR2_PX</span> = <span class="num">-0.5</span>    <span class="cm"># 右后电机</span>
+<span class="ty">CA_ROTOR2_PY</span> =  <span class="num">0.87</span>
+<span class="cm"># 保存参数即可，无需刷固件</span></div>
+        </div>
+        <p style="font-size:13px;color:var(--green);margin-top:8px;">✅ 描述几何 → 自动算 → 实时生效</p>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section>
+<div class="container">
+  <div class="slabel fi">04 / Comparison Table</div>
+  <h2 class="fi">完整对比表</h2>
+
+  <div class="tw fi">
+    <table>
+      <thead><tr><th>维度</th><th>旧版 Mixer ≤ v1.12</th><th>新版 Control Allocation ≥ v1.13</th></tr></thead>
+      <tbody>
+        <tr><td>配置方式</td><td><code>.mix</code> 文本文件，每种机架一个</td><td><code>CA_*</code> 参数族（QGC 可视化配置）</td></tr>
+        <tr><td>核心数据结构</td><td>权重表 W（人工定义 ±1.0）</td><td>效能矩阵 B（从几何坐标自动计算）</td></tr>
+        <tr><td>求解方法</td><td>线性加权求和（矩阵乘法）</td><td>伪逆 / 顺序去饱和 / 加权最小二乘</td></tr>
+        <tr><td>饱和处理</td><td>等比缩放所有姿态轴（启发式）</td><td>固定饱和器 → 残差重分配（迭代最优）</td></tr>
+        <tr><td>优先级</td><td>不支持（一视同仁缩放）</td><td>Thrust &gt; Roll/Pitch &gt; Yaw（可配置）</td></tr>
+        <tr><td>构型扩展</td><td>每种构型一个 .mix，需刷固件重启</td><td>改参数即生效，支持任意几何布局</td></tr>
+        <tr><td>电机失效</td><td>无感知，完全依赖反馈</td><td>可清零 B 列，同周期内切换分配</td></tr>
+        <tr><td>VTOL 过渡</td><td>两套 mixer 线性混合，互不通信</td><td>统一 B 矩阵，效能系数连续变化</td></tr>
+        <tr><td>uORB 消息</td><td><code>actuator_controls → actuator_outputs</code></td><td><code>torque/thrust_setpoint → actuator_motors/servos</code></td></tr>
+        <tr><td>代码位置</td><td><code>src/lib/mixer/</code></td><td><code>src/modules/control_allocator/</code></td></tr>
+        <tr><td>版本状态</td><td>v1.9~v1.12（v1.14 起完全移除）</td><td>v1.13 引入，v1.14+ 为唯一方案</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<!-- SUMMARY -->
+<section style="background:var(--bg2);">
+<div class="container">
+  <div class="slabel fi">05 / Summary</div>
+  <h2 class="fi">一句话总结</h2>
+
+  <div class="info g fi" style="font-size:16px;text-align:center;padding:32px;border-left:none;border:1px solid rgba(52,211,153,.2);border-radius:14px;">
+    旧版是 <strong style="color:var(--old);">"查表得答案"</strong>——告诉每个电机该加多少<br>
+    新版是 <strong style="color:var(--new);">"描述问题让系统求最优解"</strong>——告诉系统我要什么效果
+  </div>
+
+  <div class="info g fi" style="margin-top:24px;">
+    <strong>迁移建议：</strong>v1.14+ 已完全移除旧版 Mixer，新项目请直接使用新架构。标准构型在 QGC 中选择 Airframe 即可自动完成参数设置；自定义构型需要把 .mix 文件中的权重反推回几何参数填入 <code>CA_ROTOR*</code> 参数族。
+  </div>
+</div>
+</section>
+
+<footer>
+  <p>PX4 Mixer Architecture Reference · 基于 <a href="https://docs.px4.io/" target="_blank">PX4 官方文档</a> 整理</p>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('v'); });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.fi').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
