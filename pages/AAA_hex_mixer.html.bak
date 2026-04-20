@@ -434,5 +434,30 @@ svg text { font-family: var(--font-sans); }
   renderAll();
 })();
 </script>
+
+<div class="mx" style="margin-top: 24px;">
+  <div class="step">
+    <h3>参考链接</h3>
+    <div class="desc">下面是相关网站和说明：</div>
+    <ul>
+      <li>
+        hex_x.toml：
+        <a href="https://github.com/castacks/PX4-fully-actuated/blob/v1.10-master/src/lib/mixer/MultirotorMixer/geometries/hex_x.toml" target="_blank" rel="noopener noreferrer">quad_wide.toml</a>
+        —— 电机位置
+      </li>
+      <li>
+        mixer_multirotor.py"：
+        <a href="https://github.com/castacks/PX4-fully-actuated/blob/v1.10-master/src/lib/mixer/MultirotorMixer/mixer_multirotor.py" target="_blank" rel="noopener noreferrer">mixer_multirotor.py</a>
+        —— 内含多个混控矩阵
+      </li>
+      <li>
+        px_generate_mixers.py：
+        <a href="https://github.com/castacks/PX4-fully-actuated/blob/v1.10-master/src/lib/mixer/MultirotorMixer/geometries/tools/px_generate_mixers.py" target="_blank" rel="noopener noreferrer">px_generate_mixers.py</a>
+        —— 含系数计算公式
+      </li>
+    </ul>
+  </div>
+</div>
+
 </body>
 </html>
