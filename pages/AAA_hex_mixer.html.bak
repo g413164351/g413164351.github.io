@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hex mixer derivation with h frame</title>
+<style>
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f5f5f4;
+  --color-background-tertiary: #e7e5e4;
+  --color-background-info: #eff6ff;
+  --color-background-danger: #fef2f2;
+  --color-background-success: #f0fdf4;
+  --color-background-warning: #fffbeb;
+  --color-text-primary: #0c0c0c;
+  --color-text-secondary: #6b6b6b;
+  --color-text-tertiary: #9b9b9b;
+  --color-text-info: #1d4ed8;
+  --color-text-danger: #dc2626;
+  --color-text-success: #16a34a;
+  --color-text-warning: #ca8a04;
+  --color-border-primary: rgba(0,0,0,0.4);
+  --color-border-secondary: rgba(0,0,0,0.3);
+  --color-border-tertiary: rgba(0,0,0,0.15);
+  --color-border-info: #93c5fd;
+  --color-border-danger: #fca5a5;
+  --color-border-success: #86efac;
+  --color-border-warning: #fde68a;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: "SF Mono", "Fira Code", Consolas, monospace;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-xl: 16px;
+  --p: var(--color-text-primary);
+  --s: var(--color-text-secondary);
+  --t: var(--color-text-tertiary);
+  --bg2: var(--color-background-secondary);
+  --b: var(--color-border-tertiary);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary: #1a1a1a;
+    --color-background-secondary: #262626;
+    --color-background-tertiary: #333333;
+    --color-background-info: #1e293b;
+    --color-background-danger: #2d1b1b;
+    --color-background-success: #1a2e1a;
+    --color-background-warning: #2d2610;
+    --color-text-primary: #e8e8e8;
+    --color-text-secondary: #a3a3a3;
+    --color-text-tertiary: #737373;
+    --color-text-info: #93c5fd;
+    --color-text-danger: #fca5a5;
+    --color-text-success: #86efac;
+    --color-text-warning: #fde68a;
+    --color-border-primary: rgba(255,255,255,0.4);
+    --color-border-secondary: rgba(255,255,255,0.3);
+    --color-border-tertiary: rgba(255,255,255,0.15);
+    --color-border-info: #1e40af;
+    --color-border-danger: #991b1b;
+    --color-border-success: #166534;
+    --color-border-warning: #854d0e;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; padding: 1rem;
+  font-family: var(--font-sans);
+  font-size: 16px; font-weight: 400; line-height: 1.7;
+  color: var(--color-text-primary);
+  background: var(--color-background-primary);
+}
+h1 { font-size: 22px; font-weight: 500; }
+h2 { font-size: 18px; font-weight: 500; }
+h3 { font-size: 16px; font-weight: 500; }
+a { color: var(--color-text-info); }
+
+/* SVG text classes */
+svg text { font-family: var(--font-sans); }
+.t  { font-family: var(--font-sans); font-size: 14px; font-weight: 400; fill: var(--color-text-primary); }
+.ts { font-family: var(--font-sans); font-size: 12px; font-weight: 400; fill: var(--color-text-secondary); }
+.th { font-family: var(--font-sans); font-size: 14px; font-weight: 500; fill: var(--color-text-primary); }
+
+/* SVG structural classes */
+.box { fill: var(--color-background-secondary); stroke: var(--color-border-tertiary); stroke-width: 0.5; }
+.node { cursor: pointer; }
+.node:hover { opacity: 0.85; }
+.arr { stroke: var(--color-text-secondary); stroke-width: 1.5; fill: none; }
+.leader { stroke: var(--color-border-tertiary); stroke-width: 0.5; stroke-dasharray: 4 2; fill: none; }
+
+/* SVG color ramps — light mode */
+.c-blue > rect, .c-blue > circle, .c-blue > ellipse, .c-blue > polygon { fill: #dbeafe; stroke: #3b82f6; stroke-width: 0.5; }
+.c-blue > .t, .c-blue > .ts, .c-blue > .th { fill: #1e40af; }
+.c-teal > rect, .c-teal > circle, .c-teal > ellipse, .c-teal > polygon { fill: #ccfbf1; stroke: #14b8a6; stroke-width: 0.5; }
+.c-teal > .t, .c-teal > .ts, .c-teal > .th { fill: #0f766e; }
+.c-amber > rect, .c-amber > circle, .c-amber > ellipse, .c-amber > polygon { fill: #fef3c7; stroke: #f59e0b; stroke-width: 0.5; }
+.c-amber > .t, .c-amber > .ts, .c-amber > .th { fill: #92400e; }
+.c-green > rect, .c-green > circle, .c-green > ellipse, .c-green > polygon { fill: #dcfce7; stroke: #22c55e; stroke-width: 0.5; }
+.c-green > .t, .c-green > .ts, .c-green > .th { fill: #166534; }
+.c-red > rect, .c-red > circle, .c-red > ellipse, .c-red > polygon { fill: #fee2e2; stroke: #ef4444; stroke-width: 0.5; }
+.c-red > .t, .c-red > .ts, .c-red > .th { fill: #991b1b; }
+.c-purple > rect, .c-purple > circle, .c-purple > ellipse, .c-purple > polygon { fill: #f3e8ff; stroke: #a855f7; stroke-width: 0.5; }
+.c-purple > .t, .c-purple > .ts, .c-purple > .th { fill: #6b21a8; }
+.c-coral > rect, .c-coral > circle, .c-coral > ellipse, .c-coral > polygon { fill: #ffe4e6; stroke: #fb7185; stroke-width: 0.5; }
+.c-coral > .t, .c-coral > .ts, .c-coral > .th { fill: #9f1239; }
+.c-pink > rect, .c-pink > circle, .c-pink > ellipse, .c-pink > polygon { fill: #fce7f3; stroke: #ec4899; stroke-width: 0.5; }
+.c-pink > .t, .c-pink > .ts, .c-pink > .th { fill: #9d174d; }
+.c-gray > rect, .c-gray > circle, .c-gray > ellipse, .c-gray > polygon { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 0.5; }
+.c-gray > .t, .c-gray > .ts, .c-gray > .th { fill: #374151; }
+
+/* Dark mode color ramp overrides */
+@media (prefers-color-scheme: dark) {
+  .c-blue > rect, .c-blue > circle, .c-blue > ellipse, .c-blue > polygon { fill: #1e3a5f; stroke: #60a5fa; }
+  .c-blue > .t, .c-blue > .ts, .c-blue > .th { fill: #bfdbfe; }
+  .c-teal > rect, .c-teal > circle, .c-teal > ellipse, .c-teal > polygon { fill: #134e4a; stroke: #2dd4bf; }
+  .c-teal > .t, .c-teal > .ts, .c-teal > .th { fill: #99f6e4; }
+  .c-amber > rect, .c-amber > circle, .c-amber > ellipse, .c-amber > polygon { fill: #451a03; stroke: #fbbf24; }
+  .c-amber > .t, .c-amber > .ts, .c-amber > .th { fill: #fde68a; }
+  .c-green > rect, .c-green > circle, .c-green > ellipse, .c-green > polygon { fill: #14532d; stroke: #4ade80; }
+  .c-green > .t, .c-green > .ts, .c-green > .th { fill: #bbf7d0; }
+  .c-red > rect, .c-red > circle, .c-red > ellipse, .c-red > polygon { fill: #450a0a; stroke: #f87171; }
+  .c-red > .t, .c-red > .ts, .c-red > .th { fill: #fecaca; }
+  .c-purple > rect, .c-purple > circle, .c-purple > ellipse, .c-purple > polygon { fill: #3b0764; stroke: #c084fc; }
+  .c-purple > .t, .c-purple > .ts, .c-purple > .th { fill: #e9d5ff; }
+  .c-coral > rect, .c-coral > circle, .c-coral > ellipse, .c-coral > polygon { fill: #4c0519; stroke: #fb7185; }
+  .c-coral > .t, .c-coral > .ts, .c-coral > .th { fill: #ffe4e6; }
+  .c-pink > rect, .c-pink > circle, .c-pink > ellipse, .c-pink > polygon { fill: #500724; stroke: #f472b6; }
+  .c-pink > .t, .c-pink > .ts, .c-pink > .th { fill: #fce7f3; }
+  .c-gray > rect, .c-gray > circle, .c-gray > ellipse, .c-gray > polygon { fill: #374151; stroke: #6b7280; }
+  .c-gray > .t, .c-gray > .ts, .c-gray > .th { fill: #d1d5db; }
+}
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+</svg>
+<div id="app" style="padding: 0.5rem 0; font-family: var(--font-sans); color: var(--color-text-primary);">
+  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <button data-preset="hex_x">Hex X (PX4)</button>
+    <button data-preset="hex_plus">Hex + (star)</button>
+    <button data-preset="stretched">Non-standard (stretched)</button>
+    <button data-preset="h_frame">H frame</button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 280px) minmax(0, 1fr); gap: 1rem; margin-bottom: 1rem;">
+    <div>
+      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">Motor positions & spin</div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="color: var(--color-text-secondary);">
+            <th style="text-align: left; padding: 4px;">M</th>
+            <th style="text-align: left; padding: 4px;">x</th>
+            <th style="text-align: left; padding: 4px;">y</th>
+            <th style="text-align: left; padding: 4px;">spin</th>
+          </tr>
+        </thead>
+        <tbody id="motor-tbody"></tbody>
+      </table>
+      <div style="margin-top: 8px; font-size: 13px; display: flex; gap: 10px; align-items: center;">
+        <label>Ct <input id="inp-ct" type="number" step="0.01" value="1" style="width: 56px;"></label>
+        <label>Cm <input id="inp-cm" type="number" step="0.01" value="0.05" style="width: 56px;"></label>
+      </div>
+    </div>
+    <div>
+      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">Top view (x forward ↑, y right →)</div>
+      <svg id="diagram" viewBox="-1.2 -1.2 2.4 2.4" style="width: 100%; height: 260px; background: var(--color-background-secondary); border-radius: var(--border-radius-md);"></svg>
+    </div>
+  </div>
+
+  <div id="steps"></div>
+
+  <style>
+    #app button { padding: 6px 12px; font-size: 13px; font-family: var(--font-sans); background: transparent; border: 0.5px solid var(--color-border-secondary); color: var(--color-text-primary); border-radius: var(--border-radius-md); cursor: pointer; }
+    #app button:hover { background: var(--color-background-secondary); }
+    #app input, #app select { font-family: var(--font-sans); padding: 3px 6px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); font-size: 13px; }
+    #app .step-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 12px 16px; margin-bottom: 10px; }
+    #app .step-title { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+    #app .step-body { font-size: 13px; color: var(--color-text-primary); line-height: 1.55; }
+    #app .muted { color: var(--color-text-secondary); }
+    #app .mat { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12.5px; margin: 4px 0; }
+    #app .mat td { padding: 3px 8px; text-align: right; border: 0.5px solid var(--color-border-tertiary); }
+    #app .mat.highlight td { background: var(--color-background-secondary); }
+    #app .mat .lbl { background: transparent; border: none; text-align: left; color: var(--color-text-secondary); padding-right: 6px; }
+    #app .eq-list { font-size: 12.5px; color: var(--color-text-primary); line-height: 1.8; font-variant-numeric: tabular-nums; }
+    #app .eq-list code { font-family: var(--font-mono); }
+    #app .final { border: 2px solid var(--color-border-info); background: var(--color-background-info); }
+    #app input[type="number"] { width: 62px; }
+    #app select { padding: 2px 4px; }
+  </style>
+</div>
+
+<script>
+(function(){
+  const PRESETS = {
+    hex_x: {
+      name: 'Hex X',
+      Ct: 1, Cm: 0.05,
+      motors: [
+        {x: 0.00,  y:  1.00, dir: -1, name: 'right'},
+        {x: 0.00,  y: -1.00, dir:  1, name: 'left'},
+        {x: 0.866, y: -0.50, dir: -1, name: 'front-left'},
+        {x:-0.866, y:  0.50, dir:  1, name: 'rear-right'},
+        {x: 0.866, y:  0.50, dir:  1, name: 'front-right'},
+        {x:-0.866, y: -0.50, dir: -1, name: 'rear-left'},
+      ]
+    },
+    hex_plus: {
+      name: 'Hex + (star, one arm forward)',
+      Ct: 1, Cm: 0.05,
+      motors: [
+        {x: 1.00,  y: 0.00,   dir: -1, name: 'front'},
+        {x:-1.00,  y: 0.00,   dir:  1, name: 'rear'},
+        {x: 0.50,  y: 0.866,  dir:  1, name: 'front-right'},
+        {x:-0.50,  y:-0.866,  dir: -1, name: 'rear-left'},
+        {x: 0.50,  y:-0.866,  dir: -1, name: 'front-left'},
+        {x:-0.50,  y: 0.866,  dir:  1, name: 'rear-right'},
+      ]
+    },
+    stretched: {
+      name: 'Stretched hex',
+      Ct: 1, Cm: 0.05,
+      motors: [
+        {x: 1.20, y: 0.35, dir: -1, name: 'front-right'},
+        {x: 1.20, y:-0.35, dir:  1, name: 'front-left'},
+        {x: 0.00, y: 0.60, dir:  1, name: 'mid-right'},
+        {x: 0.00, y:-0.60, dir: -1, name: 'mid-left'},
+        {x:-1.20, y: 0.35, dir:  1, name: 'rear-right'},
+        {x:-1.20, y:-0.35, dir: -1, name: 'rear-left'},
+      ]
+    },
+    h_frame: {
+      name: 'H frame (two rails of three)',
+      Ct: 1, Cm: 0.05,
+      motors: [
+        {x: 0.60, y:  0.40, dir:  1, name: 'front-right'},
+        {x: 0.60, y: -0.40, dir: -1, name: 'front-left'},
+        {x: 0.00, y:  0.40, dir: -1, name: 'mid-right'},
+        {x: 0.00, y: -0.40, dir:  1, name: 'mid-left'},
+        {x:-0.60, y:  0.40, dir:  1, name: 'rear-right'},
+        {x:-0.60, y: -0.40, dir: -1, name: 'rear-left'},
+      ]
+    }
+  };
+
+  let state = JSON.parse(JSON.stringify(PRESETS.hex_x));
+
+  const mz = (r,c)=>Array.from({length:r},()=>Array(c).fill(0));
+  function matmul(A,B){const r=A.length,k=A[0].length,c=B[0].length;const R=mz(r,c);for(let i=0;i<r;i++)for(let j=0;j<c;j++){let s=0;for(let t=0;t<k;t++)s+=A[i][t]*B[t][j];R[i][j]=s;}return R;}
+  function transp(A){const r=A.length,c=A[0].length;const R=mz(c,r);for(let i=0;i<r;i++)for(let j=0;j<c;j++)R[j][i]=A[i][j];return R;}
+  function invN(M){
+    const n=M.length;const A=M.map(r=>r.slice());const I=mz(n,n);for(let i=0;i<n;i++)I[i][i]=1;
+    for(let i=0;i<n;i++){
+      let p=i;for(let j=i+1;j<n;j++)if(Math.abs(A[j][i])>Math.abs(A[p][i]))p=j;
+      if(Math.abs(A[p][i])<1e-12) return null;
+      [A[i],A[p]]=[A[p],A[i]];[I[i],I[p]]=[I[p],I[i]];
+      const d=A[i][i];for(let j=0;j<n;j++){A[i][j]/=d;I[i][j]/=d;}
+      for(let k=0;k<n;k++)if(k!==i){const f=A[k][i];for(let j=0;j<n;j++){A[k][j]-=f*A[i][j];I[k][j]-=f*I[i][j];}}
+    }
+    return I;
+  }
+  function pinv(A){const AT=transp(A);const AAT=matmul(A,AT);const inv=invN(AAT);if(!inv) return null;return matmul(AT,inv);}
+
+  function compute(){
+    const n=state.motors.length;
+    const {Ct,Cm}=state;
+    const A=mz(4,n);
+    for(let i=0;i<n;i++){
+      const {x,y,dir}=state.motors[i];
+      A[0][i]=-y*Ct;
+      A[1][i]= x*Ct;
+      A[2][i]= dir*Cm;
+      A[3][i]= Ct;
+    }
+    const Ap=pinv(A);
+    if(!Ap) return {A,Ap:null};
+    const col=(M,c)=>M.map(r=>r[c]);
+    const absmax=a=>Math.max(...a.map(Math.abs));
+    const rMax=absmax(col(Ap,0));
+    const pMax=absmax(col(Ap,1));
+    const yMax=absmax(col(Ap,2));
+    const tMax=absmax(col(Ap,3));
+    const rpScale=Math.max(rMax,pMax);
+    const scales=[rpScale,rpScale,yMax,tMax];
+    const M=mz(n,4);
+    for(let i=0;i<n;i++)for(let j=0;j<4;j++)M[i][j]=Ap[i][j]/scales[j];
+    return {A,Ap,M,rMax,pMax,yMax,tMax,rpScale};
+  }
+
+  const f=(v,p=3)=>{const r=Math.abs(v)<1e-9?0:v;return r.toFixed(p).replace(/-0\.000/,'0.000');};
+  function matTable(M,rowLabels,colLabels,cls=''){
+    let h='<table class="mat '+cls+'">';
+    if(colLabels){h+='<tr><td class="lbl"></td>';for(const c of colLabels)h+='<td class="lbl">'+c+'</td>';h+='</tr>';}
+    for(let i=0;i<M.length;i++){h+='<tr>';if(rowLabels)h+='<td class="lbl">'+rowLabels[i]+'</td>';for(const v of M[i])h+='<td>'+f(v)+'</td>';h+='</tr>';}
+    h+='</table>';return h;
+  }
+
+  function renderTbody(){
+    const tb=document.getElementById('motor-tbody');
+    tb.innerHTML=state.motors.map((m,i)=>`
+      <tr>
+        <td style="padding:4px; color: var(--color-text-secondary);">${i+1}</td>
+        <td style="padding:2px;"><input data-idx="${i}" data-k="x" type="number" step="0.01" value="${m.x}"></td>
+        <td style="padding:2px;"><input data-idx="${i}" data-k="y" type="number" step="0.01" value="${m.y}"></td>
+        <td style="padding:2px;">
+          <select data-idx="${i}" data-k="dir">
+            <option value="1"${m.dir===1?' selected':''}>CCW</option>
+            <option value="-1"${m.dir===-1?' selected':''}>CW</option>
+          </select>
+        </td>
+      </tr>`).join('');
+    tb.querySelectorAll('input, select').forEach(el=>{
+      el.addEventListener('input',e=>{
+        const i=+el.dataset.idx,k=el.dataset.k;
+        state.motors[i][k]=k==='dir'?+el.value:parseFloat(el.value)||0;
+        renderAll();
+      });
+    });
+    document.getElementById('inp-ct').value=state.Ct;
+    document.getElementById('inp-cm').value=state.Cm;
+  }
+
+  function renderDiagram(){
+    const svg=document.getElementById('diagram');
+    const maxR=Math.max(1.2,...state.motors.map(m=>Math.sqrt(m.x*m.x+m.y*m.y)*1.15));
+    svg.setAttribute('viewBox',`${-maxR} ${-maxR} ${2*maxR} ${2*maxR}`);
+    let h='';
+    h+=`<line x1="${-maxR}" y1="0" x2="${maxR}" y2="0" stroke="var(--color-border-tertiary)" stroke-width="${maxR*0.005}"/>`;
+    h+=`<line x1="0" y1="${-maxR}" x2="0" y2="${maxR}" stroke="var(--color-border-tertiary)" stroke-width="${maxR*0.005}"/>`;
+    h+=`<path d="M 0 ${-maxR*0.95} L ${-maxR*0.03} ${-maxR*0.85} L ${maxR*0.03} ${-maxR*0.85} Z" fill="var(--color-text-secondary)"/>`;
+    h+=`<text x="${maxR*0.05}" y="${-maxR*0.85}" font-size="${maxR*0.08}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">x</text>`;
+    h+=`<text x="${maxR*0.85}" y="${-maxR*0.03}" font-size="${maxR*0.08}" fill="var(--color-text-secondary)" font-family="var(--font-sans)" text-anchor="end">y →</text>`;
+    state.motors.forEach((m,i)=>{
+      const px=m.y, py=-m.x;
+      const color=m.dir===1?'#378ADD':'#E24B4A';
+      h+=`<line x1="0" y1="0" x2="${px}" y2="${py}" stroke="var(--color-border-secondary)" stroke-width="${maxR*0.008}"/>`;
+      h+=`<circle cx="${px}" cy="${py}" r="${maxR*0.08}" fill="${color}" opacity="0.85"/>`;
+      h+=`<text x="${px}" y="${py+maxR*0.025}" text-anchor="middle" font-size="${maxR*0.09}" fill="white" font-family="var(--font-sans)" font-weight="500">${i+1}</text>`;
+    });
+    svg.innerHTML=h;
+  }
+
+  function renderSteps(){
+    const r=compute();
+    const box=document.getElementById('steps');
+    if(!r.Ap){box.innerHTML='<div class="step-card">Matrix is singular for this configuration (A·Aᵀ not invertible). Adjust positions.</div>';return;}
+    const {A,Ap,M,rMax,pMax,yMax,rpScale}=r;
+    const n=state.motors.length;
+    const mLbl=Array.from({length:n},(_,i)=>'M'+(i+1));
+    const rowLbl=['Mx','My','Mz','T'];
+    const colLbl=['u_r','u_p','u_y','u_t'];
+
+    let s12='<div class="eq-list">';
+    state.motors.forEach((m,i)=>{
+      const drag=m.dir===1?'+Cm':'-Cm';
+      s12+=`<div><b>M${i+1}</b> <span class="muted">(${m.name}, ${m.dir===1?'CCW':'CW'}, x=${f(m.x,2)}, y=${f(m.y,2)}):</span>
+        Mx = ${f(-m.y,3)}·Ct·ω²  &nbsp;
+        My = ${f(m.x,3)}·Ct·ω²  &nbsp;
+        Mz = ${drag}·ω²  &nbsp;
+        T = Ct·ω²</div>`;
+    });
+    s12+='</div>';
+
+    const kRp=rpScale,kY=yMax,kT=r.tMax;
+    const dom=pMax>rMax?'pitch':'roll';
+
+    box.innerHTML=`
+      <div class="step-card">
+        <div class="step-title">Step ①②  single-motor moment equations</div>
+        <div class="step-body">${s12}</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-title">Step ③  assemble control-effectiveness matrix A  (4×${n})</div>
+        <div class="step-body">
+          <div class="muted" style="margin-bottom:4px;">[Mx, My, Mz, T]ᵀ = A · [ω₁², …, ω${n}²]ᵀ</div>
+          ${matTable(A,rowLbl,mLbl)}
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-title">Step ④  pseudo-inverse  A⁺ = Aᵀ(A·Aᵀ)⁻¹  (${n}×4)</div>
+        <div class="step-body">
+          <div class="muted" style="margin-bottom:4px;">[ω₁², …, ω${n}²]ᵀ = A⁺ · [Mx, My, Mz, T]ᵀ. Six motors, four DOFs — over-actuated, so use Moore–Penrose pseudo-inverse (minimum-norm solution).</div>
+          ${matTable(Ap,mLbl,rowLbl)}
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-title">Step ⑤  extract PX4 normalization scales</div>
+        <div class="step-body">
+          <div>Per-column maxima of A⁺:
+            <code>|r|ₘₐₓ = ${f(rMax,4)}</code>,
+            <code>|p|ₘₐₓ = ${f(pMax,4)}</code>,
+            <code>|y|ₘₐₓ = ${f(yMax,4)}</code>,
+            <code>|T|ₘₐₓ = ${f(r.tMax,4)}</code>
+          </div>
+          <div style="margin-top:6px;">PX4 hex rule (differs from quad: no extra √2):</div>
+          <div style="margin-top:4px;">
+            <code>k_rp = max(|r|ₘₐₓ, |p|ₘₐₓ) = ${f(kRp,4)}</code>  (dominated by <b>${dom}</b>)<br>
+            <code>k_y  = |y|ₘₐₓ = ${f(kY,4)}</code><br>
+            <code>k_t  = |T|ₘₐₓ = ${f(kT,4)}</code>
+          </div>
+          <div class="muted" style="margin-top:6px;">Normalized inputs: u_r = k_rp·Mx, u_p = k_rp·My, u_y = k_y·Mz, u_t = k_t·T — all fall in [−1, 1].</div>
+        </div>
+      </div>
+
+      <div class="step-card final">
+        <div class="step-title">Step ⑥  final mixer matrix</div>
+        <div class="step-body">
+          <div class="muted" style="margin-bottom:4px;">[ω₁², …, ω${n}²]ᵀ = M · [u_r, u_p, u_y, u_t]ᵀ</div>
+          ${matTable(M,mLbl,colLbl,'highlight')}
+          <div class="muted" style="margin-top:6px;">Rounded to 2 decimals (PX4-source form):</div>
+          ${matTable(M.map(r=>r.map(v=>+v.toFixed(2))),mLbl,colLbl)}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAll(){renderTbody();renderDiagram();renderSteps();}
+
+  document.querySelectorAll('button[data-preset]').forEach(b=>{
+    b.addEventListener('click',()=>{state=JSON.parse(JSON.stringify(PRESETS[b.dataset.preset]));renderAll();});
+  });
+  document.getElementById('inp-ct').addEventListener('input',e=>{state.Ct=parseFloat(e.target.value)||1;renderAll();});
+  document.getElementById('inp-cm').addEventListener('input',e=>{state.Cm=parseFloat(e.target.value)||0.05;renderAll();});
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
