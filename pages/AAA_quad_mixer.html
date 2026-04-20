@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>quad mixer derivation interactive</title>
+<style>
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f5f5f4;
+  --color-background-tertiary: #e7e5e4;
+  --color-background-info: #eff6ff;
+  --color-background-danger: #fef2f2;
+  --color-background-success: #f0fdf4;
+  --color-background-warning: #fffbeb;
+  --color-text-primary: #0c0c0c;
+  --color-text-secondary: #6b6b6b;
+  --color-text-tertiary: #9b9b9b;
+  --color-text-info: #1d4ed8;
+  --color-text-danger: #dc2626;
+  --color-text-success: #16a34a;
+  --color-text-warning: #ca8a04;
+  --color-border-primary: rgba(0,0,0,0.4);
+  --color-border-secondary: rgba(0,0,0,0.3);
+  --color-border-tertiary: rgba(0,0,0,0.15);
+  --color-border-info: #93c5fd;
+  --color-border-danger: #fca5a5;
+  --color-border-success: #86efac;
+  --color-border-warning: #fde68a;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: "SF Mono", "Fira Code", Consolas, monospace;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-xl: 16px;
+  --p: var(--color-text-primary);
+  --s: var(--color-text-secondary);
+  --t: var(--color-text-tertiary);
+  --bg2: var(--color-background-secondary);
+  --b: var(--color-border-tertiary);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary: #1a1a1a;
+    --color-background-secondary: #262626;
+    --color-background-tertiary: #333333;
+    --color-background-info: #1e293b;
+    --color-background-danger: #2d1b1b;
+    --color-background-success: #1a2e1a;
+    --color-background-warning: #2d2610;
+    --color-text-primary: #e8e8e8;
+    --color-text-secondary: #a3a3a3;
+    --color-text-tertiary: #737373;
+    --color-text-info: #93c5fd;
+    --color-text-danger: #fca5a5;
+    --color-text-success: #86efac;
+    --color-text-warning: #fde68a;
+    --color-border-primary: rgba(255,255,255,0.4);
+    --color-border-secondary: rgba(255,255,255,0.3);
+    --color-border-tertiary: rgba(255,255,255,0.15);
+    --color-border-info: #1e40af;
+    --color-border-danger: #991b1b;
+    --color-border-success: #166534;
+    --color-border-warning: #854d0e;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; padding: 1rem;
+  font-family: var(--font-sans);
+  font-size: 16px; font-weight: 400; line-height: 1.7;
+  color: var(--color-text-primary);
+  background: var(--color-background-primary);
+}
+h1 { font-size: 22px; font-weight: 500; }
+h2 { font-size: 18px; font-weight: 500; }
+h3 { font-size: 16px; font-weight: 500; }
+a { color: var(--color-text-info); }
+
+/* SVG text classes */
+svg text { font-family: var(--font-sans); }
+.t  { font-family: var(--font-sans); font-size: 14px; font-weight: 400; fill: var(--color-text-primary); }
+.ts { font-family: var(--font-sans); font-size: 12px; font-weight: 400; fill: var(--color-text-secondary); }
+.th { font-family: var(--font-sans); font-size: 14px; font-weight: 500; fill: var(--color-text-primary); }
+
+/* SVG structural classes */
+.box { fill: var(--color-background-secondary); stroke: var(--color-border-tertiary); stroke-width: 0.5; }
+.node { cursor: pointer; }
+.node:hover { opacity: 0.85; }
+.arr { stroke: var(--color-text-secondary); stroke-width: 1.5; fill: none; }
+.leader { stroke: var(--color-border-tertiary); stroke-width: 0.5; stroke-dasharray: 4 2; fill: none; }
+
+/* SVG color ramps — light mode */
+.c-blue > rect, .c-blue > circle, .c-blue > ellipse, .c-blue > polygon { fill: #dbeafe; stroke: #3b82f6; stroke-width: 0.5; }
+.c-blue > .t, .c-blue > .ts, .c-blue > .th { fill: #1e40af; }
+.c-teal > rect, .c-teal > circle, .c-teal > ellipse, .c-teal > polygon { fill: #ccfbf1; stroke: #14b8a6; stroke-width: 0.5; }
+.c-teal > .t, .c-teal > .ts, .c-teal > .th { fill: #0f766e; }
+.c-amber > rect, .c-amber > circle, .c-amber > ellipse, .c-amber > polygon { fill: #fef3c7; stroke: #f59e0b; stroke-width: 0.5; }
+.c-amber > .t, .c-amber > .ts, .c-amber > .th { fill: #92400e; }
+.c-green > rect, .c-green > circle, .c-green > ellipse, .c-green > polygon { fill: #dcfce7; stroke: #22c55e; stroke-width: 0.5; }
+.c-green > .t, .c-green > .ts, .c-green > .th { fill: #166534; }
+.c-red > rect, .c-red > circle, .c-red > ellipse, .c-red > polygon { fill: #fee2e2; stroke: #ef4444; stroke-width: 0.5; }
+.c-red > .t, .c-red > .ts, .c-red > .th { fill: #991b1b; }
+.c-purple > rect, .c-purple > circle, .c-purple > ellipse, .c-purple > polygon { fill: #f3e8ff; stroke: #a855f7; stroke-width: 0.5; }
+.c-purple > .t, .c-purple > .ts, .c-purple > .th { fill: #6b21a8; }
+.c-coral > rect, .c-coral > circle, .c-coral > ellipse, .c-coral > polygon { fill: #ffe4e6; stroke: #fb7185; stroke-width: 0.5; }
+.c-coral > .t, .c-coral > .ts, .c-coral > .th { fill: #9f1239; }
+.c-pink > rect, .c-pink > circle, .c-pink > ellipse, .c-pink > polygon { fill: #fce7f3; stroke: #ec4899; stroke-width: 0.5; }
+.c-pink > .t, .c-pink > .ts, .c-pink > .th { fill: #9d174d; }
+.c-gray > rect, .c-gray > circle, .c-gray > ellipse, .c-gray > polygon { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 0.5; }
+.c-gray > .t, .c-gray > .ts, .c-gray > .th { fill: #374151; }
+
+/* Dark mode color ramp overrides */
+@media (prefers-color-scheme: dark) {
+  .c-blue > rect, .c-blue > circle, .c-blue > ellipse, .c-blue > polygon { fill: #1e3a5f; stroke: #60a5fa; }
+  .c-blue > .t, .c-blue > .ts, .c-blue > .th { fill: #bfdbfe; }
+  .c-teal > rect, .c-teal > circle, .c-teal > ellipse, .c-teal > polygon { fill: #134e4a; stroke: #2dd4bf; }
+  .c-teal > .t, .c-teal > .ts, .c-teal > .th { fill: #99f6e4; }
+  .c-amber > rect, .c-amber > circle, .c-amber > ellipse, .c-amber > polygon { fill: #451a03; stroke: #fbbf24; }
+  .c-amber > .t, .c-amber > .ts, .c-amber > .th { fill: #fde68a; }
+  .c-green > rect, .c-green > circle, .c-green > ellipse, .c-green > polygon { fill: #14532d; stroke: #4ade80; }
+  .c-green > .t, .c-green > .ts, .c-green > .th { fill: #bbf7d0; }
+  .c-red > rect, .c-red > circle, .c-red > ellipse, .c-red > polygon { fill: #450a0a; stroke: #f87171; }
+  .c-red > .t, .c-red > .ts, .c-red > .th { fill: #fecaca; }
+  .c-purple > rect, .c-purple > circle, .c-purple > ellipse, .c-purple > polygon { fill: #3b0764; stroke: #c084fc; }
+  .c-purple > .t, .c-purple > .ts, .c-purple > .th { fill: #e9d5ff; }
+  .c-coral > rect, .c-coral > circle, .c-coral > ellipse, .c-coral > polygon { fill: #4c0519; stroke: #fb7185; }
+  .c-coral > .t, .c-coral > .ts, .c-coral > .th { fill: #ffe4e6; }
+  .c-pink > rect, .c-pink > circle, .c-pink > ellipse, .c-pink > polygon { fill: #500724; stroke: #f472b6; }
+  .c-pink > .t, .c-pink > .ts, .c-pink > .th { fill: #fce7f3; }
+  .c-gray > rect, .c-gray > circle, .c-gray > ellipse, .c-gray > polygon { fill: #374151; stroke: #6b7280; }
+  .c-gray > .t, .c-gray > .ts, .c-gray > .th { fill: #d1d5db; }
+}
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+</svg>
+<style>
+.mx { padding: 1rem 0; font-family: var(--font-sans); color: var(--color-text-primary); font-size: 14px; line-height: 1.6; }
+.mx h3 { font-size: 15px; font-weight: 500; margin: 0 0 8px 0; }
+.mx .sectlabel { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 8px 0; }
+.mx .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mx .card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+.mx .mhead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.mx .mname { font-size: 13px; font-weight: 500; font-family: var(--font-mono); }
+.mx .nrow { display: grid; grid-template-columns: 18px minmax(0,1fr) 18px minmax(0,1fr) auto; gap: 5px; align-items: center; margin-top: 4px; }
+.mx .nrow label { font-size: 11px; font-family: var(--font-mono); color: var(--color-text-secondary); }
+.mx input[type="number"] { width: 100%; padding: 3px 5px; font-size: 12px; font-family: var(--font-mono); }
+.mx select { font-size: 12px; padding: 3px 5px; }
+.mx .coef { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mx .coef-item { display: flex; align-items: center; gap: 8px; }
+.mx .coef-item label { font-size: 12px; font-family: var(--font-mono); color: var(--color-text-secondary); flex: none; }
+.mx .coef-item input { flex: 1; }
+.mx .diag { display: flex; justify-content: center; padding: 8px 0; }
+.mx .step { margin-top: 14px; padding: 14px 16px; background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); }
+.mx .step h3 { display: flex; align-items: center; gap: 8px; }
+.mx .sn { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--color-background-info); color: var(--color-text-info); font-size: 12px; font-weight: 500; align-items: center; justify-content: center; flex: none; }
+.mx .desc { font-size: 13px; color: var(--color-text-secondary); margin: 4px 0 10px 0; }
+.mx .desc code { background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.mx .fl { font-family: var(--font-mono); font-size: 12.5px; background: var(--color-background-secondary); padding: 8px 12px; border-radius: var(--border-radius-md); margin: 6px 0; overflow-x: auto; white-space: nowrap; }
+.mx .mtxwrap { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; overflow-x: auto; }
+.mx .mcol { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mx .mcap { font-size: 11px; color: var(--color-text-secondary); font-family: var(--font-mono); }
+.mx .eq { font-size: 20px; font-family: var(--font-mono); margin-top: 18px; color: var(--color-text-secondary); }
+.mx .mtx { display: inline-grid; padding: 8px 14px; position: relative; font-family: var(--font-mono); font-size: 12px; gap: 4px 10px; border-radius: 0; color: var(--color-text-primary); }
+.mx .mtx::before, .mx .mtx::after { content: ''; position: absolute; top: 0; bottom: 0; width: 5px; }
+.mx .mtx::before { left: 0; border-left: 2px solid currentColor; border-top: 2px solid currentColor; border-bottom: 2px solid currentColor; }
+.mx .mtx::after { right: 0; border-right: 2px solid currentColor; border-top: 2px solid currentColor; border-bottom: 2px solid currentColor; }
+.mx .mtx .cell { text-align: right; min-width: 46px; padding: 0 3px; white-space: nowrap; }
+.mx .mtx.col1 { gap: 5px 0; }
+.mx .mtx.col1 .cell { min-width: 28px; text-align: center; padding: 0; }
+.mx .factors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
+.mx .fc { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+.mx .fc .flbl { font-size: 11px; color: var(--color-text-secondary); font-family: var(--font-mono); }
+.mx .fc .fval { font-size: 17px; font-weight: 500; font-family: var(--font-mono); margin-top: 2px; }
+.mx .fc .fsub { font-size: 11px; color: var(--color-text-tertiary); font-family: var(--font-mono); margin-top: 4px; line-height: 1.4; }
+.mx .final { background: var(--color-background-info); border: 2px solid var(--color-border-info); border-radius: var(--border-radius-lg); padding: 14px 16px; margin-top: 14px; }
+.mx .final .sn { background: var(--color-text-info); color: var(--color-background-info); }
+.mx .final h3 { color: var(--color-text-info); }
+.mx .final .desc { color: var(--color-text-info); opacity: 0.85; }
+.mx .final .mtx { color: var(--color-text-info); }
+.mx .final .mcap { color: var(--color-text-info); opacity: 0.8; }
+.mx .final .eq { color: var(--color-text-info); opacity: 0.8; }
+.mx .preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+.mx button { font-size: 12px; }
+.mx .err { color: var(--color-text-danger); padding: 12px; background: var(--color-background-danger); border-radius: var(--border-radius-md); font-size: 13px; }
+.mx .tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 10px; font-family: var(--font-mono); }
+.mx .tag-ccw { background: #E6F1FB; color: #185FA5; }
+.mx .tag-cw { background: #FAECE7; color: #993C1D; }
+</style>
+
+<div class="mx">
+  <div class="preset-row">
+    <button onclick="window.__mx_preset('4w')">4W (deadcat)</button>
+    <button onclick="window.__mx_preset('x')">对称 X</button>
+    <button onclick="window.__mx_preset('plus')">十字 +</button>
+  </div>
+
+  <div class="sectlabel">电机位置 (NED body frame: x 前, y 右, z 下) [单位: m]</div>
+  <div class="grid2" id="mx_motors"></div>
+
+  <div class="sectlabel">系数</div>
+  <div class="coef">
+    <div class="card coef-item">
+      <label>C<sub>t</sub> =</label>
+      <input type="number" id="mx_Ct" step="0.1" value="1.0">
+    </div>
+    <div class="card coef-item">
+      <label>C<sub>m</sub> =</label>
+      <input type="number" id="mx_Cm" step="0.01" value="0.05">
+    </div>
+  </div>
+
+  <div class="diag" id="mx_diag"></div>
+
+  <div id="mx_steps"></div>
+</div>
+
+<script>
+(function() {
+  const presets = {
+    '4w': [
+      { name: 'front_right', x: 0.1515, y: 0.2450, dir: 1 },
+      { name: 'rear_left',   x: -0.1515, y: -0.1875, dir: 1 },
+      { name: 'front_left',  x: 0.1515, y: -0.2450, dir: -1 },
+      { name: 'rear_right',  x: -0.1515, y: 0.1875, dir: -1 }
+    ],
+    'x': [
+      { name: 'front_right', x: 0.2, y: 0.2, dir: 1 },
+      { name: 'rear_left',   x: -0.2, y: -0.2, dir: 1 },
+      { name: 'front_left',  x: 0.2, y: -0.2, dir: -1 },
+      { name: 'rear_right',  x: -0.2, y: 0.2, dir: -1 }
+    ],
+    'plus': [
+      { name: 'front', x: 0.25, y: 0, dir: 1 },
+      { name: 'rear',  x: -0.25, y: 0, dir: 1 },
+      { name: 'right', x: 0, y: 0.25, dir: -1 },
+      { name: 'left',  x: 0, y: -0.25, dir: -1 }
+    ]
+  };
+
+  let motors = JSON.parse(JSON.stringify(presets['4w']));
+
+  function getCt() { return parseFloat(document.getElementById('mx_Ct').value) || 1.0; }
+  function getCm() { return parseFloat(document.getElementById('mx_Cm').value) || 0.05; }
+
+  function computeA() {
+    const Ct = getCt();
+    const Cm = getCm();
+    const A = [[],[],[],[]];
+    for (let i = 0; i < 4; i++) {
+      A[0][i] = -motors[i].y * Ct;
+      A[1][i] =  motors[i].x * Ct;
+      A[2][i] =  motors[i].dir * Cm;
+      A[3][i] =  Ct;
+    }
+    return { A, Ct, Cm };
+  }
+
+  function inverse4x4(M) {
+    const n = 4;
+    const aug = M.map((row, i) => row.concat(Array.from({length: n}, (_, j) => i === j ? 1 : 0)));
+    for (let i = 0; i < n; i++) {
+      let pivot = i;
+      for (let k = i + 1; k < n; k++) {
+        if (Math.abs(aug[k][i]) > Math.abs(aug[pivot][i])) pivot = k;
+      }
+      if (Math.abs(aug[pivot][i]) < 1e-12) return null;
+      [aug[i], aug[pivot]] = [aug[pivot], aug[i]];
+      const div = aug[i][i];
+      for (let j = 0; j < 2*n; j++) aug[i][j] /= div;
+      for (let k = 0; k < n; k++) {
+        if (k === i) continue;
+        const f = aug[k][i];
+        if (f === 0) continue;
+        for (let j = 0; j < 2*n; j++) aug[k][j] -= f * aug[i][j];
+      }
+    }
+    return aug.map(row => row.slice(n));
+  }
+
+  function normalize(Ainv) {
+    const n = Ainv.length;
+    const colMax = [0, 0, 0, 0];
+    for (let c = 0; c < 4; c++) {
+      for (let r = 0; r < n; r++) colMax[c] = Math.max(colMax[c], Math.abs(Ainv[r][c]));
+    }
+    const krp = Math.sqrt(n/2) * Math.max(colMax[0], colMax[1]);
+    const ky = colMax[2];
+    const kt = colMax[3];
+    const divs = [krp, krp, ky, kt];
+    const P = Ainv.map(row => row.map((v, c) => divs[c] < 1e-12 ? 0 : v / divs[c]));
+    return { P, krp, ky, kt, colMax };
+  }
+
+  function fmt(n, digits = 3) {
+    if (!isFinite(n)) return 'NaN';
+    if (Math.abs(n) < 5e-5) return '0';
+    let s = n.toFixed(digits);
+    if (s.indexOf('.') >= 0) s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return s;
+  }
+  function fmt2(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+  function esc(s) { return String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function mSub(ch) { return 'M<sub>' + ch + '</sub>'; }
+
+  function renderMotorInputs() {
+    const div = document.getElementById('mx_motors');
+    div.innerHTML = motors.map((m, i) => `
+      <div class="card">
+        <div class="mhead">
+          <span class="mname">M${i+1} &middot; ${esc(m.name)}</span>
+          <span class="tag ${m.dir > 0 ? 'tag-ccw' : 'tag-cw'}">${m.dir > 0 ? 'CCW' : 'CW'}</span>
+        </div>
+        <div class="nrow">
+          <label>x=</label>
+          <input type="number" step="0.01" value="${m.x}" data-i="${i}" data-field="x">
+          <label>y=</label>
+          <input type="number" step="0.01" value="${m.y}" data-i="${i}" data-field="y">
+          <select data-i="${i}" data-field="dir">
+            <option value="1" ${m.dir > 0 ? 'selected' : ''}>CCW</option>
+            <option value="-1" ${m.dir < 0 ? 'selected' : ''}>CW</option>
+          </select>
+        </div>
+      </div>
+    `).join('');
+    div.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', (e) => {
+        const i = parseInt(e.target.dataset.i);
+        const field = e.target.dataset.field;
+        const value = parseFloat(e.target.value);
+        if (!isNaN(value)) {
+          motors[i][field] = value;
+          renderDiagram();
+          renderSteps();
+        }
+      });
+    });
+  }
+
+  function renderDiagram() {
+    const size = 240;
+    let scale = 0;
+    motors.forEach(m => { scale = Math.max(scale, Math.abs(m.x), Math.abs(m.y)); });
+    scale = Math.max(scale * 1.3, 0.15);
+    const f = (size/2 - 30) / scale;
+    const toS = (xb, yb) => [size/2 + yb * f, size/2 - xb * f];
+    let svg = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">`;
+    svg += `<line x1="${size/2}" y1="8" x2="${size/2}" y2="${size-8}" stroke="currentColor" stroke-opacity="0.12" stroke-width="1"/>`;
+    svg += `<line x1="8" y1="${size/2}" x2="${size-8}" y2="${size/2}" stroke="currentColor" stroke-opacity="0.12" stroke-width="1"/>`;
+    svg += `<path d="M${size/2} 12 L${size/2 - 5} 22 L${size/2 + 5} 22 Z" fill="currentColor" fill-opacity="0.55"/>`;
+    svg += `<text x="${size/2 + 10}" y="19" font-size="10" fill="currentColor" fill-opacity="0.65">x</text>`;
+    svg += `<path d="M${size - 12} ${size/2} L${size - 22} ${size/2 - 5} L${size - 22} ${size/2 + 5} Z" fill="currentColor" fill-opacity="0.55"/>`;
+    svg += `<text x="${size - 22}" y="${size/2 - 8}" font-size="10" fill="currentColor" fill-opacity="0.65" text-anchor="end">y</text>`;
+    motors.forEach((m, i) => {
+      const [sx, sy] = toS(m.x, m.y);
+      svg += `<line x1="${size/2}" y1="${size/2}" x2="${sx}" y2="${sy}" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.5"/>`;
+      const color = m.dir > 0 ? '#378ADD' : '#D85A30';
+      svg += `<circle cx="${sx}" cy="${sy}" r="17" fill="${color}" fill-opacity="0.9"/>`;
+      svg += `<text x="${sx}" y="${sy+4}" text-anchor="middle" font-size="11" font-weight="500" fill="white">M${i+1}</text>`;
+    });
+    svg += `</svg>`;
+    document.getElementById('mx_diag').innerHTML = svg;
+  }
+
+  function mtx(data, opts = {}) {
+    const cols = data[0].length;
+    const style = `grid-template-columns: repeat(${cols}, auto);`;
+    const cls = cols === 1 ? 'mtx col1' : 'mtx';
+    return `<div class="${cls}" style="${style}">${
+      data.flat().map(v => `<span class="cell">${v}</span>`).join('')
+    }</div>`;
+  }
+
+  function wrap(label, body) {
+    return `<div class="mcol"><div class="mcap">${label}</div>${body}</div>`;
+  }
+
+  function renderStep1() {
+    const m = motors[0];
+    const dirSign = m.dir > 0 ? '+' : '-';
+    const dirSignHtml = m.dir > 0 ? '+' : '&minus;';
+    return `
+      <div class="step">
+        <h3><span class="sn">1</span>写出一个电机的力矩 — 以 M1 为例</h3>
+        <div class="desc">电机位于 <code>r<sub>i</sub> = (x<sub>i</sub>, y<sub>i</sub>, 0)</code>，推力沿 body <code>-z</code>：<code>F<sub>i</sub> = C<sub>t</sub>·ω<sub>i</sub>²</code>。由 <code>M<sub>i</sub> = r<sub>i</sub> × F<sub>i</sub></code> 加上旋翼反扭：</div>
+        <div class="fl">M<sub>ix</sub> = &minus;y<sub>i</sub> &middot; C<sub>t</sub> &middot; ω<sub>i</sub>²  |  M<sub>iy</sub> = +x<sub>i</sub> &middot; C<sub>t</sub> &middot; ω<sub>i</sub>²  |  M<sub>iz</sub> = ±C<sub>m</sub> &middot; ω<sub>i</sub>²  |  T<sub>i</sub> = C<sub>t</sub> &middot; ω<sub>i</sub>²</div>
+        <div class="desc" style="margin-top:10px;">代入 M1 (${esc(m.name)}, ${m.dir > 0 ? 'CCW' : 'CW'})，(x₁, y₁) = (${fmt(m.x)}, ${fmt(m.y)})：</div>
+        <div class="fl">M₁<sub>x</sub> = ${fmt(-m.y)}&middot;ω₁²  |  M₁<sub>y</sub> = ${fmt(m.x)}&middot;ω₁²  |  M₁<sub>z</sub> = ${dirSignHtml}C<sub>m</sub>&middot;ω₁² = ${fmt(m.dir * getCm())}&middot;ω₁²  |  T₁ = C<sub>t</sub>&middot;ω₁² = ${fmt(getCt())}&middot;ω₁²</div>
+      </div>
+    `;
+  }
+
+  function renderStep2() {
+    const Ct = getCt(), Cm = getCm();
+    const rows = motors.map((m, i) => {
+      return `<tr>
+        <td style="padding:4px 10px;font-family:var(--font-mono);">M${i+1}</td>
+        <td style="padding:4px 10px;font-family:var(--font-mono);color:var(--color-text-secondary);">(${fmt(m.x)}, ${fmt(m.y)})</td>
+        <td style="padding:4px 10px;font-family:var(--font-mono);">${fmt(-m.y * Ct)}&middot;ω${i+1}²</td>
+        <td style="padding:4px 10px;font-family:var(--font-mono);">${fmt(m.x * Ct)}&middot;ω${i+1}²</td>
+        <td style="padding:4px 10px;font-family:var(--font-mono);">${fmt(m.dir * Cm)}&middot;ω${i+1}²</td>
+        <td style="padding:4px 10px;font-family:var(--font-mono);">${fmt(Ct)}&middot;ω${i+1}²</td>
+      </tr>`;
+    }).join('');
+    return `
+      <div class="step">
+        <h3><span class="sn">2</span>对 M2、M3、M4 套同一组公式</h3>
+        <div class="desc">把每个电机的 (x<sub>i</sub>, y<sub>i</sub>) 和旋向代入 Step 1 的公式：</div>
+        <div style="overflow-x:auto;margin-top:6px;">
+          <table style="border-collapse:collapse;font-size:12px;width:100%;min-width:560px;">
+            <thead>
+              <tr style="color:var(--color-text-secondary);font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary);">
+                <th style="padding:6px 10px;text-align:left;"></th>
+                <th style="padding:6px 10px;text-align:left;">(x, y)</th>
+                <th style="padding:6px 10px;text-align:left;">M<sub>ix</sub></th>
+                <th style="padding:6px 10px;text-align:left;">M<sub>iy</sub></th>
+                <th style="padding:6px 10px;text-align:left;">M<sub>iz</sub></th>
+                <th style="padding:6px 10px;text-align:left;">T<sub>i</sub></th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStep3(A) {
+    const A_disp = A.map(row => row.map(v => fmt(v)));
+    return `
+      <div class="step">
+        <h3><span class="sn">3</span>求和得到控制效率矩阵 A</h3>
+        <div class="desc">对四个电机的力矩求和：<code>M<sub>x</sub> = Σ M<sub>ix</sub></code> 等，写成矩阵形式 <code>[M<sub>x</sub>, M<sub>y</sub>, M<sub>z</sub>, T]ᵀ = A &middot; [ω₁², ω₂², ω₃², ω₄²]ᵀ</code></div>
+        <div class="mtxwrap">
+          ${wrap('[M<sub>x</sub>, M<sub>y</sub>, M<sub>z</sub>, T]ᵀ', mtx([['M<sub>x</sub>'],['M<sub>y</sub>'],['M<sub>z</sub>'],['T']]))}
+          <span class="eq">=</span>
+          ${wrap('A (control effectiveness)', mtx(A_disp))}
+          <span class="eq">&middot;</span>
+          ${wrap('[ω₁², ω₂², ω₃², ω₄²]ᵀ', mtx([['ω₁²'],['ω₂²'],['ω₃²'],['ω₄²']]))}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStep4(Ainv) {
+    const Ainv_disp = Ainv.map(row => row.map(v => fmt(v)));
+    return `
+      <div class="step">
+        <h3><span class="sn">4</span>求逆得到 A⁻¹</h3>
+        <div class="desc">对 A 做数值求逆，得到从 <code>[M<sub>x</sub>, M<sub>y</sub>, M<sub>z</sub>, T]</code> 反推每个电机 ω² 的关系：</div>
+        <div class="mtxwrap">
+          ${wrap('[ω₁², ω₂², ω₃², ω₄²]ᵀ', mtx([['ω₁²'],['ω₂²'],['ω₃²'],['ω₄²']]))}
+          <span class="eq">=</span>
+          ${wrap('A⁻¹', mtx(Ainv_disp))}
+          <span class="eq">&middot;</span>
+          ${wrap('[M<sub>x</sub>, M<sub>y</sub>, M<sub>z</sub>, T]ᵀ', mtx([['M<sub>x</sub>'],['M<sub>y</sub>'],['M<sub>z</sub>'],['T']]))}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStep5(Ainv, krp, ky, kt, colMax, P) {
+    const P_disp = P.map(row => row.map(v => fmt(v)));
+    const rMax = colMax[0], pMax = colMax[1];
+    const dom = pMax >= rMax ? 'pitch' : 'roll';
+    const Ct = getCt();
+    return `
+      <div class="step">
+        <h3><span class="sn">5</span>提系数 (按 PX4 归一化规则)</h3>
+        <div class="desc">PX4 对 A⁻¹ 再做归一化：<strong>roll 和 pitch 两列共用</strong>一个除数 <code>k<sub>rp</sub> = √(n/2) &middot; max(|r|<sub>max</sub>, |p|<sub>max</sub>)</code>，yaw、thrust 各列除以该列 <code>max|&middot;|</code>。</div>
+        <div class="factors">
+          <div class="fc">
+            <div class="flbl">k<sub>rp</sub> (roll &amp; pitch)</div>
+            <div class="fval">${fmt(krp)}</div>
+            <div class="fsub">= √2 &middot; max(${fmt(rMax)}, ${fmt(pMax)})<br>主导列: ${dom}</div>
+          </div>
+          <div class="fc">
+            <div class="flbl">k<sub>y</sub> (yaw)</div>
+            <div class="fval">${fmt(ky)}</div>
+            <div class="fsub">= max|yaw 列| = ${fmt(ky)}</div>
+          </div>
+          <div class="fc">
+            <div class="flbl">k<sub>t</sub> (thrust)</div>
+            <div class="fval">${fmt(kt)}</div>
+            <div class="fsub">= max|thrust 列| = 1/(4&middot;C<sub>t</sub>) = ${fmt(1/(4*Ct))}</div>
+          </div>
+        </div>
+        <div class="desc" style="margin-top:10px;">满足 <code>A⁻¹ = C<sub>mat</sub> &middot; diag(k<sub>rp</sub>, k<sub>rp</sub>, k<sub>y</sub>, k<sub>t</sub>)</code>，也就是 A⁻¹ 每一列除以对应 k，得到归一化后的 C<sub>mat</sub>：</div>
+        <div class="mtxwrap">
+          ${wrap('C<sub>mat</sub> = A⁻¹ / diag(k<sub>rp</sub>, k<sub>rp</sub>, k<sub>y</sub>, k<sub>t</sub>)', mtx(P_disp))}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStep6(P) {
+    const P_disp = P.map(row => row.map(v => fmt(v)));
+    const P_disp2 = P.map(row => row.map(v => fmt2(v)));
+    return `
+      <div class="step final">
+        <h3><span class="sn">6</span>吸收系数到 u<sub>r</sub>, u<sub>p</sub>, u<sub>y</sub>, u<sub>t</sub> — 最终混控矩阵</h3>
+        <div class="desc">定义归一化控制输入 <code>u<sub>r</sub>=k<sub>rp</sub>M<sub>x</sub></code>, <code>u<sub>p</sub>=k<sub>rp</sub>M<sub>y</sub></code>, <code>u<sub>y</sub>=k<sub>y</sub>M<sub>z</sub></code>, <code>u<sub>t</sub>=k<sub>t</sub>T</code>。这就是 PX4 里控制器输出给 mixer 的 [-1, 1] 命令。</div>
+        <div class="mtxwrap">
+          ${wrap('[ω₁², ω₂², ω₃², ω₄²]ᵀ', mtx([['ω₁²'],['ω₂²'],['ω₃²'],['ω₄²']]))}
+          <span class="eq">=</span>
+          ${wrap('P (混控矩阵, 精确)', mtx(P_disp))}
+          <span class="eq">&middot;</span>
+          ${wrap('[u<sub>r</sub>, u<sub>p</sub>, u<sub>y</sub>, u<sub>t</sub>]ᵀ', mtx([['u<sub>r</sub>'],['u<sub>p</sub>'],['u<sub>y</sub>'],['u<sub>t</sub>']]))}
+        </div>
+        <div class="desc" style="margin-top:12px;">四舍五入到 2 位小数 (对应 PX4 源码里写死的 P 矩阵)：</div>
+        <div class="mtxwrap">
+          ${wrap('PX4 形式', mtx(P_disp2))}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSteps() {
+    const { A } = computeA();
+    const Ainv = inverse4x4(A);
+    const container = document.getElementById('mx_steps');
+    if (!Ainv) {
+      container.innerHTML = '<div class="step"><div class="err">矩阵 A 不可逆 (奇异)。检查电机配置 — 例如所有电机的 y 坐标都为 0 会让 roll 通道退化。</div></div>';
+      return;
+    }
+    const { P, krp, ky, kt, colMax } = normalize(Ainv);
+    container.innerHTML = renderStep1() + renderStep2() + renderStep3(A) + renderStep4(Ainv) + renderStep5(Ainv, krp, ky, kt, colMax, P) + renderStep6(P);
+  }
+
+  window.__mx_preset = function(name) {
+    motors = JSON.parse(JSON.stringify(presets[name]));
+    renderMotorInputs();
+    renderDiagram();
+    renderSteps();
+  };
+
+  document.getElementById('mx_Ct').addEventListener('input', () => { renderSteps(); });
+  document.getElementById('mx_Cm').addEventListener('input', () => { renderSteps(); });
+
+  renderMotorInputs();
+  renderDiagram();
+  renderSteps();
+})();
+</script>
+</body>
+</html>
