@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>通用多旋翼 rho / ACAI 倾角扫描热力图</title>
+  <title>通用多旋翼 rho / ACAI 倾角计算器</title>
   <style>
     :root {
       --slate-50: #f8fafc;
@@ -161,69 +161,6 @@
     .badge-amber { background: var(--amber-100); color: var(--amber-700); }
     .badge-red { background: var(--red-100); color: var(--red-700); }
 
-
-    .heatmap-scroll {
-      width: 100%;
-      overflow: auto;
-      border: 1px solid var(--slate-200);
-      border-radius: 16px;
-      background: #fff;
-    }
-    .heatmap-svg {
-      min-width: 720px;
-      display: block;
-    }
-    .legend-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-top: 12px;
-      color: var(--slate-600);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .legend-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-    .legend-swatch {
-      width: 18px;
-      height: 12px;
-      border-radius: 3px;
-      border: 1px solid rgba(15, 23, 42, 0.18);
-      display: inline-block;
-    }
-    .metric-grid {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      margin-top: 16px;
-    }
-    .metric {
-      border: 1px solid var(--slate-200);
-      border-radius: 16px;
-      background: var(--slate-50);
-      padding: 12px;
-    }
-    .metric .label {
-      color: var(--slate-600);
-      font-size: 12px;
-      font-weight: 800;
-      margin-bottom: 4px;
-    }
-    .metric .value {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 18px;
-      font-weight: 950;
-      color: var(--slate-900);
-    }
-    @media (max-width: 920px) {
-      .metric-grid { grid-template-columns: 1fr 1fr; }
-    }
-
     @media (max-width: 1180px) {
       .main-grid { grid-template-columns: 1fr; }
     }
@@ -246,48 +183,6 @@
       if (!Number.isFinite(x)) return "NaN";
       if (Math.abs(x) < 0.00005) return "0.0000";
       return x.toFixed(d);
-    }
-
-    function clamp(x, lo, hi) {
-      return Math.max(lo, Math.min(hi, x));
-    }
-
-    function hexToRgb(hex) {
-      const h = hex.replace("#", "");
-      return {
-        r: parseInt(h.slice(0, 2), 16),
-        g: parseInt(h.slice(2, 4), 16),
-        b: parseInt(h.slice(4, 6), 16)
-      };
-    }
-
-    function rgbToHex({ r, g, b }) {
-      const toHex = (v) => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, "0");
-      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-    }
-
-    function mixHex(a, b, t) {
-      const ca = hexToRgb(a);
-      const cb = hexToRgb(b);
-      return rgbToHex({
-        r: ca.r + (cb.r - ca.r) * t,
-        g: ca.g + (cb.g - ca.g) * t,
-        b: ca.b + (cb.b - ca.b) * t
-      });
-    }
-
-    function colorForRho(rho, scan) {
-      if (!Number.isFinite(rho)) return "#020617";
-      if (rho < -EPS) {
-        const t = scan.negAbsMax > EPS ? clamp(Math.abs(rho) / scan.negAbsMax, 0, 1) : 0;
-        return mixHex("#fef3c7", "#b91c1c", t);
-      }
-      if (rho > EPS) {
-        // 有解/可控区域使用独立色标，只按 ρ>0 的范围归一化，避免被负值范围压扁。
-        const t = scan.posMax > EPS ? clamp(rho / scan.posMax, 0, 1) : 0;
-        return mixHex("#dcfce7", "#2563eb", t);
-      }
-      return "#fef3c7";
     }
 
     function dot(a, b) {
@@ -480,21 +375,21 @@
       const dirs = layout === "PNPNPN"
         ? ["CW", "CCW", "CW", "CCW", "CW", "CCW"]
         : ["CW", "CW", "CCW", "CCW", "CW", "CCW"];
-      return xy.map((p, i) => ({ id: i + 1, name: String(i + 1), x: +p[0].toFixed(6), y: +p[1].toFixed(6), z: 0, dir: dirs[i], eta: 1, K: 6.125, kmu: 0.1, tiltDeg: 10 }));
+      return xy.map((p, i) => ({ id: i + 1, name: String(i + 1), x: +p[0].toFixed(6), y: +p[1].toFixed(6), z: 0, dir: dirs[i], eta: 1, K: 6.125, kmu: 0.1, tiltDeg: 0 }));
     }
 
     function presetQuad() {
       const a = 0.225 / Math.sqrt(2);
       const xy = [[a, a], [a, -a], [-a, -a], [-a, a]];
       const dirs = ["CW", "CCW", "CW", "CCW"];
-      return xy.map((p, i) => ({ id: i + 1, name: String(i + 1), x: +p[0].toFixed(6), y: +p[1].toFixed(6), z: 0, dir: dirs[i], eta: 1, K: 5, kmu: 0.08, tiltDeg: 10 }));
+      return xy.map((p, i) => ({ id: i + 1, name: String(i + 1), x: +p[0].toFixed(6), y: +p[1].toFixed(6), z: 0, dir: dirs[i], eta: 1, K: 5, kmu: 0.08, tiltDeg: 0 }));
     }
 
     function presetOcto() {
       const R = 0.35;
       return Array.from({ length: 8 }, (_, i) => {
         const a = Math.PI / 2 - (2 * Math.PI * i) / 8;
-        return { id: i + 1, name: String(i + 1), x: +(R * Math.cos(a)).toFixed(6), y: +(R * Math.sin(a)).toFixed(6), z: 0, dir: i % 2 === 0 ? "CW" : "CCW", eta: 1, K: 5.5, kmu: 0.08, tiltDeg: 10 };
+        return { id: i + 1, name: String(i + 1), x: +(R * Math.cos(a)).toFixed(6), y: +(R * Math.sin(a)).toFixed(6), z: 0, dir: i % 2 === 0 ? "CW" : "CCW", eta: 1, K: 5.5, kmu: 0.08, tiltDeg: 0 };
       });
     }
 
@@ -517,37 +412,28 @@
     // 原始坐标单位为 mm，此处统一换算为 m。
     // 顺 = CW，逆 = CCW。
     // kμ = Cq / Ct = 8.6704128e-5 / 8.4897792e-4 ≈ 0.10212766。
-    // 注意：原始参数未提供最大转速 rpm_max，因此默认 K 按需求设为 3500 N。
-    // 可在电机参数表中为每个桨单独设置不同 K。若有真实最大转速，也可将 K 改为 Ct * rpm_max^2。
+    // 注意：原始参数未提供最大转速 rpm_max，因此默认 K 暂取 2*mg/6 = mg/3。
+    // 这表示总最大推力约为 2mg，悬停平均推力约为最大推力的 50%。
+    // 若有真实最大转速，请将 K 改为 Ct * rpm_max^2。
     let params = {
       mass: 1144.41,
       g: 9.81,
-      defaultK: 3500,
+      defaultK: 3742.2207,
       defaultKmu: 0.1021276595744681,
-      defaultTiltDeg: 10,
+      defaultTiltDeg: 0,
       cgx: 0.612903,
       cgy: 0.152299,
       cgz: 1.072025
     };
     let preset = "custom";
     let rotors = [
-      { id: 1, name: "1", x: -1.893, y: -2.306, z: 2.09082,  dir: "CCW", eta: 1, K: 3500, kmu: 0.1021276595744681, tiltDeg: 10 },
-      { id: 2, name: "2", x:  0.700, y: -2.505, z: 1.785885, dir: "CW",  eta: 1, K: 3500, kmu: 0.1021276595744681, tiltDeg: 10 },
-      { id: 3, name: "3", x:  3.293, y: -2.306, z: 2.085885, dir: "CCW", eta: 1, K: 3500, kmu: 0.1021276595744681, tiltDeg: 10 },
-      { id: 4, name: "4", x:  3.293, y:  2.306, z: 2.085885, dir: "CW",  eta: 1, K: 3500, kmu: 0.1021276595744681, tiltDeg: 10 },
-      { id: 5, name: "5", x:  0.700, y:  2.505, z: 1.785885, dir: "CCW", eta: 1, K: 3500, kmu: 0.1021276595744681, tiltDeg: 10 },
-      { id: 6, name: "6", x: -1.893, y:  2.306, z: 2.085885, dir: "CW",  eta: 1, K: 3500, kmu: 0.1021276595744681, tiltDeg: 10 }
+      { id: 1, name: "1", x: -1.893, y: -2.306, z: 2.09082,  dir: "CCW", eta: 1, K: 3742.2207, kmu: 0.1021276595744681, tiltDeg: 0 },
+      { id: 2, name: "2", x:  0.700, y: -2.505, z: 1.785885, dir: "CW",  eta: 1, K: 3742.2207, kmu: 0.1021276595744681, tiltDeg: 0 },
+      { id: 3, name: "3", x:  3.293, y: -2.306, z: 2.085885, dir: "CCW", eta: 1, K: 3742.2207, kmu: 0.1021276595744681, tiltDeg: 0 },
+      { id: 4, name: "4", x:  3.293, y:  2.306, z: 2.085885, dir: "CW",  eta: 1, K: 3742.2207, kmu: 0.1021276595744681, tiltDeg: 0 },
+      { id: 5, name: "5", x:  0.700, y:  2.505, z: 1.785885, dir: "CCW", eta: 1, K: 3742.2207, kmu: 0.1021276595744681, tiltDeg: 0 },
+      { id: 6, name: "6", x: -1.893, y:  2.306, z: 2.085885, dir: "CW",  eta: 1, K: 3742.2207, kmu: 0.1021276595744681, tiltDeg: 0 }
     ];
-
-    // CG 扫描参数。界面使用 mm，计算时换算为 m。
-    // 默认：x = 400..900 mm，y = -200..200 mm，步长 10 mm。
-    let scanParams = {
-      xMinMm: 400,
-      xMaxMm: 900,
-      yMinMm: -200,
-      yMaxMm: 200,
-      stepMm: 10
-    };
 
     function updateParam(key, value) {
       const num = Number(value);
@@ -568,14 +454,6 @@
       render();
     }
 
-    function updateScanParam(key, value) {
-      let num = Number(value);
-      if (!Number.isFinite(num)) num = scanParams[key];
-      if (key === "stepMm") num = Math.max(1, Math.abs(num));
-      scanParams = { ...scanParams, [key]: num };
-      render();
-    }
-
     function updateRotor(i, key, value) {
       preset = "custom";
       rotors = rotors.map((r, idx) => idx === i ? { ...r, [key]: key === "dir" || key === "name" ? value : Number(value) } : r);
@@ -585,13 +463,13 @@
     function loadPreset(name) {
       preset = name;
       if (name === "PNPNPN" || name === "PPNNPN") {
-        params = { mass: 1.535, g: 9.8, defaultK: 6.125, defaultKmu: 0.1, defaultTiltDeg: 10, cgx: 0, cgy: 0, cgz: 0 };
+        params = { mass: 1.535, g: 9.8, defaultK: 6.125, defaultKmu: 0.1, defaultTiltDeg: 0, cgx: 0, cgy: 0, cgz: 0 };
         rotors = presetHex(name);
       } else if (name === "quadX") {
-        params = { mass: 1.2, g: 9.8, defaultK: 5, defaultKmu: 0.08, defaultTiltDeg: 10, cgx: 0, cgy: 0, cgz: 0 };
+        params = { mass: 1.2, g: 9.8, defaultK: 5, defaultKmu: 0.08, defaultTiltDeg: 0, cgx: 0, cgy: 0, cgz: 0 };
         rotors = presetQuad();
       } else if (name === "octoAlt") {
-        params = { mass: 2.6, g: 9.8, defaultK: 5.5, defaultKmu: 0.08, defaultTiltDeg: 10, cgx: 0, cgy: 0, cgz: 0 };
+        params = { mass: 2.6, g: 9.8, defaultK: 5.5, defaultKmu: 0.08, defaultTiltDeg: 0, cgx: 0, cgy: 0, cgz: 0 };
         rotors = presetOcto();
       }
       render();
@@ -620,14 +498,6 @@
       return `
         <label>${label}
           <input data-kind="param" data-key="${key}" type="number" step="0.001" value="${escapeHTML(params[key])}" />
-        </label>
-      `;
-    }
-
-    function scanField(key, label) {
-      return `
-        <label>${label}
-          <input data-kind="scan" data-key="${key}" type="number" step="${key === "stepMm" ? "1" : "10"}" value="${escapeHTML(scanParams[key])}" />
         </label>
       `;
     }
@@ -679,11 +549,10 @@
         const dirColor = r.dir === "CW" ? "#1d4ed8" : "#7c3aed";
         const theta = Number(r.tiltDeg) || 0;
         const { tx, ty } = thrustDirParts(r, { x: Number(params.cgx), y: Number(params.cgy), z: Number(params.cgz) });
-        // 俯视图中 SVG 的 y 轴向下，这里把倾角箭头方向翻转，修正原先正/负倾角显示反向的问题。
-        const arrowSign = Math.sin(deg2rad(theta)) < 0 ? 1 : -1;
+        const arrowSign = Math.sin(deg2rad(theta)) < 0 ? -1 : 1;
         const arrowLen = Math.min(52, Math.max(0, Math.abs(theta)) * 2.2);
         const arrow = arrowLen > 0.5
-          ? `<line x1="${x}" y1="${y}" x2="${x + arrowSign * tx * arrowLen}" y2="${y - arrowSign * ty * arrowLen}" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" marker-end="url(#tiltArrow)"><title>倾角箭头：已按当前 θ 正负方向修正显示</title></line>`
+          ? `<line x1="${x}" y1="${y}" x2="${x + arrowSign * tx * arrowLen}" y2="${y - arrowSign * ty * arrowLen}" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" marker-end="url(#tiltArrow)" />`
           : "";
         return `
           <g>
@@ -730,245 +599,6 @@
       `).join("");
     }
 
-    function scanCasesForRotors(baseRotors) {
-      const cases = [{ label: "正常", data: baseRotors }];
-      baseRotors.forEach((r, i) => {
-        cases.push({
-          label: `桨 ${r.name} 失效`,
-          data: baseRotors.map((x, idx) => idx === i ? { ...x, eta: 0 } : x)
-        });
-      });
-      return cases;
-    }
-
-    function computeWorstCaseRho(baseRotors, p) {
-      const cases = scanCasesForRotors(baseRotors);
-      let worst = { rho: Infinity, label: "" };
-      for (const c of cases) {
-        const rho = computeRho(c.data, p).rho;
-        if (rho < worst.rho) worst = { rho, label: c.label };
-      }
-      return worst;
-    }
-
-    function scanRhoGrid() {
-      const x0 = Number(scanParams.xMinMm);
-      const x1 = Number(scanParams.xMaxMm);
-      const y0 = Number(scanParams.yMinMm);
-      const y1 = Number(scanParams.yMaxMm);
-      const step = Math.max(1, Math.abs(Number(scanParams.stepMm) || 10));
-      const xmin = Math.min(x0, x1);
-      const xmax = Math.max(x0, x1);
-      const ymin = Math.min(y0, y1);
-      const ymax = Math.max(y0, y1);
-
-      const xs = [];
-      for (let x = xmin; x <= xmax + EPS; x += step) xs.push(+x.toFixed(6));
-
-      const ys = [];
-      for (let y = ymin; y <= ymax + EPS; y += step) ys.push(+y.toFixed(6));
-
-      const rows = [];
-      const values = [];
-      const positiveValues = [];
-      const negativeValues = [];
-      let min = Infinity;
-      let max = -Infinity;
-      let best = { rho: -Infinity, x: NaN, y: NaN, caseLabel: "" };
-      let worst = { rho: Infinity, x: NaN, y: NaN, caseLabel: "" };
-      let positiveCount = 0;
-      let nonFiniteCount = 0;
-
-      for (let yi = ys.length - 1; yi >= 0; yi--) {
-        const y = ys[yi];
-        const row = [];
-        for (const x of xs) {
-          const p = { ...params, cgx: x / 1000, cgy: y / 1000 };
-          // 每个扫描点的热力图值定义为：正常 + 所有单桨失效场景中的最小 rho。
-          const worstCase = computeWorstCaseRho(rotors, p);
-          const rho = worstCase.rho;
-          const caseLabel = worstCase.label;
-          row.push({ x, y, rho, caseLabel });
-          if (Number.isFinite(rho)) {
-            values.push(rho);
-            min = Math.min(min, rho);
-            max = Math.max(max, rho);
-            if (rho > best.rho) best = { rho, x, y, caseLabel };
-            if (rho < worst.rho) worst = { rho, x, y, caseLabel };
-            if (rho > 0) {
-              positiveCount += 1;
-              positiveValues.push(rho);
-            }
-            if (rho < 0) negativeValues.push(rho);
-          } else {
-            nonFiniteCount += 1;
-          }
-        }
-        rows.push(row);
-      }
-
-      const total = xs.length * ys.length;
-      if (!values.length) {
-        min = -Infinity;
-        max = -Infinity;
-        best = { rho: -Infinity, x: NaN, y: NaN, caseLabel: "rank 不足 / 无有限 rho" };
-        worst = { rho: -Infinity, x: NaN, y: NaN, caseLabel: "rank 不足 / 无有限 rho" };
-      }
-
-      const posMin = positiveValues.length ? Math.min(...positiveValues) : NaN;
-      const posMax = positiveValues.length ? Math.max(...positiveValues) : 0;
-      const negAbsMax = negativeValues.length ? Math.max(...negativeValues.map((v) => Math.abs(v))) : 0;
-
-      return {
-        xs,
-        ys,
-        rows,
-        min,
-        max,
-        best,
-        worst,
-        total,
-        positiveCount,
-        nonFiniteCount,
-        posMin,
-        posMax,
-        negAbsMax,
-        maxAbs: Math.max(1, ...values.map((v) => Math.abs(v)))
-      };
-    }
-
-    function heatmapSVG(scan) {
-      const cell = 10;
-      const left = 60;
-      const top = 28;
-      const right = 178;
-      const bottom = 44;
-      const heatW = scan.xs.length * cell;
-      const heatH = scan.rows.length * cell;
-      const barH = Math.max(90, Math.min(150, heatH * 0.38));
-      const w = left + heatW + right;
-      const h = Math.max(top + heatH + bottom, top + 20 + barH + 60 + barH + 38);
-      const xTicks = scan.xs.filter((_, i) => i === 0 || i === scan.xs.length - 1 || scan.xs[i] % 100 === 0);
-      const yVals = scan.rows.map((row) => row[0]?.y).filter((v) => v !== undefined);
-      const yTicks = yVals.filter((y) => y === yVals[0] || y === yVals[yVals.length - 1] || y % 100 === 0);
-
-      const cells = scan.rows.map((row, r) => row.map((pt, c) => {
-        const fill = colorForRho(pt.rho, scan);
-        const title = `x=${pt.x} mm, y=${pt.y} mm, 最小ρ=${fmt(pt.rho, 4)}, 限制场景=${pt.caseLabel}`;
-        return `<rect x="${left + c * cell}" y="${top + r * cell}" width="${cell + 0.1}" height="${cell + 0.1}" fill="${fill}"><title>${escapeHTML(title)}</title></rect>`;
-      }).join("")).join("");
-
-      const xAxis = xTicks.map((x) => {
-        const idx = scan.xs.indexOf(x);
-        const px = left + idx * cell + cell / 2;
-        return `<g><line x1="${px}" y1="${top + scan.rows.length * cell}" x2="${px}" y2="${top + scan.rows.length * cell + 5}" stroke="#64748b" /><text x="${px}" y="${top + scan.rows.length * cell + 20}" text-anchor="middle" font-size="11" fill="#475569">${x}</text></g>`;
-      }).join("");
-
-      const yAxis = yTicks.map((y) => {
-        const rowIndex = yVals.indexOf(y);
-        const py = top + rowIndex * cell + cell / 2;
-        return `<g><line x1="${left - 5}" y1="${py}" x2="${left}" y2="${py}" stroke="#64748b" /><text x="${left - 9}" y="${py + 4}" text-anchor="end" font-size="11" fill="#475569">${y}</text></g>`;
-      }).join("");
-
-      const barX = left + heatW + 36;
-      const barW = 16;
-      const negBarY = top + 20;
-      const posBarY = negBarY + barH + 60;
-      const negBottomLabel = scan.negAbsMax > EPS ? `-${fmt(scan.negAbsMax, 2)}` : "无<0";
-      const posTopLabel = scan.posMax > EPS ? fmt(scan.posMax, 2) : "无>0";
-      const negFill = scan.negAbsMax > EPS ? "url(#negRhoBar)" : "#f8fafc";
-      const posFill = scan.posMax > EPS ? "url(#posRhoBar)" : "#f8fafc";
-      const colorBars = `
-        <g>
-          <text x="${barX - 6}" y="${negBarY - 8}" font-size="11" font-weight="900" fill="#334155">不可解 ρ&lt;0</text>
-          <rect x="${barX}" y="${negBarY}" width="${barW}" height="${barH}" rx="3" fill="${negFill}" stroke="#94a3b8" />
-          <text x="${barX + barW + 6}" y="${negBarY + 4}" font-size="10" fill="#475569">0</text>
-          <text x="${barX + barW + 6}" y="${negBarY + barH + 4}" font-size="10" fill="#475569">${negBottomLabel}</text>
-          <text x="${barX - 6}" y="${posBarY - 8}" font-size="11" font-weight="900" fill="#334155">有解 ρ&gt;0</text>
-          <rect x="${barX}" y="${posBarY}" width="${barW}" height="${barH}" rx="3" fill="${posFill}" stroke="#94a3b8" />
-          <text x="${barX + barW + 6}" y="${posBarY + 4}" font-size="10" fill="#475569">${posTopLabel}</text>
-          <text x="${barX + barW + 6}" y="${posBarY + barH + 4}" font-size="10" fill="#475569">0</text>
-          <text x="${barX - 6}" y="${posBarY + barH + 22}" font-size="10" fill="#64748b">正值单独归一化</text>
-        </g>
-      `;
-
-      const currentX = Number(params.cgx) * 1000;
-      const currentY = Number(params.cgy) * 1000;
-      const inX = currentX >= scan.xs[0] && currentX <= scan.xs[scan.xs.length - 1];
-      const inY = currentY >= Math.min(...scan.ys) && currentY <= Math.max(...scan.ys);
-      let marker = "";
-      if (inX && inY) {
-        const mx = left + ((currentX - scan.xs[0]) / Math.max(1, Number(scanParams.stepMm))) * cell + cell / 2;
-        const my = top + ((Math.max(...scan.ys) - currentY) / Math.max(1, Number(scanParams.stepMm))) * cell + cell / 2;
-        marker = `
-          <g>
-            <circle cx="${mx}" cy="${my}" r="7" fill="none" stroke="#0f172a" stroke-width="2" />
-            <line x1="${mx - 9}" y1="${my}" x2="${mx + 9}" y2="${my}" stroke="#0f172a" stroke-width="2" />
-            <line x1="${mx}" y1="${my - 9}" x2="${mx}" y2="${my + 9}" stroke="#0f172a" stroke-width="2" />
-            <title>当前 CG: x=${fmt(currentX, 1)} mm, y=${fmt(currentY, 1)} mm</title>
-          </g>
-        `;
-      }
-
-      return `
-        <svg class="heatmap-svg" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="negRhoBar" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#fef3c7" />
-              <stop offset="100%" stop-color="#b91c1c" />
-            </linearGradient>
-            <linearGradient id="posRhoBar" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#2563eb" />
-              <stop offset="100%" stop-color="#dcfce7" />
-            </linearGradient>
-          </defs>
-          <rect x="0" y="0" width="${w}" height="${h}" fill="#ffffff" />
-          <text x="${left}" y="18" font-size="13" font-weight="900" fill="#334155">鲁棒最小 ρ 热力图：正常 + 单桨失效取最小值</text>
-          ${cells}
-          <rect x="${left}" y="${top}" width="${heatW}" height="${heatH}" fill="none" stroke="#334155" stroke-width="1" />
-          ${marker}
-          ${xAxis}
-          ${yAxis}
-          ${colorBars}
-          <text x="${left + heatW / 2}" y="${top + heatH + 36}" text-anchor="middle" font-size="12" font-weight="900" fill="#334155">CG x / mm</text>
-          <text x="15" y="${top + heatH / 2}" text-anchor="middle" font-size="12" font-weight="900" fill="#334155" transform="rotate(-90 15 ${top + heatH / 2})">CG y / mm</text>
-        </svg>
-      `;
-    }
-
-    function heatmapSectionHTML(scan) {
-      const rate = scan.total > 0 ? 100 * scan.positiveCount / scan.total : 0;
-      const positiveRangeText = scan.posMax > EPS ? `${fmt(scan.posMin)} ~ ${fmt(scan.posMax)}` : "无 ρ>0 点";
-      return `
-        <section class="card">
-          <h2>CG x-y 扫描热力图</h2>
-          <p style="margin-bottom: 16px;">每个网格点会计算 7 种场景：正常无故障 + 6 个单桨失效；热力图显示其中最小的 ρ。扫描时只改变质心 x/y，单位为 mm；计算时自动换算成 m。z、质量、电机坐标、转向、η、kμ、倾角、每桨 K 都保持当前表格值。鼠标悬停在色块上可看对应 x/y/最小ρ/限制场景。ρ&lt;0 和 ρ&gt;0 分别使用两个独立 colorbar，其中有解区域 ρ&gt;0 会单独按自身范围着色。</p>
-          <div class="grid grid-4">
-            ${scanField("xMinMm", "x 最小 / mm")}
-            ${scanField("xMaxMm", "x 最大 / mm")}
-            ${scanField("yMinMm", "y 最小 / mm")}
-            ${scanField("yMaxMm", "y 最大 / mm")}
-            ${scanField("stepMm", "步长 / mm")}
-          </div>
-          <div class="metric-grid">
-            <div class="metric"><div class="label">最大最小ρ / 最优 CG</div><div class="value">${fmt(scan.best.rho)} @ (${fmt(scan.best.x, 0)}, ${fmt(scan.best.y, 0)}) mm</div></div>
-            <div class="metric"><div class="label">最小最小ρ / 最差 CG</div><div class="value">${fmt(scan.worst.rho)} @ (${fmt(scan.worst.x, 0)}, ${fmt(scan.worst.y, 0)}) mm</div></div>
-            <div class="metric"><div class="label">最小ρ 范围</div><div class="value">${fmt(scan.min)} ~ ${fmt(scan.max)}</div></div>
-            <div class="metric"><div class="label">有解ρ&gt;0 范围</div><div class="value">${positiveRangeText}</div></div>
-            <div class="metric"><div class="label">鲁棒ρ &gt; 0 比例</div><div class="value">${fmt(rate, 1)}%</div></div>
-            <div class="metric"><div class="label">非有限点</div><div class="value">${scan.nonFiniteCount}</div></div>
-          </div>
-          <div class="heatmap-scroll" style="margin-top: 16px;">${heatmapSVG(scan)}</div>
-          <div class="legend-row">
-            <span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#fef3c7,#b91c1c)"></span>最小ρ&lt;0：不可解区，按负值范围着色</span>
-            <span class="legend-chip"><span class="legend-swatch" style="background:#fef3c7"></span>最小ρ≈0：最差场景在边界</span>
-            <span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#dcfce7,#2563eb)"></span>最小ρ&gt;0：有解区，使用独立 colorbar</span>
-            <span class="legend-chip">黑色十字：当前全局 CG</span>
-          </div>
-        </section>
-      `;
-    }
-
     function faultRowsHTML() {
       const rows = [{ label: "No fault / current η", data: rotors }];
       rotors.forEach((r, i) => rows.push({ label: `η${r.name}=0`, data: rotors.map((x, idx) => idx === i ? { ...x, eta: 0 } : x) }));
@@ -985,7 +615,6 @@
 
     function render() {
       const out = computeRho(rotors, params);
-      const scan = scanRhoGrid();
       const totalThrust = out.limits.reduce((a, b) => a + b, 0);
       const verticalCapacity = out.limits.reduce((sum, lim, i) => {
         const theta = deg2rad(Number(rotors[i].tiltDeg) || 0);
@@ -1002,8 +631,8 @@
         <div class="page">
           <div class="container">
             <header class="card header-card">
-              <div class="pill">通用多旋翼 rho / ACAI 倾角计算器 · CG 扫描热力图</div>
-              <h1>自由输入电机坐标、转向、倾角、质心和每桨最大升力，扫描 ρ(G, ∂Ω) 热力图</h1>
+              <div class="pill">通用多旋翼 rho / ACAI 倾角计算器</div>
+              <h1>自由输入电机坐标、转向、倾角、质心和参数，计算 ρ(G, ∂Ω)</h1>
               <p class="lead">当前模型支持电机绕自身机臂轴线倾斜。正倾角定义为：桨盘法向/推力方向产生的水平切向分量，与该桨气动反扭矩产生的偏航力矩同向，因此 CW 桨和 CCW 桨会自动使用相反切向倾斜方向来增强各自 yaw authority。</p>
             </header>
 
@@ -1021,14 +650,13 @@
               </div>
               <div class="card">
                 <h2>判定规则</h2>
-                <div class="rho-box">当前正常 ρ(G, ∂Ω) = ${fmt(out.rho)}</div>
+                <div class="rho-box">ρ(G, ∂Ω) = ${fmt(out.rho)}</div>
                 <div class="status-box ${statusClass}">${statusText}</div>
               </div>
             </section>
 
             <section class="card">
               <h2>全局参数</h2>
-              <p style="margin-bottom: 16px;">默认最大升力 K 已设为 3500 N，默认倾角 θ 已设为 10°；也可以在下面“电机参数表”的 K 列和倾角列为每个桨单独设置。</p>
               <div class="grid grid-4">
                 ${paramField("mass", "质量 m / kg")}
                 ${paramField("g", "重力加速度 g")}
@@ -1054,8 +682,6 @@
                 <button class="btn-outline-blue" data-action="reset-eta">全部 η=1</button>
               </div>
             </section>
-
-            ${heatmapSectionHTML(scan)}
 
             <section class="grid main-grid">
               <div class="card">
@@ -1113,10 +739,6 @@
         el.addEventListener("change", (e) => updateRotor(Number(e.target.dataset.index), e.target.dataset.key, e.target.value));
       });
 
-      document.querySelectorAll('[data-kind="scan"]').forEach((el) => {
-        el.addEventListener("change", (e) => updateScanParam(e.target.dataset.key, e.target.value));
-      });
-
       const presetSelect = document.getElementById("presetSelect");
       if (presetSelect) presetSelect.addEventListener("change", (e) => loadPreset(e.target.value));
 
@@ -1133,8 +755,6 @@
 
     render();
   </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
