@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>多旋翼倾斜配平 / ACAI / CG 扫描</title>
+  <style>
+    :root {
+      --slate-50:#f8fafc; --slate-100:#f1f5f9; --slate-200:#e2e8f0; --slate-300:#cbd5e1;
+      --slate-600:#475569; --slate-700:#334155; --slate-900:#0f172a;
+      --blue-50:#eff6ff; --blue-100:#dbeafe; --blue-300:#93c5fd; --blue-600:#2563eb; --blue-700:#1d4ed8;
+      --green-50:#f0fdf4; --green-100:#dcfce7; --green-700:#15803d; --green-800:#166534;
+      --amber-50:#fffbeb; --amber-100:#fef3c7; --amber-500:#f59e0b; --amber-700:#b45309; --amber-800:#92400e; --amber-900:#78350f;
+      --red-50:#fef2f2; --red-100:#fee2e2; --red-700:#b91c1c; --red-800:#991b1b;
+      --purple-100:#f3e8ff; --purple-700:#7e22ce;
+    }
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--slate-50);color:var(--slate-900);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
+    .page{min-height:100vh;padding:24px}.container{max-width:1320px;margin:0 auto;display:grid;gap:20px}.card{background:#fff;border:1px solid var(--slate-200);border-radius:24px;box-shadow:0 1px 3px rgba(15,23,42,.08);padding:24px}.header-card{padding:28px}.pill{display:inline-flex;border-radius:999px;background:var(--blue-100);color:var(--blue-700);padding:4px 12px;font-size:14px;font-weight:900;margin-bottom:12px}
+    h1,h2,h3,p{margin-top:0}h1{margin-bottom:0;font-size:clamp(30px,5vw,48px);line-height:1.05;font-weight:950;letter-spacing:-.04em}h2{margin-bottom:16px;font-size:24px;line-height:1.15;font-weight:950}h3{margin-bottom:8px;font-size:18px;line-height:1.2;font-weight:950}p{color:var(--slate-600);line-height:1.65}.lead{max-width:1100px;margin-top:16px;margin-bottom:0;font-size:18px}.space-y>*+*{margin-top:12px}
+    .grid{display:grid;gap:20px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}.main-grid{grid-template-columns:1.15fr .85fr .95fr}.notice{border-radius:16px;padding:16px;line-height:1.55}.notice-amber{border-left:4px solid var(--amber-500);background:var(--amber-50);color:var(--amber-900)}.notice-blue{border-left:4px solid var(--blue-600);background:var(--blue-50);color:#1e3a8a}.notice-green{border-left:4px solid var(--green-700);background:var(--green-50);color:var(--green-800)}
+    .status-box{border-radius:16px;padding:16px;font-size:17px;font-weight:950}.status-green{background:var(--green-50);color:var(--green-800)}.status-amber{background:var(--amber-50);color:var(--amber-800)}.status-red{background:var(--red-50);color:var(--red-800)}
+    label{display:block;color:var(--slate-700);font-size:14px;font-weight:800}input,select{width:100%;margin-top:4px;border:1px solid var(--slate-300);border-radius:12px;padding:8px 12px;font:inherit;color:var(--slate-900);background:#fff;outline:none}input:focus,select:focus{border-color:var(--blue-600);box-shadow:0 0 0 3px rgba(37,99,235,.14)}button{border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:850;cursor:pointer}button:active{transform:translateY(1px)}.btn-blue{background:var(--blue-600);color:#fff}.btn-slate{background:var(--slate-700);color:#fff}.btn-outline-blue{border:1px solid var(--blue-300);background:#fff;color:var(--blue-700)}.btn-outline-red{border:1px solid #fecaca;background:#fff;color:var(--red-700);padding:6px 9px;border-radius:8px}
+    .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}thead{background:var(--slate-100);color:var(--slate-700)}th,td{padding:8px;text-align:left;vertical-align:middle}th.right,td.right{text-align:right}tbody tr{border-bottom:1px solid var(--slate-200)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.input-name{width:64px}.input-num-wide{width:96px}.input-num-small{width:82px}.select-dir{width:96px}
+    .svg-wrap{width:100%;border-radius:16px;background:var(--slate-50);overflow:hidden}svg{display:block;width:100%;height:auto}pre{max-height:340px;overflow:auto;border-radius:16px;background:#020617;color:#f1f5f9;padding:16px;font-size:13px;line-height:1.5;margin:0}.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:900;white-space:nowrap}.badge-green{background:var(--green-100);color:var(--green-700)}.badge-amber{background:var(--amber-100);color:var(--amber-700)}.badge-red{background:var(--red-100);color:var(--red-700)}.badge-purple{background:var(--purple-100);color:var(--purple-700)}
+    .metric-grid{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:16px}.metric{border:1px solid var(--slate-200);border-radius:16px;background:var(--slate-50);padding:12px}.metric .label{color:var(--slate-600);font-size:12px;font-weight:800;margin-bottom:4px}.metric .value{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:18px;font-weight:950;color:var(--slate-900)}
+    .heatmap-scroll{width:100%;overflow:auto;border:1px solid var(--slate-200);border-radius:16px;background:#fff}.heatmap-svg{min-width:760px;display:block}.legend-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px;color:var(--slate-600);font-size:13px;line-height:1.5}.legend-chip{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.legend-swatch{width:18px;height:12px;border-radius:3px;border:1px solid rgba(15,23,42,.18);display:inline-block}
+    @media(max-width:1180px){.main-grid{grid-template-columns:1fr}}@media(max-width:920px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr 1fr}.page{padding:14px}.card,.header-card{padding:18px;border-radius:20px}}@media(max-width:560px){.metric-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body><div id="app"></div>
+<script>
+const EPS = 1e-9;
+function fmt(x,d=4){ if(x===Infinity)return "+∞"; if(x===-Infinity)return "-∞"; if(!Number.isFinite(x))return "NaN"; if(Math.abs(x)<0.5*Math.pow(10,-d))return (0).toFixed(d); return Number(x).toFixed(d); }
+function clamp(x,lo,hi){return Math.max(lo,Math.min(hi,x));}
+function deg2rad(deg){return Number(deg)*Math.PI/180;}
+function rad2deg(rad){return Number(rad)*180/Math.PI;}
+function dot(a,b){let s=0; for(let i=0;i<a.length;i++)s+=a[i]*b[i]; return s;}
+function norm(a){return Math.sqrt(dot(a,a));}
+function matVec(B,v){return B.map(row=>row.reduce((s,x,i)=>s+x*v[i],0));}
+function sub(a,b){return a.map((v,i)=>v-b[i]);}
+function signOfDir(dir){return dir==="CCW"?1:-1;}
+function escapeHTML(value){return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
+function hexToRgb(hex){const h=hex.replace("#","");return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)}}
+function rgbToHex({r,g,b}){const h=v=>Math.round(clamp(v,0,255)).toString(16).padStart(2,"0");return`#${h(r)}${h(g)}${h(b)}`}
+function mixHex(a,b,t){const ca=hexToRgb(a),cb=hexToRgb(b);return rgbToHex({r:ca.r+(cb.r-ca.r)*t,g:ca.g+(cb.g-ca.g)*t,b:ca.b+(cb.b-ca.b)*t})}
+
+function det3(M){return M[0][0]*(M[1][1]*M[2][2]-M[1][2]*M[2][1])-M[0][1]*(M[1][0]*M[2][2]-M[1][2]*M[2][0])+M[0][2]*(M[1][0]*M[2][1]-M[1][1]*M[2][0]);}
+function det4(A){let s=0; for(let c=0;c<4;c++){const M=[]; for(let r=1;r<4;r++){const row=[]; for(let cc=0;cc<4;cc++)if(cc!==c)row.push(A[r][cc]); M.push(row);} s+=(c%2===0?1:-1)*A[0][c]*det3(M);} return s;}
+function cross4(u,v,w){const M=[u,v,w]; const res=[]; for(let i=0;i<4;i++){const minor=[]; for(let r=0;r<4;r++){if(r===i)continue; minor.push([M[0][r],M[1][r],M[2][r]]);} res.push((i%2===0?1:-1)*det3(minor));} return res;}
+function combinations(n,k){const out=[]; function rec(start,arr){if(arr.length===k){out.push([...arr]);return;} for(let i=start;i<=n-(k-arr.length);i++){arr.push(i);rec(i+1,arr);arr.pop();}} rec(0,[]); return out;}
+function col(B,i){return B.map(row=>row[i]);}
+
+function matrixRank(A,tol=1e-8){
+  if(!A.length)return 0; const M=A.map(r=>r.slice()); const rows=M.length, cols=M[0].length; let r=0;
+  for(let c=0;c<cols && r<rows;c++){
+    let p=r; for(let i=r+1;i<rows;i++)if(Math.abs(M[i][c])>Math.abs(M[p][c]))p=i;
+    if(Math.abs(M[p][c])<=tol)continue;
+    [M[r],M[p]]=[M[p],M[r]]; const pv=M[r][c]; for(let j=c;j<cols;j++)M[r][j]/=pv;
+    for(let i=0;i<rows;i++)if(i!==r){const f=M[i][c]; if(Math.abs(f)>tol)for(let j=c;j<cols;j++)M[i][j]-=f*M[r][j];}
+    r++;
+  }
+  return r;
+}
+function independentRowIndices(A,tol=1e-8){const idx=[]; let cur=[]; let rk=0; for(let i=0;i<A.length;i++){const nr=matrixRank([...cur,A[i]],tol); if(nr>rk){idx.push(i);cur.push(A[i]);rk=nr;}} return idx;}
+function solveSquare(A,b,tol=1e-9){
+  const n=A.length; if(n===0)return []; const M=A.map((row,i)=>[...row,b[i]]);
+  for(let c=0;c<n;c++){
+    let p=c; for(let i=c+1;i<n;i++)if(Math.abs(M[i][c])>Math.abs(M[p][c]))p=i;
+    if(Math.abs(M[p][c])<tol)return null;
+    [M[c],M[p]]=[M[p],M[c]]; const pv=M[c][c]; for(let j=c;j<=n;j++)M[c][j]/=pv;
+    for(let i=0;i<n;i++)if(i!==c){const f=M[i][c]; if(Math.abs(f)>tol)for(let j=c;j<=n;j++)M[i][j]-=f*M[c][j];}
+  }
+  return M.map(r=>r[n]);
+}
+function residualNorm(A,x,b){let s=0; for(let i=0;i<A.length;i++){let v=-b[i]; for(let j=0;j<x.length;j++)v+=A[i][j]*x[j]; s+=v*v;} return Math.sqrt(s);}
+function enumerateEqualityBoxVertices(Aeq,beq,limits){
+  const n=limits.length; const rowIdx=independentRowIndices(Aeq); const A=rowIdx.map(i=>Aeq[i]); const b=rowIdx.map(i=>beq[i]); const r=A.length; const out=[]; const seen=new Set();
+  if(r>n)return [];
+  const all=Array.from({length:n},(_,i)=>i);
+  if(r===0){
+    const maxMask = n<=12 ? (1<<n) : 0;
+    for(let mask=0;mask<maxMask;mask++){const f=all.map(i=>((mask>>i)&1)?limits[i]:0); const key=f.map(v=>v.toFixed(7)).join(","); if(!seen.has(key)){seen.add(key); out.push(f);}}
+    return out;
+  }
+  for(const free of combinations(n,r)){
+    const freeSet=new Set(free); const fixed=all.filter(i=>!freeSet.has(i)); const fixedMasks = 1<<fixed.length;
+    const Afree=A.map(row=>free.map(j=>row[j]));
+    for(let mask=0;mask<fixedMasks;mask++){
+      const f=Array(n).fill(0); for(let k=0;k<fixed.length;k++){const j=fixed[k]; f[j]=((mask>>k)&1)?limits[j]:0;}
+      const rhs=b.map((bi,ri)=>bi-fixed.reduce((s,j)=>s+A[ri][j]*f[j],0));
+      const sol=solveSquare(Afree,rhs); if(!sol)continue;
+      let ok=true; for(let k=0;k<free.length;k++){const j=free[k]; if(sol[k]<-1e-6 || sol[k]>limits[j]+1e-6){ok=false;break;} f[j]=clamp(sol[k],0,limits[j]);}
+      if(!ok)continue; if(residualNorm(Aeq,f,beq)>1e-5)continue;
+      const key=f.map(v=>v.toFixed(6)).join(","); if(!seen.has(key)){seen.add(key); out.push(f);}
+    }
+  }
+  return out;
+}
+
+function thrustDirParts(rotor,cg){
+  const rx=Number(rotor.x)-cg.x, ry=Number(rotor.y)-cg.y; const rr=Math.sqrt(rx*rx+ry*ry); const spin=signOfDir(rotor.dir);
+  const tx=rr>EPS?spin*(-ry/rr):0; const ty=rr>EPS?spin*(rx/rr):0;
+  return {rx,ry,rr,spin,tx,ty};
+}
+function rotorColumn6(rotor,cg){
+  const {rx,ry,tx,ty,spin}=thrustDirParts(rotor,cg); const rz=Number(rotor.z)-cg.z; const theta=deg2rad(Number(rotor.tiltDeg)||0); const st=Math.sin(theta), ct=Math.cos(theta);
+  const fx=st*tx, fy=st*ty, fz=ct;
+  const taux=ry*fz-rz*fy; const tauy=rz*fx-rx*fz; const tauz=rx*fy-ry*fx+spin*kmuOfRotor(rotor)*ct;
+  return [fx,fy,fz,taux,tauy,tauz];
+}
+function buildB6(rotors,cg){const B=Array.from({length:6},()=>[]); rotors.forEach((r,i)=>{const c=rotorColumn6(r,cg); for(let k=0;k<6;k++)B[k][i]=c[k];}); return B;}
+function buildB4(rotors,cg){const B6=buildB6(rotors,cg); return [B6[2].slice(),B6[3].slice(),B6[4].slice(),B6[5].slice()];}
+function limitsOf(rotors){return rotors.map(r=>Math.max(0,Number(r.eta)*Number(r.K)));}
+function cgOf(params){return {x:Number(params.cgx),y:Number(params.cgy),z:Number(params.cgz)};}
+
+function rank4(B){const n=B[0].length; if(n<4)return 0; let best=0; for(const S of combinations(n,4)){const A=[0,1,2,3].map(r=>S.map(c=>B[r][c])); best=Math.max(best,Math.abs(det4(A)));} return best>EPS?4:matrixRank(B);}
+function computeRho(rotors,params){
+  const cg=cgOf(params); const B=buildB4(rotors,cg); const B6=buildB6(rotors,cg); const n=rotors.length; const G=[Number(params.mass)*Number(params.g),0,0,0]; const limits=limitsOf(rotors); const rank=rank4(B);
+  if(n<4||rank<4)return{rho:-Infinity,B,B6,rank,G,limits,details:[],center:[0,0,0,0]};
+  const fc=limits.map(v=>v/2); const center=matVec(B,fc); const centerMinusG=sub(center,G); const all=Array.from({length:n},(_,i)=>i); const details=[];
+  for(const S of combinations(n,3)){let xi=cross4(col(B,S[0]),col(B,S[1]),col(B,S[2])); const nn=norm(xi); const S2=all.filter(x=>!S.includes(x)); if(nn<EPS){details.push({S,S2,dj:Infinity});continue;} xi=xi.map(x=>x/nn); let half=0; for(const idx of S2)half+=0.5*limits[idx]*Math.abs(dot(xi,col(B,idx))); const offset=Math.abs(dot(xi,centerMinusG)); details.push({S,S2,dj:half-offset,half,offset,xi}); }
+  const finite=details.filter(x=>Number.isFinite(x.dj)); if(!finite.length)return{rho:-Infinity,B,B6,rank,G,limits,details:[],center}; let rho=Math.min(...finite.map(x=>x.dj)); if(Math.abs(rho)<5e-7)rho=0; finite.sort((a,b)=>a.dj-b.dj); return{rho,B,B6,rank,G,limits,details:finite,center};
+}
+
+function forceMetrics(B6,f){
+  const w=matVec(B6,f); const F=w.slice(0,3), tau=w.slice(3,6); const Fxy=Math.sqrt(F[0]*F[0]+F[1]*F[1]); const T=norm(F); const tilt=F[2]>EPS?rad2deg(Math.atan2(Fxy,F[2])):180;
+  return {w,F,tau,Fxy,T,tiltDeg:tilt,torqueNorm:norm(tau)};
+}
+function attitudeFromForceBody(F,yawDeg=0){
+  const T=norm(F);
+  if(!(T>EPS))return null;
+  const ux=F[0]/T, uy=F[1]/T, uz=F[2]/T;
+  if(uz<=0)return null;
+  // ZYX Euler, body -> world: R = Rz(yaw) Ry(pitch) Rx(roll)
+  // Requirement: R * F_body = [0, 0, |F|].
+  // Therefore world-up expressed in body coordinates equals F_body / |F|:
+  // R^T * e_z = [-sin(pitch), cos(pitch)sin(roll), cos(pitch)cos(roll)].
+  const pitch=Math.asin(clamp(-ux,-1,1));
+  const roll=Math.atan2(uy,uz);
+  const yaw=deg2rad(Number(yawDeg)||0);
+  const cp=Math.cos(pitch), sp=Math.sin(pitch), cr=Math.cos(roll), sr=Math.sin(roll), cy=Math.cos(yaw), sy=Math.sin(yaw);
+  const R=[
+    [cy*cp, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
+    [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
+    [-sp,   cp*sr,            cp*cr]
+  ];
+  const Fw=[
+    R[0][0]*F[0]+R[0][1]*F[1]+R[0][2]*F[2],
+    R[1][0]*F[0]+R[1][1]*F[1]+R[1][2]*F[2],
+    R[2][0]*F[0]+R[2][1]*F[1]+R[2][2]*F[2]
+  ];
+  return {roll,pitch,yaw,rollDeg:rad2deg(roll),pitchDeg:rad2deg(pitch),yawDeg:Number(yawDeg)||0,unitBody:[ux,uy,uz],R,Fw,worldResidualXY:Math.sqrt(Fw[0]*Fw[0]+Fw[1]*Fw[1]),worldUp:Fw[2]};
+}
+function matrix3Text(M){
+  return M.map(row=>row.map(x=>fmt(x,6).padStart(11)).join(" ")).join("\n");
+}
+function motorMargin(f,limits){let m=Infinity; for(let i=0;i<limits.length;i++){if(limits[i]<=EPS)continue; m=Math.min(m,(limits[i]-f[i])/limits[i]);} return Number.isFinite(m)?m:0;}
+function aeroKmuFromValues(Ct,Cq){
+  const ct=Number(Ct), cq=Number(Cq);
+  if(Number.isFinite(ct)&&Number.isFinite(cq)&&Math.abs(ct)>EPS)return cq/ct;
+  return Number(params?.defaultKmu)||0;
+}
+function aeroKmu(){return aeroKmuFromValues(params.Ct,params.Cq);}
+function kmuOfRotor(rotor){
+  const kmu=aeroKmu();
+  if(Number.isFinite(kmu)&&Math.abs(kmu)>EPS)return kmu;
+  return Number(rotor.kmu)||0;
+}
+function rpmFromThrust(thrustN){
+  const Ct=Number(params.Ct), f=Number(thrustN);
+  if(!(Number.isFinite(Ct)&&Ct>EPS&&Number.isFinite(f)&&f>=-EPS))return NaN;
+  return Math.sqrt(Math.max(0,f)/Ct);
+}
+function thrustFromRPM(rpm){
+  const Ct=Number(params.Ct), n=Number(rpm);
+  if(!(Number.isFinite(Ct)&&Number.isFinite(n)))return NaN;
+  return Ct*n*n;
+}
+function torqueFromRPM(rpm){
+  const Cq=Number(params.Cq), n=Number(rpm);
+  if(!(Number.isFinite(Cq)&&Number.isFinite(n)))return NaN;
+  return Cq*n*n;
+}
+function rpmPercent(rpm,rpmMax){
+  if(!(Number.isFinite(rpm)&&Number.isFinite(rpmMax)&&rpmMax>EPS))return NaN;
+  return 100*rpm/rpmMax;
+}
+function computeLevelHoverTrim(rotors,params){
+  const cg=cgOf(params); const B6=buildB6(rotors,cg); const limits=limitsOf(rotors); const mg=Number(params.mass)*Number(params.g); const target=[0,0,mg,0,0,0];
+  const verts=enumerateEqualityBoxVertices(B6,target,limits); let best=null;
+  for(const f of verts){const m=forceMetrics(B6,f); const mm=motorMargin(f,limits); const cand={f,metrics:m,motorMargin:mm}; if(!best||mm>best.motorMargin)best=cand;}
+  return {feasible:!!best,best,B6,limits,mg,target,vertexCount:verts.length};
+}
+function computeFreeAttitudeTrim(rotors,params){
+  const cg=cgOf(params); const B6=buildB6(rotors,cg); const limits=limitsOf(rotors); const mg=Number(params.mass)*Number(params.g); const tiltLimit=Number(params.trimTiltLimitDeg ?? 45);
+  const torqueRows=[B6[3],B6[4],B6[5]]; const verts=enumerateEqualityBoxVertices(torqueRows,[0,0,0],limits);
+  let maxCandidate=null; const feasibleCandidates=[];
+  for(const f of verts){
+    const m=forceMetrics(B6,f); if(m.T<=EPS||m.F[2]<=EPS)continue;
+    const cand={f,metrics:m,availableWorldUp:m.T,forceMargin:m.T-mg,tiltDeg:m.tiltDeg};
+    if(!maxCandidate||cand.availableWorldUp>maxCandidate.availableWorldUp)maxCandidate=cand;
+    if(cand.availableWorldUp+1e-5>=mg){
+      const scale=mg/cand.availableWorldUp; const tf=f.map(v=>v*scale); const tm=forceMetrics(B6,tf); feasibleCandidates.push({f:tf,source:f,metrics:tm,scale,availableWorldUp:cand.availableWorldUp,forceMargin:cand.forceMargin,tiltDeg:tm.tiltDeg,motorMargin:motorMargin(tf,limits)});
+    }
+  }
+  feasibleCandidates.sort((a,b)=>a.tiltDeg-b.tiltDeg || b.motorMargin-a.motorMargin || b.forceMargin-a.forceMargin);
+  const best=feasibleCandidates[0]||null; const forceMargin=maxCandidate?maxCandidate.availableWorldUp-mg:-Infinity;
+  return {feasibleForce:forceMargin>=-1e-5,feasibleWithTilt:!!best && best.tiltDeg<=tiltLimit+1e-7,best,maxCandidate,B6,limits,mg,tiltLimit,forceMargin,vertexCount:verts.length};
+}
+
+function presetHex(layout){const d=0.275; const xy=[[0,d],[(Math.sqrt(3)/2)*d,.5*d],[(Math.sqrt(3)/2)*d,-.5*d],[0,-d],[-(Math.sqrt(3)/2)*d,-.5*d],[-(Math.sqrt(3)/2)*d,.5*d]]; const dirs=layout==="PNPNPN"?["CW","CCW","CW","CCW","CW","CCW"]:["CW","CW","CCW","CCW","CW","CCW"]; return xy.map((p,i)=>({id:i+1,name:String(i+1),x:+p[0].toFixed(6),y:+p[1].toFixed(6),z:0,dir:dirs[i],eta:1,K:6.125,kmu:.1,tiltDeg:10}));}
+function presetQuad(){const a=.225/Math.sqrt(2); const xy=[[a,a],[a,-a],[-a,-a],[-a,a]]; const dirs=["CW","CCW","CW","CCW"]; return xy.map((p,i)=>({id:i+1,name:String(i+1),x:+p[0].toFixed(6),y:+p[1].toFixed(6),z:0,dir:dirs[i],eta:1,K:5,kmu:.08,tiltDeg:10}));}
+function presetOcto(){const R=.35; return Array.from({length:8},(_,i)=>{const a=Math.PI/2-(2*Math.PI*i)/8; return{id:i+1,name:String(i+1),x:+(R*Math.cos(a)).toFixed(6),y:+(R*Math.sin(a)).toFixed(6),z:0,dir:i%2===0?"CW":"CCW",eta:1,K:5.5,kmu:.08,tiltDeg:10};});}
+function badgeHTML(ok,text){return ok?`<span class="badge badge-green">${text||"OK"}</span>`:`<span class="badge badge-red">${text||"NO"}</span>`;}
+function rhoBadgeHTML(rho){if(rho>0)return'<span class="badge badge-green">ρ&gt;0</span>'; if(rho===0)return'<span class="badge badge-amber">边界</span>'; return'<span class="badge badge-red">ρ&lt;0</span>';}
+function trimBadgeHTML(trim){if(trim.feasibleWithTilt)return'<span class="badge badge-green">可倾斜配平</span>'; if(trim.feasibleForce)return'<span class="badge badge-amber">力够但倾角超限</span>'; return'<span class="badge badge-red">不可配平</span>';}
+
+let params={mass:1144.41,g:9.81,Ct:8.4897792e-4,Cq:8.6704128e-5,defaultK:3500,defaultKmu:0.1021276595744681,defaultTiltDeg:10,trimTiltLimitDeg:45,desiredYawDeg:0,cgx:0.612903,cgy:0.152299,cgz:1.072025};
+let preset="custom";
+let rotors=[
+  {id:1,name:"1",x:-1.893,y:-2.306,z:2.09082,dir:"CCW",eta:1,K:3500,kmu:0.1021276595744681,tiltDeg:10},
+  {id:2,name:"2",x:0.700,y:-2.505,z:1.785885,dir:"CW",eta:1,K:3500,kmu:0.1021276595744681,tiltDeg:10},
+  {id:3,name:"3",x:3.293,y:-2.306,z:2.085885,dir:"CCW",eta:1,K:3500,kmu:0.1021276595744681,tiltDeg:10},
+  {id:4,name:"4",x:3.293,y:2.306,z:2.085885,dir:"CW",eta:1,K:3500,kmu:0.1021276595744681,tiltDeg:10},
+  {id:5,name:"5",x:0.700,y:2.505,z:1.785885,dir:"CCW",eta:1,K:3500,kmu:0.1021276595744681,tiltDeg:10},
+  {id:6,name:"6",x:-1.893,y:2.306,z:2.085885,dir:"CW",eta:1,K:3500,kmu:0.1021276595744681,tiltDeg:10}
+];
+let scanParams={xMinMm:400,xMaxMm:900,yMinMm:-200,yMaxMm:200,stepMm:20};
+
+function updateParam(key,value){
+  const num=Number(value);
+  const next={...params,[key]:num};
+  if(key==="Ct"||key==="Cq"){
+    next.defaultKmu=aeroKmuFromValues(next.Ct,next.Cq);
+    rotors=rotors.map(r=>({...r,kmu:next.defaultKmu}));
+  }
+  params=next;
+  if(key==="defaultK")rotors=rotors.map(r=>({...r,K:num}));
+  if(key==="defaultKmu")rotors=rotors.map(r=>({...r,kmu:num}));
+  if(key==="defaultTiltDeg")rotors=rotors.map(r=>({...r,tiltDeg:num}));
+  render();
+}
+function updateScanParam(key,value){let num=Number(value); if(!Number.isFinite(num))num=scanParams[key]; if(key==="stepMm")num=Math.max(1,Math.abs(num)); scanParams={...scanParams,[key]:num}; render();}
+function updateRotor(i,key,value){preset="custom"; rotors=rotors.map((r,idx)=>idx===i?{...r,[key]:key==="dir"||key==="name"?value:Number(value)}:r); render();}
+function loadPreset(name){
+  preset=name;
+  const aero={Ct:Number(params.Ct),Cq:Number(params.Cq),desiredYawDeg:Number(params.desiredYawDeg)||0};
+  const kmu=aeroKmuFromValues(aero.Ct,aero.Cq);
+  if(name==="PNPNPN"||name==="PPNNPN"){
+    params={...aero,mass:1.535,g:9.8,defaultK:6.125,defaultKmu:kmu,defaultTiltDeg:10,trimTiltLimitDeg:45,desiredYawDeg:Number(params.desiredYawDeg)||0,cgx:0,cgy:0,cgz:0};
+    rotors=presetHex(name).map(r=>({...r,kmu}));
+  } else if(name==="quadX"){
+    params={...aero,mass:1.2,g:9.8,defaultK:5,defaultKmu:kmu,defaultTiltDeg:10,trimTiltLimitDeg:45,desiredYawDeg:Number(params.desiredYawDeg)||0,cgx:0,cgy:0,cgz:0};
+    rotors=presetQuad().map(r=>({...r,kmu}));
+  } else if(name==="octoAlt"){
+    params={...aero,mass:2.6,g:9.8,defaultK:5.5,defaultKmu:kmu,defaultTiltDeg:10,trimTiltLimitDeg:45,desiredYawDeg:Number(params.desiredYawDeg)||0,cgx:0,cgy:0,cgz:0};
+    rotors=presetOcto().map(r=>({...r,kmu}));
+  }
+  render();
+}
+function addRotor(){preset="custom"; const n=rotors.length+1; const R=.275; const a=Math.PI/2-(2*Math.PI*(n-1))/Math.max(6,n); rotors=[...rotors,{id:Date.now(),name:String(n),x:+(R*Math.cos(a)).toFixed(4),y:+(R*Math.sin(a)).toFixed(4),z:0,dir:n%2?"CW":"CCW",eta:1,K:params.defaultK,kmu:params.defaultKmu,tiltDeg:params.defaultTiltDeg}]; render();}
+function removeLastRotor(){rotors=rotors.slice(0,-1); render();}
+function resetEta(){rotors=rotors.map(r=>({...r,eta:1})); render();}
+function paramField(key,label,step="0.001"){return`<label>${label}<input data-kind="param" data-key="${key}" type="number" step="${step}" value="${escapeHTML(params[key])}" /></label>`;}
+function scanField(key,label){return`<label>${label}<input data-kind="scan" data-key="${key}" type="number" step="${key==="stepMm"?"1":"10"}" value="${escapeHTML(scanParams[key])}" /></label>`;}
+function rotorRows(){
+  return rotors.map((r,i)=>{
+    const rpmK=rpmFromThrust(Number(r.K));
+    const kmu=kmuOfRotor(r);
+    return `<tr><td class="mono">${i+1}</td><td><input class="input-name" data-kind="rotor" data-index="${i}" data-key="name" value="${escapeHTML(r.name)}" /></td><td><input class="input-num-wide" data-kind="rotor" data-index="${i}" data-key="x" type="number" step="0.001" value="${escapeHTML(r.x)}" /></td><td><input class="input-num-wide" data-kind="rotor" data-index="${i}" data-key="y" type="number" step="0.001" value="${escapeHTML(r.y)}" /></td><td><input class="input-num-wide" data-kind="rotor" data-index="${i}" data-key="z" type="number" step="0.001" value="${escapeHTML(r.z)}" /></td><td><select class="select-dir" data-kind="rotor" data-index="${i}" data-key="dir"><option value="CW" ${r.dir==="CW"?"selected":""}>CW/P</option><option value="CCW" ${r.dir==="CCW"?"selected":""}>CCW/N</option></select></td><td><input class="input-num-small" data-kind="rotor" data-index="${i}" data-key="eta" type="number" step="0.01" value="${escapeHTML(r.eta)}" /></td><td><input class="input-num-small" data-kind="rotor" data-index="${i}" data-key="K" type="number" step="0.001" value="${escapeHTML(r.K)}" /></td><td><input class="input-num-small" type="number" step="0.000001" value="${escapeHTML(kmu)}" readonly title="由 Cq/Ct 自动计算" /></td><td class="right mono">${fmt(rpmK,1)}</td><td><input class="input-num-small" data-kind="rotor" data-index="${i}" data-key="tiltDeg" type="number" step="0.1" value="${escapeHTML(r.tiltDeg??0)}" /></td><td><button class="btn-outline-red" data-action="fail-rotor" data-index="${i}">η=0</button></td></tr>`;
+  }).join("");
+}
+
+function layoutSVG(scale,maxK,trim){
+  const grid=Array.from({length:11},(_,i)=>{const p=30+i*40; return`<g><line x1="30" y1="${p}" x2="430" y2="${p}" stroke="#e2e8f0"/><line x1="${p}" y1="30" x2="${p}" y2="430" stroke="#e2e8f0"/></g>`;}).join("");
+  const arms=rotors.map(r=>{const x=230+(Number(r.x)-Number(params.cgx))*scale, y=230-(Number(r.y)-Number(params.cgy))*scale; return`<line x1="230" y1="230" x2="${x}" y2="${y}" stroke="#94a3b8" stroke-width="7" stroke-linecap="round"/>`;}).join("");
+  const motors=rotors.map(r=>{const relx=Number(r.x)-Number(params.cgx), rely=Number(r.y)-Number(params.cgy); const x=230+relx*scale, y=230-rely*scale; const rad=22+18*(Number(r.K)/maxK); const eta=clamp(Number(r.eta),0,1); const fill=eta===0?"#fee2e2":`rgba(191,219,254,${.25+.75*eta})`; const stroke=eta===0?"#dc2626":"#2563eb"; const dirColor=r.dir==="CW"?"#1d4ed8":"#7c3aed"; const theta=Number(r.tiltDeg)||0; const {tx,ty}=thrustDirParts(r,cgOf(params)); const arrowSign=Math.sin(deg2rad(theta))<0?1:-1; const arrowLen=Math.min(52,Math.max(0,Math.abs(theta))*2.2); const arrow=arrowLen>.5?`<line x1="${x}" y1="${y}" x2="${x+arrowSign*tx*arrowLen}" y2="${y-arrowSign*ty*arrowLen}" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" marker-end="url(#tiltArrow)"><title>橙色箭头：倾斜推力的水平分量方向</title></line>`:""; return`<g><circle cx="${x}" cy="${y}" r="${rad}" fill="${fill}" stroke="${stroke}" stroke-width="3"/>${arrow}<text x="${x}" y="${y+5}" text-anchor="middle" font-size="17" font-weight="950">${escapeHTML(r.name)}</text><text x="${x}" y="${y+rad+16}" text-anchor="middle" font-size="12" font-weight="950" fill="${dirColor}">${escapeHTML(r.dir)} · θ=${fmt(theta,1)}°</text>${eta===0?`<text x="${x}" y="${y-rad-8}" text-anchor="middle" font-size="12" font-weight="900" fill="#dc2626">failed</text>`:""}</g>`;}).join("");
+  let forceArrow=""; if(trim&&trim.best){const F=trim.best.metrics.F; const fxy=Math.sqrt(F[0]*F[0]+F[1]*F[1]); if(fxy>EPS){const L=75; const ax=230+(F[0]/fxy)*L, ay=230-(F[1]/fxy)*L; forceArrow=`<line x1="230" y1="230" x2="${ax}" y2="${ay}" stroke="#16a34a" stroke-width="5" stroke-linecap="round" marker-end="url(#forceArrow)"><title>绿色箭头：可配平合力在机体系 x-y 平面的方向；机体需向反方向倾斜，使该合力转到世界系向上</title></line>`;}}
+  return`<svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg"><defs><marker id="tiltArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L7,3 z" fill="#f59e0b"/></marker><marker id="forceArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L7,3 z" fill="#16a34a"/></marker></defs>${grid}<line x1="30" y1="230" x2="430" y2="230" stroke="#94a3b8"/><line x1="230" y1="430" x2="230" y2="30" stroke="#94a3b8"/>${arms}${forceArrow}<circle cx="230" cy="230" r="6" fill="#0f172a"/><text x="240" y="224" font-size="14" font-weight="900">CG</text>${motors}</svg>`;
+}
+function matrixText(B6){return["Fx","Fy","Fz","tau_x","tau_y","tau_z"].map((name,r)=>`${name.padEnd(6)} | ${B6[r].map(x=>fmt(x,4).padStart(10)).join(" ")}`).join("\n");}
+function detailRows(out){return out.details.slice(0,8).map(it=>`<tr><td class="mono">${it.S.map(x=>escapeHTML(rotors[x].name)).join(", ")}</td><td class="mono">${it.S2.map(x=>escapeHTML(rotors[x].name)).join(", ")}</td><td class="right mono">${fmt(it.dj)}</td></tr>`).join("");}
+
+function scanCasesForRotors(baseRotors){const cases=[{label:"正常",data:baseRotors}]; baseRotors.forEach((r,i)=>cases.push({label:`桨 ${r.name} 失效`,data:baseRotors.map((x,idx)=>idx===i?{...x,eta:0}:x)})); return cases;}
+function computeWorstTrimCase(baseRotors,p){let worst={score:Infinity,label:"",trim:null}; for(const c of scanCasesForRotors(baseRotors)){const trim=computeFreeAttitudeTrim(c.data,p); const score=Number.isFinite(trim.forceMargin)?trim.forceMargin:-Infinity; if(score<worst.score)worst={score,label:c.label,trim};} return worst;}
+function scanTrimGrid(){
+  const x0=Number(scanParams.xMinMm),x1=Number(scanParams.xMaxMm),y0=Number(scanParams.yMinMm),y1=Number(scanParams.yMaxMm),step=Math.max(1,Math.abs(Number(scanParams.stepMm)||20)); const xmin=Math.min(x0,x1),xmax=Math.max(x0,x1),ymin=Math.min(y0,y1),ymax=Math.max(y0,y1);
+  const xs=[]; for(let x=xmin;x<=xmax+EPS;x+=step)xs.push(+x.toFixed(6)); const ys=[]; for(let y=ymin;y<=ymax+EPS;y+=step)ys.push(+y.toFixed(6));
+  const rows=[]; let min=Infinity,max=-Infinity,best={score:-Infinity,x:NaN,y:NaN,caseLabel:""},worst={score:Infinity,x:NaN,y:NaN,caseLabel:""}; let okCount=0,forceCount=0,nonFiniteCount=0; const neg=[],pos=[];
+  for(let yi=ys.length-1;yi>=0;yi--){const y=ys[yi],row=[]; for(const x of xs){const p={...params,cgx:x/1000,cgy:y/1000}; const wc=computeWorstTrimCase(rotors,p); const score=wc.score; const trim=wc.trim; const tilt=trim?.best?trim.best.tiltDeg:Infinity; const forceOk=!!trim&&trim.feasibleForce; const tiltOk=!!trim&&trim.feasibleWithTilt; const pt={x,y,score,caseLabel:wc.label,tilt,forceOk,tiltOk,maxWorldUp:trim?.maxCandidate?.availableWorldUp??NaN}; row.push(pt); if(Number.isFinite(score)){min=Math.min(min,score); max=Math.max(max,score); if(score>best.score)best={score,x,y,caseLabel:wc.label,tilt}; if(score<worst.score)worst={score,x,y,caseLabel:wc.label,tilt}; if(forceOk)forceCount++; if(tiltOk)okCount++; if(score>=0)pos.push(score); else neg.push(score);}else nonFiniteCount++;} rows.push(row);}
+  const total=xs.length*ys.length; if(!pos.length)pos.push(0); return{xs,ys,rows,min,max,best,worst,total,okCount,forceCount,nonFiniteCount,posMax:Math.max(...pos),negAbsMax:neg.length?Math.max(...neg.map(v=>Math.abs(v))):0};
+}
+function colorForTrim(pt,scan){if(!Number.isFinite(pt.score))return"#020617"; if(pt.score<0){const t=scan.negAbsMax>EPS?clamp(Math.abs(pt.score)/scan.negAbsMax,0,1):0; return mixHex("#fef3c7","#b91c1c",t);} if(!pt.tiltOk)return"#f59e0b"; const t=scan.posMax>EPS?clamp(pt.score/scan.posMax,0,1):0; return mixHex("#dcfce7","#2563eb",t);}
+function heatmapSVG(scan){
+  const cell=12,left=64,top=30,right=184,bottom=46,heatW=scan.xs.length*cell,heatH=scan.rows.length*cell,w=left+heatW+right,h=top+heatH+bottom; const xTicks=scan.xs.filter((_,i)=>i===0||i===scan.xs.length-1||scan.xs[i]%100===0); const yVals=scan.rows.map(row=>row[0]?.y).filter(v=>v!==undefined); const yTicks=yVals.filter(y=>y===yVals[0]||y===yVals[yVals.length-1]||y%100===0);
+  const cells=scan.rows.map((row,r)=>row.map((pt,c)=>{const fill=colorForTrim(pt,scan); const title=`x=${pt.x} mm, y=${pt.y} mm, 最差场景=${pt.caseLabel}, 世界向上力裕度=${fmt(pt.score,3)} N, 所需倾角=${Number.isFinite(pt.tilt)?fmt(pt.tilt,2):"无"}°`; return`<rect x="${left+c*cell}" y="${top+r*cell}" width="${cell+.1}" height="${cell+.1}" fill="${fill}"><title>${escapeHTML(title)}</title></rect>`;}).join("")).join("");
+  const xAxis=xTicks.map(x=>{const idx=scan.xs.indexOf(x),px=left+idx*cell+cell/2; return`<g><line x1="${px}" y1="${top+scan.rows.length*cell}" x2="${px}" y2="${top+scan.rows.length*cell+5}" stroke="#64748b"/><text x="${px}" y="${top+scan.rows.length*cell+20}" text-anchor="middle" font-size="11" fill="#475569">${x}</text></g>`;}).join("");
+  const yAxis=yTicks.map(y=>{const rowIndex=yVals.indexOf(y),py=top+rowIndex*cell+cell/2; return`<g><line x1="${left-5}" y1="${py}" x2="${left}" y2="${py}" stroke="#64748b"/><text x="${left-9}" y="${py+4}" text-anchor="end" font-size="11" fill="#475569">${y}</text></g>`;}).join("");
+  const currentX=Number(params.cgx)*1000,currentY=Number(params.cgy)*1000; let marker=""; if(currentX>=scan.xs[0]&&currentX<=scan.xs[scan.xs.length-1]&&currentY>=Math.min(...scan.ys)&&currentY<=Math.max(...scan.ys)){const mx=left+((currentX-scan.xs[0])/Math.max(1,Number(scanParams.stepMm)))*cell+cell/2; const my=top+((Math.max(...scan.ys)-currentY)/Math.max(1,Number(scanParams.stepMm)))*cell+cell/2; marker=`<g><circle cx="${mx}" cy="${my}" r="7" fill="none" stroke="#0f172a" stroke-width="2"/><line x1="${mx-9}" y1="${my}" x2="${mx+9}" y2="${my}" stroke="#0f172a" stroke-width="2"/><line x1="${mx}" y1="${my-9}" x2="${mx}" y2="${my+9}" stroke="#0f172a" stroke-width="2"/><title>当前 CG: x=${fmt(currentX,1)} mm, y=${fmt(currentY,1)} mm</title></g>`;}
+  const barX=left+heatW+40,barY=top+18,barW=16,barH=Math.max(120,Math.min(220,heatH*.65)); const negLabel=scan.negAbsMax>EPS?`-${fmt(scan.negAbsMax,1)} N`:"无不足"; const posLabel=scan.posMax>EPS?`${fmt(scan.posMax,1)} N`:"0";
+  return`<svg class="heatmap-svg" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="negTrimBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fef3c7"/><stop offset="100%" stop-color="#b91c1c"/></linearGradient><linearGradient id="posTrimBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#dcfce7"/></linearGradient></defs><rect x="0" y="0" width="${w}" height="${h}" fill="#fff"/><text x="${left}" y="18" font-size="13" font-weight="900" fill="#334155">鲁棒自由姿态配平裕度：正常 + 单桨失效取最差</text>${cells}<rect x="${left}" y="${top}" width="${heatW}" height="${heatH}" fill="none" stroke="#334155" stroke-width="1"/>${marker}${xAxis}${yAxis}<g><text x="${barX-8}" y="${barY-8}" font-size="11" font-weight="900" fill="#334155">裕度色标</text><rect x="${barX}" y="${barY}" width="${barW}" height="${barH/2}" rx="3" fill="url(#posTrimBar)" stroke="#94a3b8"/><rect x="${barX}" y="${barY+barH/2+14}" width="${barW}" height="${barH/2}" rx="3" fill="url(#negTrimBar)" stroke="#94a3b8"/><text x="${barX+barW+6}" y="${barY+4}" font-size="10" fill="#475569">${posLabel}</text><text x="${barX+barW+6}" y="${barY+barH/2+4}" font-size="10" fill="#475569">0</text><text x="${barX+barW+6}" y="${barY+barH/2+18}" font-size="10" fill="#475569">0</text><text x="${barX+barW+6}" y="${barY+barH+18}" font-size="10" fill="#475569">${negLabel}</text><rect x="${barX}" y="${barY+barH+34}" width="${barW}" height="13" rx="3" fill="#f59e0b" stroke="#94a3b8"/><text x="${barX+barW+6}" y="${barY+barH+45}" font-size="10" fill="#475569">力够但倾角超限</text></g><text x="${left+heatW/2}" y="${top+heatH+38}" text-anchor="middle" font-size="12" font-weight="900" fill="#334155">CG x / mm</text><text x="15" y="${top+heatH/2}" text-anchor="middle" font-size="12" font-weight="900" fill="#334155" transform="rotate(-90 15 ${top+heatH/2})">CG y / mm</text></svg>`;
+}
+function heatmapSectionHTML(scan){const okRate=scan.total>0?100*scan.okCount/scan.total:0, forceRate=scan.total>0?100*scan.forceCount/scan.total:0; return`<section class="card"><h2>CG x-y 扫描：自由姿态配平裕度</h2><p style="margin-bottom:16px;">每个网格点计算“正常 + 所有单桨失效”中的最差自由姿态配平裕度。这里的裕度 = 在三轴力矩为零的前提下，可产生的最大合力大小 − mg。若裕度 ≥ 0，说明只要允许机体倾斜，就能把机体系合力旋到世界系向上；同时页面会检查所需倾角是否超过限制。</p><div class="grid grid-4">${scanField("xMinMm","x 最小 / mm")}${scanField("xMaxMm","x 最大 / mm")}${scanField("yMinMm","y 最小 / mm")}${scanField("yMaxMm","y 最大 / mm")}${scanField("stepMm","步长 / mm")}</div><div class="metric-grid"><div class="metric"><div class="label">最优最差裕度 / CG</div><div class="value">${fmt(scan.best.score,2)} N @ (${fmt(scan.best.x,0)}, ${fmt(scan.best.y,0)})</div></div><div class="metric"><div class="label">最差裕度 / CG</div><div class="value">${fmt(scan.worst.score,2)} N @ (${fmt(scan.worst.x,0)}, ${fmt(scan.worst.y,0)})</div></div><div class="metric"><div class="label">力够比例</div><div class="value">${fmt(forceRate,1)}%</div></div><div class="metric"><div class="label">力够且倾角≤限制比例</div><div class="value">${fmt(okRate,1)}%</div></div></div><div class="heatmap-scroll" style="margin-top:16px;">${heatmapSVG(scan)}</div><div class="legend-row"><span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#fef3c7,#b91c1c)"></span>红色：最大可对齐世界向上力仍小于 mg</span><span class="legend-chip"><span class="legend-swatch" style="background:#f59e0b"></span>橙色：力够，但所需机体倾角超过限制</span><span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#dcfce7,#2563eb)"></span>绿色/蓝色：可配平，颜色越深裕度越大</span><span class="legend-chip">黑色十字：当前 CG</span></div></section>`;}
+
+function faultRowsHTML(){const rows=[{label:"No fault / current η",data:rotors}]; rotors.forEach((r,i)=>rows.push({label:`η${r.name}=0`,data:rotors.map((x,idx)=>idx===i?{...x,eta:0}:x)})); return rows.map(row=>{const rho=computeRho(row.data,params); const level=computeLevelHoverTrim(row.data,params); const trim=computeFreeAttitudeTrim(row.data,params); const best=trim.best; const tilt=best?fmt(best.tiltDeg,2)+"°":"—"; const margin=Number.isFinite(trim.forceMargin)?fmt(trim.forceMargin,2)+" N":"—"; const maxUp=trim.maxCandidate?fmt(trim.maxCandidate.availableWorldUp,2)+" N":"—"; const motor=best?fmt(100*best.motorMargin,1)+"%":"—"; return`<tr><td class="mono">${escapeHTML(row.label)}</td><td class="right mono">${fmt(rho.rho)}</td><td>${rhoBadgeHTML(rho.rho)}</td><td>${badgeHTML(level.feasible,level.feasible?"水平可配平":"水平不可配")}</td><td>${trimBadgeHTML(trim)}</td><td class="right mono">${maxUp}</td><td class="right mono">${margin}</td><td class="right mono">${tilt}</td><td class="right mono">${motor}</td></tr>`;}).join("");}
+function trimAttitudeHTML(trim){
+  if(!trim.best)return "";
+  const b=trim.best;
+  const att=attitudeFromForceBody(b.metrics.F,params.desiredYawDeg);
+  if(!att)return `<div class="notice notice-amber" style="margin-top:12px;">当前配平合力无法换算成有效姿态：合力大小为零或机体系 z 分量非正。</div>`;
+  return `<h3 style="margin-top:20px;">自由姿态配平对应姿态</h3><div class="metric-grid"><div class="metric"><div class="label">Roll φ / deg</div><div class="value">${fmt(att.rollDeg,4)}°</div></div><div class="metric"><div class="label">Pitch θ / deg</div><div class="value">${fmt(att.pitchDeg,4)}°</div></div><div class="metric"><div class="label">Yaw ψ / deg</div><div class="value">${fmt(att.yawDeg,4)}°</div></div><div class="metric"><div class="label">水平残差 |Fwxy|</div><div class="value">${fmt(att.worldResidualXY,6)} N</div></div><div class="metric"><div class="label">World force [Fx,Fy,Fz]</div><div class="value">[${fmt(att.Fw[0],3)}, ${fmt(att.Fw[1],3)}, ${fmt(att.Fw[2],3)}]</div></div><div class="metric"><div class="label">Body up vector</div><div class="value">[${fmt(att.unitBody[0],5)}, ${fmt(att.unitBody[1],5)}, ${fmt(att.unitBody[2],5)}]</div></div><div class="metric"><div class="label">欧拉角约定</div><div class="value">ZYX</div></div><div class="metric"><div class="label">姿态用途</div><div class="value">body→world</div></div></div><div class="notice notice-blue" style="margin-top:12px;">Yaw 不由悬停配平唯一决定；页面使用你设置的“期望 yaw”，再由合力方向反解 roll/pitch。约定：R = Rz(yaw)·Ry(pitch)·Rx(roll)，并满足 R·Fbody ≈ [0,0,mg]。</div><pre style="margin-top:12px;">R_body_to_world =
+${escapeHTML(matrix3Text(att.R))}</pre>`;
+}
+function trimMotorSpeedTableHTML(trim){
+  if(!trim.best)return "";
+  const b=trim.best;
+  const rows=rotors.map((r,i)=>{
+    const f=Number(b.f[i]);
+    const rpm=rpmFromThrust(f);
+    const rpmAvail=rpmFromThrust(Number(trim.limits[i]));
+    const pct=rpmPercent(rpm,rpmAvail);
+    const q=torqueFromRPM(rpm);
+    const theta=deg2rad(Number(r.tiltDeg)||0);
+    const yawComponent=signOfDir(r.dir)*q*Math.cos(theta);
+    const status=Number.isFinite(pct)?(pct>95?"badge-red":pct>85?"badge-amber":"badge-green"):"badge-amber";
+    return `<tr><td class="mono">${escapeHTML(r.name)}</td><td class="right mono">${fmt(f,3)}</td><td class="right mono">${fmt(rpm,1)}</td><td class="right mono">${fmt(rpmAvail,1)}</td><td class="right mono">${fmt(pct,1)}%</td><td><span class="badge ${status}">${Number.isFinite(pct)?(pct>95?"接近上限":pct>85?"余量较小":"余量充足"):"无可用上限"}</span></td><td class="right mono">${fmt(q,3)}</td><td class="right mono">${fmt(yawComponent,3)}</td></tr>`;
+  }).join("");
+  return `<h3 style="margin-top:20px;">倾斜悬停时每个电机转速</h3><div class="table-wrap"><table><thead><tr><th>电机</th><th class="right">推力 f / N</th><th class="right">rpm</th><th class="right">可用 max rpm</th><th class="right">转速占比</th><th>余量</th><th class="right">轴反扭矩 Q / N·m</th><th class="right">偏航分量 / N·m</th></tr></thead><tbody>${rows}</tbody></table></div><div class="notice notice-blue" style="margin-top:12px;">转速换算使用 f=Ct·rpm²；轴反扭矩使用 Q=Cq·rpm²；偏航分量约为 ±Q·cosθ。当前 Ct=${escapeHTML(params.Ct)}，Cq=${escapeHTML(params.Cq)}，kμ=Cq/Ct=${fmt(aeroKmu(),8)} m。</div>`;
+}
+function trimDetailHTML(trim){
+  if(!trim.best)return`<div class="notice notice-amber">没有找到三轴力矩为零且合力达到 mg 的自由姿态配平点。最大可对齐世界向上力裕度：${fmt(trim.forceMargin,3)} N。</div>`;
+  const b=trim.best, F=b.metrics.F, tau=b.metrics.tau;
+  const forceDir=norm(F)>EPS?F.map(v=>v/norm(F)):[NaN,NaN,NaN];
+  const attitudeHint=`机体系合力方向单位向量 = [${fmt(forceDir[0],5)}, ${fmt(forceDir[1],5)}, ${fmt(forceDir[2],5)}]`;
+  return`<div class="metric-grid"><div class="metric"><div class="label">所需机体倾角</div><div class="value">${fmt(b.tiltDeg,3)}°</div></div><div class="metric"><div class="label">合力大小 |F|</div><div class="value">${fmt(b.metrics.T,3)} N</div></div><div class="metric"><div class="label">世界系向上力裕度</div><div class="value">${fmt(trim.forceMargin,3)} N</div></div><div class="metric"><div class="label">最小电机余量</div><div class="value">${fmt(100*b.motorMargin,2)}%</div></div><div class="metric"><div class="label">Fbody = [Fx,Fy,Fz]</div><div class="value">[${fmt(F[0],2)}, ${fmt(F[1],2)}, ${fmt(F[2],2)}]</div></div><div class="metric"><div class="label">τ residual</div><div class="value">${fmt(b.metrics.torqueNorm,6)}</div></div><div class="metric"><div class="label">配平缩放系数</div><div class="value">${fmt(b.scale,4)}</div></div><div class="metric"><div class="label">枚举顶点数</div><div class="value">${trim.vertexCount}</div></div></div><div class="notice notice-green" style="margin-top:12px;">${attitudeHint}。只要把这个机体系合力方向旋到世界系竖直向上，就能实现倾斜悬停。</div>${trimAttitudeHTML(trim)}${trimMotorSpeedTableHTML(trim)}`;
+}
+
+function render(){
+  const out=computeRho(rotors,params); const level=computeLevelHoverTrim(rotors,params); const trim=computeFreeAttitudeTrim(rotors,params); const scan=scanTrimGrid(); const totalThrust=out.limits.reduce((a,b)=>a+b,0); const verticalCapacity=out.limits.reduce((sum,lim,i)=>sum+lim*Math.cos(deg2rad(Number(rotors[i].tiltDeg)||0)),0); const maxXY=Math.max(.1,...rotors.flatMap(r=>[Math.abs(Number(r.x)-Number(params.cgx)),Math.abs(Number(r.y)-Number(params.cgy))])); const scale=175/maxXY; const maxK=Math.max(.1,...rotors.map(r=>Number(r.K)));
+  const trimStatusClass=trim.feasibleWithTilt?"status-green":trim.feasibleForce?"status-amber":"status-red"; const trimStatusText=trim.feasibleWithTilt?"可配平：存在三轴力矩为零的推力组合，合力可旋到世界系向上且倾角不超限":trim.feasibleForce?"力够但倾角超限：合力大小可抵消重力，但当前倾角限制下不建议判为可用配平":"不可配平：三轴力矩为零时，最大合力仍小于 mg";
+  document.getElementById("app").innerHTML=`<div class="page"><div class="container"><header class="card header-card"><div class="pill">倾斜多旋翼 · 水平分量 · 自由姿态配平</div><h1>考虑水平推力分量和机体倾斜后，判断世界系 Fz 向上是否能配平</h1><p class="lead">新版不再只把倾角推力投影成机体系 Fz，而是使用完整六维列向量 [Fx,Fy,Fz,τx,τy,τz]。自由姿态配平时，先要求 τx=τy=τz=0，再看合力 |Fbody| 是否达到 mg；若达到，就存在一个机体姿态可把该合力旋到世界系竖直向上。</p></header><section class="grid grid-2"><div class="card"><h2>计算约定</h2><div class="space-y" style="color:var(--slate-700);"><p>单桨推力方向：Fᵢ/fᵢ = [sinθ·tx, sinθ·ty, cosθ]，其中 t = s[-y/r, x/r]，s=+1 表示 CCW，s=-1 表示 CW。</p><p>完整力矩列：τ/f = r × F/f + [0,0,s·kμ·cosθ]。</p><p>自由姿态配平条件：τ=0，|ΣFbody| = mg，Fbody,z &gt; 0，并检查 required tilt = atan2(√(Fx²+Fy²), Fz)。随后用 ZYX 欧拉角反解姿态：roll=atan2(Fy,Fz)，pitch=asin(-Fx/|F|)，yaw 为用户指定值。</p><div class="notice notice-amber">这一步明确考虑了水平分量：水平力不再直接视为“坏事”，而是作为机体倾斜后的必要合力方向；只要合力能旋到世界系向上，就可抵消重力。</div></div></div><div class="card"><h2>当前判定</h2><div class="status-box ${trimStatusClass}">${trimStatusText}</div><div class="metric-grid"><div class="metric"><div class="label">4D ρ：[Fz, τ]</div><div class="value">${fmt(out.rho)}</div></div><div class="metric"><div class="label">水平配平</div><div class="value">${level.feasible?"YES":"NO"}</div></div><div class="metric"><div class="label">自由姿态配平</div><div class="value">${trim.feasibleWithTilt?"YES":trim.feasibleForce?"TILT LIMIT":"NO"}</div></div><div class="metric"><div class="label">mg</div><div class="value">${fmt(out.G[0],2)} N</div></div></div>${trimDetailHTML(trim)}</div></section><section class="card"><h2>全局参数</h2><p style="margin-bottom:16px;">默认最大升力 K 仍表示单个电机可用最大推力；Ct/Cq 用于把配平推力换算成电机 rpm，并用 kμ=Cq/Ct 自动修正偏航反扭矩模型。新增“允许配平倾角限制”，用于判断自由姿态配平是否工程可用。</p><div class="grid grid-4">${paramField("mass","质量 m / kg")}${paramField("g","重力加速度 g")}${paramField("defaultK","默认最大升力 K / N")}${paramField("Ct","Ct / N·rpm⁻²","0.0000001")}${paramField("Cq","Cq / N·m·rpm⁻²","0.0000001")}${paramField("defaultTiltDeg","默认倾角 θ / °","0.1")}${paramField("trimTiltLimitDeg","允许配平倾角限制 / °","0.1")}${paramField("desiredYawDeg","期望 yaw / °","0.1")}${paramField("cgx","质心 xcg / m")}${paramField("cgy","质心 ycg / m")}${paramField("cgz","质心 zcg / m")}<label>快速预设<select id="presetSelect"><option value="custom" ${preset==="custom"?"selected":""}>自定义</option><option value="PNPNPN" ${preset==="PNPNPN"?"selected":""}>六旋翼 PNPNPN</option><option value="PPNNPN" ${preset==="PPNNPN"?"selected":""}>六旋翼 PPNNPN</option><option value="quadX" ${preset==="quadX"?"selected":""}>四旋翼 X 型</option><option value="octoAlt" ${preset==="octoAlt"?"selected":""}>八旋翼交替转向</option></select></label></div><div class="metric-grid"><div class="metric"><div class="label">kμ = Cq/Ct</div><div class="value">${fmt(aeroKmu(),8)} m</div></div><div class="metric"><div class="label">默认 K 对应 max rpm</div><div class="value">${fmt(rpmFromThrust(Number(params.defaultK)),1)}</div></div><div class="metric"><div class="label">Ct</div><div class="value">${fmt(Number(params.Ct),8)}</div></div><div class="metric"><div class="label">Cq</div><div class="value">${fmt(Number(params.Cq),8)}</div></div></div><div class="grid grid-3" style="margin-top:16px;"><button class="btn-blue" data-action="add-rotor">添加电机</button><button class="btn-slate" data-action="remove-last">删除最后一个电机</button><button class="btn-outline-blue" data-action="reset-eta">全部 η=1</button></div></section>${heatmapSectionHTML(scan)}<section class="grid main-grid"><div class="card"><h2>电机参数表</h2><div class="table-wrap"><table><thead><tr>${["#","名称","x","y","z","转向","η","K","kμ=Cq/Ct","rpm@K","倾角°","操作"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rotorRows()}</tbody></table></div></div><div class="card"><h2>布局俯视图</h2><div class="svg-wrap">${layoutSVG(scale,maxK,trim)}</div><div class="notice notice-blue" style="margin-top:16px;">电机数 n=<b>${rotors.length}</b>；4D rank=<b>${out.rank}</b>；ΣηK=<b>${fmt(totalThrust,3)} N</b>；ΣηKcosθ=<b>${fmt(verticalCapacity,3)} N</b>；mg=<b>${fmt(out.G[0],3)} N</b>。绿色箭头为当前自由配平合力在机体系 x-y 平面的方向。</div></div><div class="card"><h2>完整 B6 矩阵</h2><pre>${escapeHTML(matrixText(out.B6))}</pre><h3 style="margin-top:20px;">4D ρ 最限制边界</h3><table><thead><tr><th>S</th><th>S₂</th><th class="right">dj</th></tr></thead><tbody>${detailRows(out)}</tbody></table></div></section><section class="card"><h2>单电机失效扫描：ρ + 水平配平 + 自由姿态配平</h2><p style="margin-bottom:16px;">水平配平要求 [Fx,Fy,Fz,τ]=[0,0,mg,0,0,0]；自由姿态配平允许 Fx/Fy 存在，只要求合力可通过机体倾斜转成世界系向上。</p><div class="table-wrap"><table><thead><tr><th>场景</th><th class="right">4D ρ</th><th>ρ 判定</th><th>水平配平</th><th>自由姿态配平</th><th class="right">最大世界向上力</th><th class="right">裕度</th><th class="right">所需倾角</th><th class="right">电机余量</th></tr></thead><tbody>${faultRowsHTML()}</tbody></table></div></section></div></div>`; bindEvents();}
+function bindEvents(){document.querySelectorAll('[data-kind="param"]').forEach(el=>el.addEventListener("change",e=>updateParam(e.target.dataset.key,e.target.value))); document.querySelectorAll('[data-kind="rotor"]').forEach(el=>el.addEventListener("change",e=>updateRotor(Number(e.target.dataset.index),e.target.dataset.key,e.target.value))); document.querySelectorAll('[data-kind="scan"]').forEach(el=>el.addEventListener("change",e=>updateScanParam(e.target.dataset.key,e.target.value))); const presetSelect=document.getElementById("presetSelect"); if(presetSelect)presetSelect.addEventListener("change",e=>loadPreset(e.target.value)); document.querySelectorAll("[data-action]").forEach(el=>el.addEventListener("click",e=>{const action=e.currentTarget.dataset.action; if(action==="add-rotor")addRotor(); if(action==="remove-last")removeLastRotor(); if(action==="reset-eta")resetEta(); if(action==="fail-rotor")updateRotor(Number(e.currentTarget.dataset.index),"eta",0);}));}
+render();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body></html>
