@@ -161,6 +161,16 @@
     .badge-amber { background: var(--amber-100); color: var(--amber-700); }
     .badge-red { background: var(--red-100); color: var(--red-700); }
 
+    .margin-block { margin-top: 4px; }
+    .margin-table { font-size: 14px; }
+    .margin-table th { font-weight: 900; font-size: 12px; color: var(--slate-600); }
+    .margin-table td { padding: 8px 6px; }
+    .margin-cell { font-weight: 900; white-space: nowrap; padding: 4px 8px; display: inline-block; }
+    .margin-pos { color: var(--green-800); background: var(--green-50); border-radius: 6px; }
+    .margin-neg { color: var(--red-800); background: var(--red-50); border-radius: 6px; }
+    .margin-zero { color: var(--amber-800); background: var(--amber-50); border-radius: 6px; }
+    .margin-na { color: var(--slate-600); }
+
 
     .heatmap-scroll {
       width: 100%;
@@ -420,16 +430,20 @@
       return best > EPS ? 4 : 3;
     }
 
-    function computeRho(rotors, params) {
+    function computeRho(rotors, params, duct) {
       const cg = { x: Number(params.cgx), y: Number(params.cgy), z: Number(params.cgz) };
-      const B = buildB(rotors, cg);
-      const n = rotors.length;
+      const B0 = buildB(rotors, cg);
+      const rotorLimits = rotors.map((r) => Math.max(0, Number(r.eta) * Number(r.K)));
+      const aug = augmentBWithDuct(B0, rotorLimits, duct);
+      const B = aug.B;
+      const limits = aug.limits;
+      const n = B[0].length;            // 列数 = 电机数 + 涵道列数
+      const nRotors = rotors.length;
       const G = [Number(params.mass) * Number(params.g), 0, 0, 0];
-      const limits = rotors.map((r) => Math.max(0, Number(r.eta) * Number(r.K)));
       const rank = rank4(B);
 
       if (n < 4 || rank < 4) {
-        return { rho: -Infinity, B, rank, G, limits, details: [], center: [0, 0, 0, 0] };
+        return { rho: -Infinity, B, rank, G, limits, rotorLimits, nRotors, hasDuct: aug.hasDuct, details: [], center: [0, 0, 0, 0] };
       }
 
       const fc = limits.map((v) => v / 2);
@@ -454,17 +468,92 @@
       }
 
       const finite = details.filter((x) => Number.isFinite(x.dj));
-      if (!finite.length) return { rho: -Infinity, B, rank, G, limits, details: [], center };
+      if (!finite.length) return { rho: -Infinity, B, rank, G, limits, rotorLimits, nRotors, hasDuct: aug.hasDuct, details: [], center };
 
       const minD = Math.min(...finite.map((x) => x.dj));
-      // 用最小 signed margin 作为可控性判据：
-      // minD > 0 表示 G 在 Ω 内部；minD = 0 表示边界；minD < 0 表示不可控。
-      // 原 React 版本使用 sign(minD) * min(abs(dj))，在某些外部点恰好落在其它边界超平面上时会显示为 0，容易误判。
       let rho = minD;
       if (Math.abs(rho) < 5e-7) rho = 0;
       finite.sort((a, b) => a.dj - b.dj);
 
-      return { rho, B, rank, G, limits, details: finite, center };
+      return { rho, B, rank, G, limits, rotorLimits, nRotors, hasDuct: aug.hasDuct, details: finite, center };
+    }
+
+    // 三轴力矩裕度：在维持悬停 (Fz = mg) 的前提下，分别沿 ±τx / ±τy / ±τz
+    // 方向从 G 出发，求射线与可达集 Ω 边界的距离。
+    // 每个 3-子集 S 对应一对平行超平面 |ξ·(F - center)| ≤ half，
+    // 求射线 F = G + t·d 与所有超平面带的交集即得 [tMin, tMax]。
+    function computeMomentMargins(rotors, params, duct) {
+      const cg = { x: Number(params.cgx), y: Number(params.cgy), z: Number(params.cgz) };
+      const B0 = buildB(rotors, cg);
+      const rotorLimits = rotors.map((r) => Math.max(0, Number(r.eta) * Number(r.K)));
+      const aug = augmentBWithDuct(B0, rotorLimits, duct);
+      const B = aug.B;
+      const limits = aug.limits;
+      const n = B[0].length;
+      const G = [Number(params.mass) * Number(params.g), 0, 0, 0];
+      const rank = rank4(B);
+
+      const axes = ["mx", "my", "mz"];
+      const dirs = { mx: [0, 1, 0, 0], my: [0, 0, 1, 0], mz: [0, 0, 0, 1] };
+
+      const empty = { pos: NaN, neg: NaN, min: NaN, range: NaN, tMax: NaN, tMin: NaN };
+      const blank = { mx: { ...empty }, my: { ...empty }, mz: { ...empty }, feasible: false, rank, n };
+
+      if (n < 4 || rank < 4) return blank;
+
+      const fc = limits.map((v) => v / 2);
+      const center = matVec(B, fc);
+
+      const tMax = { mx: Infinity, my: Infinity, mz: Infinity };
+      const tMin = { mx: -Infinity, my: -Infinity, mz: -Infinity };
+
+      for (const S of combinations(n, 3)) {
+        let xi = cross4(col(B, S[0]), col(B, S[1]), col(B, S[2]));
+        const nn = norm(xi);
+        if (nn < EPS) continue;
+        xi = xi.map((x) => x / nn);
+
+        const S2 = [];
+        for (let i = 0; i < n; i++) if (!S.includes(i)) S2.push(i);
+
+        let half = 0;
+        for (const idx of S2) half += 0.5 * limits[idx] * Math.abs(dot(xi, col(B, idx)));
+
+        const a = dot(xi, sub(G, center));
+
+        for (const ax of axes) {
+          const b = dot(xi, dirs[ax]);
+          if (Math.abs(b) < EPS) continue;
+          let tUp, tLo;
+          if (b > 0) {
+            tUp = (half - a) / b;
+            tLo = (-half - a) / b;
+          } else {
+            tUp = (-half - a) / b;
+            tLo = (half - a) / b;
+          }
+          if (tUp < tMax[ax]) tMax[ax] = tUp;
+          if (tLo > tMin[ax]) tMin[ax] = tLo;
+        }
+      }
+
+      const result = { feasible: true, rank, n };
+      for (const ax of axes) {
+        const hi = tMax[ax];
+        const lo = tMin[ax];
+        // 收紧 -0
+        const pos = Math.abs(hi) < 5e-7 ? 0 : hi;
+        const neg = Math.abs(-lo) < 5e-7 ? 0 : -lo;
+        result[ax] = {
+          tMax: hi,
+          tMin: lo,
+          pos,                            // +方向裕度
+          neg,                            // -方向裕度（正数）
+          min: Math.min(pos, neg),        // 对称裕度（较小者）
+          range: Number.isFinite(hi) && Number.isFinite(lo) ? hi - lo : NaN
+        };
+      }
+      return result;
     }
 
     function presetHex(layout) {
@@ -504,6 +593,105 @@
       return '<span class="badge badge-red">Uncontrollable</span>';
     }
 
+    function fmtMargin(v) {
+      if (!Number.isFinite(v)) return "—";
+      return fmt(v, 2);
+    }
+
+    function marginClass(v) {
+      if (!Number.isFinite(v)) return "margin-cell margin-na";
+      if (v > EPS) return "margin-cell margin-pos";
+      if (v < -EPS) return "margin-cell margin-neg";
+      return "margin-cell margin-zero";
+    }
+
+    // 带显式 + 号的数字。正数加 "+"，负数已含 "-"，约零显示为 0.00 不加号。
+    function fmtSigned(v, d = 2) {
+      if (!Number.isFinite(v)) return "—";
+      if (Math.abs(v) < 5e-5) return (0).toFixed(d);
+      const s = v.toFixed(d);
+      return v > 0 ? `+${s}` : s;
+    }
+
+    // 显式区间 [τ_min, τ_max]，端点带 ± 号。
+    // 当 tMin > tMax 时说明沿该轴的射线根本不与 Ω 相交（feasible interval = ∅）。
+    function rangeIsEmpty(tMin, tMax) {
+      return Number.isFinite(tMin) && Number.isFinite(tMax) && tMin > tMax + 1e-6;
+    }
+
+    function fmtRange(tMin, tMax, d = 2) {
+      if (!Number.isFinite(tMin) || !Number.isFinite(tMax)) return "—";
+      if (rangeIsEmpty(tMin, tMax)) return "∅ (LP 不可行)";
+      return `[${fmtSigned(tMin, d)},&nbsp;${fmtSigned(tMax, d)}]`;
+    }
+
+    // 区间是否包含 0；包含则该轴 hover 可行。EPS 容差用于浮点判等。
+    function rangeContainsZero(tMin, tMax) {
+      if (!Number.isFinite(tMin) || !Number.isFinite(tMax)) return false;
+      if (rangeIsEmpty(tMin, tMax)) return false;
+      return tMin <= 1e-6 && tMax >= -1e-6;
+    }
+
+    function rangeClass(tMin, tMax) {
+      if (!Number.isFinite(tMin) || !Number.isFinite(tMax)) return "margin-cell margin-na";
+      return rangeContainsZero(tMin, tMax) ? "margin-cell margin-pos" : "margin-cell margin-neg";
+    }
+
+    function marginCardHTML(margins) {
+      if (!margins.feasible) {
+        return `
+          <div class="margin-block">
+            <h3 style="margin-top: 12px;">三轴力矩裕度 / N·m</h3>
+            <div class="notice notice-amber">电机数不足或 Bf 矩阵 rank &lt; 4，无法计算力矩裕度。</div>
+          </div>
+        `;
+      }
+      const axes = [
+        { key: "mx", label: "τx (roll)" },
+        { key: "my", label: "τy (pitch)" },
+        { key: "mz", label: "τz (yaw)" }
+      ];
+      const rows = axes.map((ax) => {
+        const m = margins[ax.key];
+        const contains = rangeContainsZero(m.tMin, m.tMax);
+        const containsBadge = contains
+          ? '<span class="badge badge-green">含 0</span>'
+          : '<span class="badge badge-red">不含 0</span>';
+        // min-side：包含 0 时为正（worst direction 边距），不含 0 时为负（到 0 的距离取负）
+        return `
+          <tr>
+            <td class="mono"><b>${ax.label}</b></td>
+            <td class="right mono ${rangeClass(m.tMin, m.tMax)}">${fmtRange(m.tMin, m.tMax)}</td>
+            <td class="right mono">${fmtSigned(m.tMin)}</td>
+            <td class="right mono">${fmtSigned(m.tMax)}</td>
+            <td>${containsBadge}</td>
+            <td class="right mono ${marginClass(m.min)}"><b>${fmtSigned(m.min)}</b></td>
+          </tr>
+        `;
+      }).join("");
+      return `
+        <div class="margin-block">
+          <h3 style="margin-top: 16px;">三轴力矩裕度 / N·m</h3>
+          <p style="margin-bottom: 8px; font-size: 13px;">在维持 Fz=mg 且其它两轴力矩为 0 的前提下，绕该轴可达的力矩区间 [τ_min, τ_max]。区间 <b>包含 0</b> ⇔ 该轴 hover 可行；<b>不含 0</b> 表示该轴存在不可消除的偏置力矩。最右列 min-side = min(τ_max, −τ_min)：正值代表两侧都有余量（取较小的一侧），负值代表到可行性边界的距离。</p>
+          <div class="table-wrap">
+            <table class="margin-table">
+              <thead>
+                <tr>
+                  <th>轴</th>
+                  <th class="right">可达区间 [τ_min, τ_max] / N·m</th>
+                  <th class="right">τ_min</th>
+                  <th class="right">τ_max</th>
+                  <th>含 0?</th>
+                  <th class="right">min-side<br/>= min(τ_max, −τ_min)</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
     function escapeHTML(value) {
       return String(value)
         .replace(/&/g, "&amp;")
@@ -541,13 +729,51 @@
 
     // CG 扫描参数。界面使用 mm，计算时换算为 m。
     // 默认：x = 400..900 mm，y = -200..200 mm，步长 10 mm。
+    // metric: rho / mx / my / mz —— 决定热力图显示哪个指标。
+    // includeDuctFailure: 是否把涵道失效加入扫描场景。
     let scanParams = {
       xMinMm: 400,
       xMaxMm: 900,
       yMinMm: -200,
       yMaxMm: 200,
-      stepMm: 10
+      stepMm: 10,
+      metric: "rho",
+      includeDuctFailure: false
     };
+
+    // 水平涵道：作为一个双向辅助力矩源 u ∈ [-maxTorque, +maxTorque]，
+    // 对所选轴贡献力矩，不影响 Fz。
+    // 在 B 中通过添加两根反向列 (+d, -d) 各以 [0, maxTorque] 为上界实现 [-x, +x] 段。
+    // 默认轴：τz (yaw)，与典型水平涵道偏航增强用途一致。
+    let duct = {
+      enabled: false,
+      axis: "tauz",      // taux / tauy / tauz
+      maxTorque: 200     // N·m
+    };
+
+    const DUCT_AXIS_VEC = {
+      taux: [0, 1, 0, 0],
+      tauy: [0, 0, 1, 0],
+      tauz: [0, 0, 0, 1]
+    };
+
+    const DUCT_AXIS_LABEL = {
+      taux: "τx (roll)",
+      tauy: "τy (pitch)",
+      tauz: "τz (yaw)"
+    };
+
+    function ductActive(d) {
+      return d && d.enabled && Number.isFinite(d.maxTorque) && d.maxTorque > 0;
+    }
+
+    function augmentBWithDuct(B, limits, d) {
+      if (!ductActive(d)) return { B, limits, hasDuct: false };
+      const vec = DUCT_AXIS_VEC[d.axis] || DUCT_AXIS_VEC.tauz;
+      const Bnew = B.map((row, r) => [...row, vec[r], -vec[r]]);
+      const limitsNew = [...limits, d.maxTorque, d.maxTorque];
+      return { B: Bnew, limits: limitsNew, hasDuct: true };
+    }
 
     function updateParam(key, value) {
       const num = Number(value);
@@ -569,10 +795,32 @@
     }
 
     function updateScanParam(key, value) {
+      if (key === "metric") {
+        scanParams = { ...scanParams, metric: String(value) };
+        render();
+        return;
+      }
+      if (key === "includeDuctFailure") {
+        scanParams = { ...scanParams, includeDuctFailure: String(value) === "1" || value === true };
+        render();
+        return;
+      }
       let num = Number(value);
       if (!Number.isFinite(num)) num = scanParams[key];
       if (key === "stepMm") num = Math.max(1, Math.abs(num));
       scanParams = { ...scanParams, [key]: num };
+      render();
+    }
+
+    function updateDuct(key, value) {
+      if (key === "enabled") {
+        duct = { ...duct, enabled: String(value) === "1" || value === true };
+      } else if (key === "axis") {
+        duct = { ...duct, axis: String(value) };
+      } else if (key === "maxTorque") {
+        const num = Number(value);
+        duct = { ...duct, maxTorque: Number.isFinite(num) ? Math.max(0, num) : 0 };
+      }
       render();
     }
 
@@ -720,33 +968,55 @@
         .join("\n");
     }
 
+    function colName(idx, out) {
+      const nR = out.nRotors != null ? out.nRotors : rotors.length;
+      if (idx < nR) return rotors[idx] ? rotors[idx].name : `?${idx}`;
+      if (idx === nR) return "Duct+";
+      if (idx === nR + 1) return "Duct-";
+      return `?${idx}`;
+    }
+
     function detailRows(out) {
       return out.details.slice(0, 8).map((it) => `
         <tr>
-          <td class="mono">${it.S.map((x) => escapeHTML(rotors[x].name)).join(", ")}</td>
-          <td class="mono">${it.S2.map((x) => escapeHTML(rotors[x].name)).join(", ")}</td>
+          <td class="mono">${it.S.map((x) => escapeHTML(colName(x, out))).join(", ")}</td>
+          <td class="mono">${it.S2.map((x) => escapeHTML(colName(x, out))).join(", ")}</td>
           <td class="right mono">${fmt(it.dj)}</td>
         </tr>
       `).join("");
     }
 
     function scanCasesForRotors(baseRotors) {
-      const cases = [{ label: "正常", data: baseRotors }];
+      const cases = [{ label: "正常", data: baseRotors, ductOverride: null }];
       baseRotors.forEach((r, i) => {
         cases.push({
           label: `桨 ${r.name} 失效`,
-          data: baseRotors.map((x, idx) => idx === i ? { ...x, eta: 0 } : x)
+          data: baseRotors.map((x, idx) => idx === i ? { ...x, eta: 0 } : x),
+          ductOverride: null
         });
       });
       return cases;
     }
 
-    function computeWorstCaseRho(baseRotors, p) {
+    // metric 取值：rho / mx / my / mz
+    function evalMetric(rotorsArr, p, metric, d) {
+      if (metric === "rho") return computeRho(rotorsArr, p, d).rho;
+      const m = computeMomentMargins(rotorsArr, p, d);
+      if (!m.feasible) return -Infinity;
+      return m[metric].min;  // 对称裕度 min(+方向, -方向)
+    }
+
+    function computeWorstCaseMetric(baseRotors, p, metric) {
       const cases = scanCasesForRotors(baseRotors);
-      let worst = { rho: Infinity, label: "" };
+      // 如启用了涵道，按扫描设置决定是否加入"涵道失效"场景
+      if (ductActive(duct) && scanParams.includeDuctFailure) {
+        cases.push({ label: "涵道失效", data: baseRotors, ductOverride: { ...duct, enabled: false } });
+      }
+      let worst = { value: Infinity, label: "" };
       for (const c of cases) {
-        const rho = computeRho(c.data, p).rho;
-        if (rho < worst.rho) worst = { rho, label: c.label };
+        const useDuct = c.ductOverride !== null ? c.ductOverride : duct;
+        const v = evalMetric(c.data, p, metric, useDuct);
+        if (v < worst.value) worst = { value: v, label: c.label };
       }
       return worst;
     }
@@ -779,14 +1049,16 @@
       let positiveCount = 0;
       let nonFiniteCount = 0;
 
+      const metric = scanParams.metric || "rho";
+
       for (let yi = ys.length - 1; yi >= 0; yi--) {
         const y = ys[yi];
         const row = [];
         for (const x of xs) {
           const p = { ...params, cgx: x / 1000, cgy: y / 1000 };
-          // 每个扫描点的热力图值定义为：正常 + 所有单桨失效场景中的最小 rho。
-          const worstCase = computeWorstCaseRho(rotors, p);
-          const rho = worstCase.rho;
+          // 每个扫描点的热力图值定义为：正常 + 所有单桨失效场景中的最小指标值。
+          const worstCase = computeWorstCaseMetric(rotors, p, metric);
+          const rho = worstCase.value;
           const caseLabel = worstCase.label;
           row.push({ x, y, rho, caseLabel });
           if (Number.isFinite(rho)) {
@@ -811,8 +1083,8 @@
       if (!values.length) {
         min = -Infinity;
         max = -Infinity;
-        best = { rho: -Infinity, x: NaN, y: NaN, caseLabel: "rank 不足 / 无有限 rho" };
-        worst = { rho: -Infinity, x: NaN, y: NaN, caseLabel: "rank 不足 / 无有限 rho" };
+        best = { rho: -Infinity, x: NaN, y: NaN, caseLabel: "rank 不足 / 无有限值" };
+        worst = { rho: -Infinity, x: NaN, y: NaN, caseLabel: "rank 不足 / 无有限值" };
       }
 
       const posMin = positiveValues.length ? Math.min(...positiveValues) : NaN;
@@ -833,6 +1105,7 @@
         posMin,
         posMax,
         negAbsMax,
+        metric,
         maxAbs: Math.max(1, ...values.map((v) => Math.abs(v)))
       };
     }
@@ -854,7 +1127,9 @@
 
       const cells = scan.rows.map((row, r) => row.map((pt, c) => {
         const fill = colorForRho(pt.rho, scan);
-        const title = `x=${pt.x} mm, y=${pt.y} mm, 最小ρ=${fmt(pt.rho, 4)}, 限制场景=${pt.caseLabel}`;
+        const metricName = scan.metric === "rho" ? "最小ρ" : `最小 ${scan.metric}`;
+        const unit = scan.metric === "rho" ? "" : " N·m";
+        const title = `x=${pt.x} mm, y=${pt.y} mm, ${metricName}=${fmt(pt.rho, 4)}${unit}, 限制场景=${pt.caseLabel}`;
         return `<rect x="${left + c * cell}" y="${top + r * cell}" width="${cell + 0.1}" height="${cell + 0.1}" fill="${fill}"><title>${escapeHTML(title)}</title></rect>`;
       }).join("")).join("");
 
@@ -874,17 +1149,20 @@
       const barW = 16;
       const negBarY = top + 20;
       const posBarY = negBarY + barH + 60;
+      const metricUnit = scan.metric === "rho" ? "" : " N·m";
+      const negLabel = scan.metric === "rho" ? "不可解 ρ<0" : `负裕度 ${scan.metric}<0`;
+      const posLabel = scan.metric === "rho" ? "有解 ρ>0" : `正裕度 ${scan.metric}>0`;
       const negBottomLabel = scan.negAbsMax > EPS ? `-${fmt(scan.negAbsMax, 2)}` : "无<0";
       const posTopLabel = scan.posMax > EPS ? fmt(scan.posMax, 2) : "无>0";
       const negFill = scan.negAbsMax > EPS ? "url(#negRhoBar)" : "#f8fafc";
       const posFill = scan.posMax > EPS ? "url(#posRhoBar)" : "#f8fafc";
       const colorBars = `
         <g>
-          <text x="${barX - 6}" y="${negBarY - 8}" font-size="11" font-weight="900" fill="#334155">不可解 ρ&lt;0</text>
+          <text x="${barX - 6}" y="${negBarY - 8}" font-size="11" font-weight="900" fill="#334155">${negLabel}${metricUnit}</text>
           <rect x="${barX}" y="${negBarY}" width="${barW}" height="${barH}" rx="3" fill="${negFill}" stroke="#94a3b8" />
           <text x="${barX + barW + 6}" y="${negBarY + 4}" font-size="10" fill="#475569">0</text>
           <text x="${barX + barW + 6}" y="${negBarY + barH + 4}" font-size="10" fill="#475569">${negBottomLabel}</text>
-          <text x="${barX - 6}" y="${posBarY - 8}" font-size="11" font-weight="900" fill="#334155">有解 ρ&gt;0</text>
+          <text x="${barX - 6}" y="${posBarY - 8}" font-size="11" font-weight="900" fill="#334155">${posLabel}${metricUnit}</text>
           <rect x="${barX}" y="${posBarY}" width="${barW}" height="${barH}" rx="3" fill="${posFill}" stroke="#94a3b8" />
           <text x="${barX + barW + 6}" y="${posBarY + 4}" font-size="10" fill="#475569">${posTopLabel}</text>
           <text x="${barX + barW + 6}" y="${posBarY + barH + 4}" font-size="10" fill="#475569">0</text>
@@ -923,7 +1201,7 @@
             </linearGradient>
           </defs>
           <rect x="0" y="0" width="${w}" height="${h}" fill="#ffffff" />
-          <text x="${left}" y="18" font-size="13" font-weight="900" fill="#334155">鲁棒最小 ρ 热力图：正常 + 单桨失效取最小值</text>
+          <text x="${left}" y="18" font-size="13" font-weight="900" fill="#334155">${escapeHTML(metricTitle(scan.metric))}</text>
           ${cells}
           <rect x="${left}" y="${top}" width="${heatW}" height="${heatH}" fill="none" stroke="#334155" stroke-width="1" />
           ${marker}
@@ -936,33 +1214,94 @@
       `;
     }
 
+    function ductSectionHTML() {
+      const active = ductActive(duct);
+      const statusLine = active
+        ? `<span class="badge badge-green">已启用</span>　轴：<b>${escapeHTML(DUCT_AXIS_LABEL[duct.axis])}</b>　力矩范围：<b>[-${fmt(duct.maxTorque, 2)}, +${fmt(duct.maxTorque, 2)}] N·m</b>`
+        : `<span class="badge badge-amber">未启用</span>　涵道关闭，B 矩阵仅由电机组成。`;
+      return `
+        <section class="card">
+          <h2>水平涵道（辅助力矩源）</h2>
+          <p style="margin-bottom: 16px;">把涵道建模为<b>双向控制变量</b> u ∈ [-x, +x] N·m，仅对所选轴贡献力矩，不进入 Fz 通道。等价地在 B 中加入两根反向列 (+d, −d)，各以 [0, x] 为上界，二者 Minkowski 和恰好给出 [-x, +x] 段。所有的 ρ、三轴力矩裕度、热力图、失效场景都会立即考虑涵道贡献。</p>
+          <div class="grid grid-4">
+            <label>启用涵道
+              <select data-kind="duct" data-key="enabled">
+                <option value="0" ${duct.enabled ? "" : "selected"}>关闭</option>
+                <option value="1" ${duct.enabled ? "selected" : ""}>启用</option>
+              </select>
+            </label>
+            <label>力矩轴
+              <select data-kind="duct" data-key="axis">
+                <option value="taux" ${duct.axis === "taux" ? "selected" : ""}>τx (roll)</option>
+                <option value="tauy" ${duct.axis === "tauy" ? "selected" : ""}>τy (pitch)</option>
+                <option value="tauz" ${duct.axis === "tauz" ? "selected" : ""}>τz (yaw)</option>
+              </select>
+            </label>
+            <label>最大力矩 x / N·m
+              <input data-kind="duct" data-key="maxTorque" type="number" step="10" min="0" value="${escapeHTML(duct.maxTorque)}" />
+            </label>
+            <label>扫描涵道失效场景
+              <select data-kind="scan" data-key="includeDuctFailure">
+                <option value="0" ${scanParams.includeDuctFailure ? "" : "selected"}>否</option>
+                <option value="1" ${scanParams.includeDuctFailure ? "selected" : ""}>是（更保守）</option>
+              </select>
+            </label>
+          </div>
+          <div class="notice ${active ? "notice-blue" : "notice-amber"}" style="margin-top: 16px;">${statusLine}</div>
+        </section>
+      `;
+    }
+
+    function metricTitle(metric) {
+      if (metric === "rho") return "鲁棒最小 ρ 热力图：正常 + 单桨失效取最小值";
+      const map = { mx: "τx (roll)", my: "τy (pitch)", mz: "τz (yaw)" };
+      return `鲁棒最小 ${metric} 力矩裕度热力图 / N·m：正常 + 单桨失效取最小值（${map[metric]} 方向对称裕度 min(+,-)）`;
+    }
+
+    function metricUnitText(metric) {
+      return metric === "rho" ? "" : " N·m";
+    }
+
     function heatmapSectionHTML(scan) {
       const rate = scan.total > 0 ? 100 * scan.positiveCount / scan.total : 0;
-      const positiveRangeText = scan.posMax > EPS ? `${fmt(scan.posMin)} ~ ${fmt(scan.posMax)}` : "无 ρ>0 点";
+      const unit = metricUnitText(scan.metric);
+      const metricLabel = scan.metric === "rho" ? "ρ" : scan.metric;
+      const positiveRangeText = scan.posMax > EPS ? `${fmt(scan.posMin)} ~ ${fmt(scan.posMax)}${unit}` : `无 ${metricLabel}>0 点`;
+      const descByMetric = scan.metric === "rho"
+        ? "热力图显示其中最小的 ρ。"
+        : `热力图显示其中最小的 ${metricLabel} 对称力矩裕度 min(${metricLabel}⁺, ${metricLabel}⁻)（单位 N·m）—— 即在维持悬停 Fz=mg 且其它两轴力矩为零的前提下，绕该轴还能输出的最小力矩裕度。`;
       return `
         <section class="card">
           <h2>CG x-y 扫描热力图</h2>
-          <p style="margin-bottom: 16px;">每个网格点会计算 7 种场景：正常无故障 + 6 个单桨失效；热力图显示其中最小的 ρ。扫描时只改变质心 x/y，单位为 mm；计算时自动换算成 m。z、质量、电机坐标、转向、η、kμ、倾角、每桨 K 都保持当前表格值。鼠标悬停在色块上可看对应 x/y/最小ρ/限制场景。ρ&lt;0 和 ρ&gt;0 分别使用两个独立 colorbar，其中有解区域 ρ&gt;0 会单独按自身范围着色。</p>
+          <p style="margin-bottom: 16px;">每个网格点会计算 7 种场景：正常无故障 + 6 个单桨失效。${descByMetric}扫描时只改变质心 x/y（mm，自动换算成 m），其它参数保持当前表格值。鼠标悬停色块可看具体 x/y/指标值/限制场景。负值与正值分别使用独立 colorbar 归一化。</p>
           <div class="grid grid-4">
             ${scanField("xMinMm", "x 最小 / mm")}
             ${scanField("xMaxMm", "x 最大 / mm")}
             ${scanField("yMinMm", "y 最小 / mm")}
             ${scanField("yMaxMm", "y 最大 / mm")}
             ${scanField("stepMm", "步长 / mm")}
+            <label>热力图指标
+              <select data-kind="scan" data-key="metric">
+                <option value="rho" ${scan.metric === "rho" ? "selected" : ""}>ρ (ACAI / 控制可达裕度)</option>
+                <option value="mx" ${scan.metric === "mx" ? "selected" : ""}>mx 力矩裕度 / N·m (roll)</option>
+                <option value="my" ${scan.metric === "my" ? "selected" : ""}>my 力矩裕度 / N·m (pitch)</option>
+                <option value="mz" ${scan.metric === "mz" ? "selected" : ""}>mz 力矩裕度 / N·m (yaw)</option>
+              </select>
+            </label>
           </div>
           <div class="metric-grid">
-            <div class="metric"><div class="label">最大最小ρ / 最优 CG</div><div class="value">${fmt(scan.best.rho)} @ (${fmt(scan.best.x, 0)}, ${fmt(scan.best.y, 0)}) mm</div></div>
-            <div class="metric"><div class="label">最小最小ρ / 最差 CG</div><div class="value">${fmt(scan.worst.rho)} @ (${fmt(scan.worst.x, 0)}, ${fmt(scan.worst.y, 0)}) mm</div></div>
-            <div class="metric"><div class="label">最小ρ 范围</div><div class="value">${fmt(scan.min)} ~ ${fmt(scan.max)}</div></div>
-            <div class="metric"><div class="label">有解ρ&gt;0 范围</div><div class="value">${positiveRangeText}</div></div>
-            <div class="metric"><div class="label">鲁棒ρ &gt; 0 比例</div><div class="value">${fmt(rate, 1)}%</div></div>
+            <div class="metric"><div class="label">最优 CG（指标最大）</div><div class="value">${fmt(scan.best.rho)}${unit} @ (${fmt(scan.best.x, 0)}, ${fmt(scan.best.y, 0)}) mm</div></div>
+            <div class="metric"><div class="label">最差 CG（指标最小）</div><div class="value">${fmt(scan.worst.rho)}${unit} @ (${fmt(scan.worst.x, 0)}, ${fmt(scan.worst.y, 0)}) mm</div></div>
+            <div class="metric"><div class="label">指标范围</div><div class="value">${fmt(scan.min)} ~ ${fmt(scan.max)}${unit}</div></div>
+            <div class="metric"><div class="label">${metricLabel}&gt;0 范围</div><div class="value">${positiveRangeText}</div></div>
+            <div class="metric"><div class="label">${metricLabel}&gt;0 比例</div><div class="value">${fmt(rate, 1)}%</div></div>
             <div class="metric"><div class="label">非有限点</div><div class="value">${scan.nonFiniteCount}</div></div>
           </div>
           <div class="heatmap-scroll" style="margin-top: 16px;">${heatmapSVG(scan)}</div>
           <div class="legend-row">
-            <span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#fef3c7,#b91c1c)"></span>最小ρ&lt;0：不可解区，按负值范围着色</span>
-            <span class="legend-chip"><span class="legend-swatch" style="background:#fef3c7"></span>最小ρ≈0：最差场景在边界</span>
-            <span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#dcfce7,#2563eb)"></span>最小ρ&gt;0：有解区，使用独立 colorbar</span>
+            <span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#fef3c7,#b91c1c)"></span>${metricLabel}&lt;0：失效/不可行区，按负值范围着色</span>
+            <span class="legend-chip"><span class="legend-swatch" style="background:#fef3c7"></span>${metricLabel}≈0：最差场景在边界</span>
+            <span class="legend-chip"><span class="legend-swatch" style="background:linear-gradient(90deg,#dcfce7,#2563eb)"></span>${metricLabel}&gt;0：有裕度区，使用独立 colorbar</span>
             <span class="legend-chip">黑色十字：当前全局 CG</span>
           </div>
         </section>
@@ -970,26 +1309,40 @@
     }
 
     function faultRowsHTML() {
-      const rows = [{ label: "No fault / current η", data: rotors }];
-      rotors.forEach((r, i) => rows.push({ label: `η${r.name}=0`, data: rotors.map((x, idx) => idx === i ? { ...x, eta: 0 } : x) }));
-      return rows.map((row) => ({ ...row, out: computeRho(row.data, params) }))
-        .map((row) => `
+      const rows = [{ label: "No fault / current η", data: rotors, useDuct: duct }];
+      rotors.forEach((r, i) => rows.push({
+        label: `η${r.name}=0`,
+        data: rotors.map((x, idx) => idx === i ? { ...x, eta: 0 } : x),
+        useDuct: duct
+      }));
+      if (ductActive(duct)) {
+        rows.push({ label: "涵道失效 (duct off)", data: rotors, useDuct: { ...duct, enabled: false } });
+      }
+      return rows.map((row) => {
+        const out = computeRho(row.data, params, row.useDuct);
+        const m = computeMomentMargins(row.data, params, row.useDuct);
+        const cell = (a) => `<span class="${rangeClass(a.tMin, a.tMax)}">${fmtRange(a.tMin, a.tMax)}</span>`;
+        return `
           <tr>
             <td class="mono">${escapeHTML(row.label)}</td>
-            <td class="right mono">${fmt(row.out.rho)}</td>
-            <td>${badgeHTML(row.out.rho)}</td>
-            <td style="color: var(--slate-600);">${row.out.rho > 0 ? "仍有正余量" : row.out.rho === 0 ? "处于边界" : "不可正可控"}</td>
+            <td class="right mono">${fmt(out.rho)}</td>
+            <td>${badgeHTML(out.rho)}</td>
+            <td class="right mono">${cell(m.mx)}</td>
+            <td class="right mono">${cell(m.my)}</td>
+            <td class="right mono">${cell(m.mz)}</td>
           </tr>
-        `).join("");
+        `;
+      }).join("");
     }
 
     function render() {
-      const out = computeRho(rotors, params);
+      const out = computeRho(rotors, params, duct);
+      const margins = computeMomentMargins(rotors, params, duct);
       const scan = scanRhoGrid();
-      const totalThrust = out.limits.reduce((a, b) => a + b, 0);
-      const verticalCapacity = out.limits.reduce((sum, lim, i) => {
-        const theta = deg2rad(Number(rotors[i].tiltDeg) || 0);
-        return sum + lim * Math.cos(theta);
+      const totalThrust = rotors.reduce((s, r) => s + Math.max(0, Number(r.eta) * Number(r.K)), 0);
+      const verticalCapacity = rotors.reduce((sum, r) => {
+        const theta = deg2rad(Number(r.tiltDeg) || 0);
+        return sum + Math.max(0, Number(r.eta) * Number(r.K)) * Math.cos(theta);
       }, 0);
       const maxXY = Math.max(0.1, ...rotors.flatMap((r) => [Math.abs(Number(r.x) - Number(params.cgx)), Math.abs(Number(r.y) - Number(params.cgy))]));
       const scale = 175 / maxXY;
@@ -1023,6 +1376,7 @@
                 <h2>判定规则</h2>
                 <div class="rho-box">当前正常 ρ(G, ∂Ω) = ${fmt(out.rho)}</div>
                 <div class="status-box ${statusClass}">${statusText}</div>
+                ${marginCardHTML(margins)}
               </div>
             </section>
 
@@ -1055,6 +1409,8 @@
               </div>
             </section>
 
+            ${ductSectionHTML()}
+
             ${heatmapSectionHTML(scan)}
 
             <section class="grid main-grid">
@@ -1073,7 +1429,7 @@
               <div class="card">
                 <h2>布局俯视图</h2>
                 <div class="svg-wrap">${layoutSVG(scale, maxK)}</div>
-                <div class="notice notice-blue" style="margin-top: 16px;">电机数 n=<b>${rotors.length}</b>；Bf rank=<b>${out.rank}</b>；ΣηK=<b>${fmt(totalThrust, 3)} N</b>；ΣηKcosθ=<b>${fmt(verticalCapacity, 3)} N</b>；mg=<b>${fmt(out.G[0], 3)} N</b></div>
+                <div class="notice notice-blue" style="margin-top: 16px;">电机数 n=<b>${rotors.length}</b>；B rank=<b>${out.rank}</b>；ΣηK=<b>${fmt(totalThrust, 3)} N</b>；ΣηKcosθ=<b>${fmt(verticalCapacity, 3)} N</b>；mg=<b>${fmt(out.G[0], 3)} N</b>${out.hasDuct ? `；涵道：<b>${escapeHTML(DUCT_AXIS_LABEL[duct.axis])} ±${fmt(duct.maxTorque, 2)} N·m</b>` : "；涵道：<b>未启用</b>"}</div>
               </div>
 
               <div class="card">
@@ -1089,10 +1445,10 @@
 
             <section class="card">
               <h2>单电机失效扫描</h2>
-              <p style="margin-bottom: 16px;">自动把每个电机分别设为 ηᵢ=0，其余电机保持当前 η，计算对应的 ρ。</p>
+              <p style="margin-bottom: 16px;">把每个电机分别设为 ηᵢ=0，其余电机保持当前 η，计算对应的 ρ 以及三轴可达力矩区间 [τ_min, τ_max]（在维持 Fz=mg 且其它两轴力矩=0 时）。<b>区间含 0</b>（绿色）⇔ 该轴 hover 可行；<b>不含 0</b>（红色）表示该轴存在不可消除的偏置力矩。</p>
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>场景</th><th class="right">ρ</th><th>判定</th><th>备注</th></tr></thead>
+                  <thead><tr><th>场景</th><th class="right">ρ</th><th>判定</th><th class="right">τx range / N·m</th><th class="right">τy range / N·m</th><th class="right">τz range / N·m</th></tr></thead>
                   <tbody>${faultRowsHTML()}</tbody>
                 </table>
               </div>
@@ -1115,6 +1471,10 @@
 
       document.querySelectorAll('[data-kind="scan"]').forEach((el) => {
         el.addEventListener("change", (e) => updateScanParam(e.target.dataset.key, e.target.value));
+      });
+
+      document.querySelectorAll('[data-kind="duct"]').forEach((el) => {
+        el.addEventListener("change", (e) => updateDuct(e.target.dataset.key, e.target.value));
       });
 
       const presetSelect = document.getElementById("presetSelect");
