@@ -147,20 +147,14 @@ svg text { font-family: var(--font-sans); }
     <button data-preset="hex_plus">Hex + (star)</button>
     <button data-preset="stretched">Non-standard (stretched)</button>
     <button data-preset="h_frame">H frame</button>
+    <button data-preset="h_frame_xplane">H frame Xplane</button>
   </div>
 
-  <div style="display: grid; grid-template-columns: minmax(0, 280px) minmax(0, 1fr); gap: 1rem; margin-bottom: 1rem;">
+  <div style="display: grid; grid-template-columns: minmax(0, 430px) minmax(0, 1fr); gap: 1rem; margin-bottom: 1rem;">
     <div>
-      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">Motor positions & spin</div>
+      <div id="input-title" style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">Motor positions & spin</div>
       <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-        <thead>
-          <tr style="color: var(--color-text-secondary);">
-            <th style="text-align: left; padding: 4px;">M</th>
-            <th style="text-align: left; padding: 4px;">x</th>
-            <th style="text-align: left; padding: 4px;">y</th>
-            <th style="text-align: left; padding: 4px;">spin</th>
-          </tr>
-        </thead>
+        <thead id="motor-thead"></thead>
         <tbody id="motor-tbody"></tbody>
       </table>
       <div style="margin-top: 8px; font-size: 13px; display: flex; gap: 10px; align-items: center;">
@@ -169,7 +163,7 @@ svg text { font-family: var(--font-sans); }
       </div>
     </div>
     <div>
-      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">Top view (x forward ↑, y right →)</div>
+      <div id="diagram-title" style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">Top view (x forward ↑, y right →)</div>
       <svg id="diagram" viewBox="-1.2 -1.2 2.4 2.4" style="width: 100%; height: 260px; background: var(--color-background-secondary); border-radius: var(--border-radius-md);"></svg>
     </div>
   </div>
@@ -198,9 +192,25 @@ svg text { font-family: var(--font-sans); }
 
 <script>
 (function(){
+  /*
+    Two coordinate conventions are handled separately:
+
+    1) PX4 / conventional presets:
+       x = forward, y = right.
+       Matrix rows: Roll (+X), Pitch (+Y), Yaw (+Z), T.
+
+    2) H frame Xplane:
+       Inputs remain Plane Maker arms:
+       long_arm -> X-Plane body Z   (+Z = aft/tail, -Z = nose/forward)
+       lat_arm  -> X-Plane body X   (+X = right)
+       vert_arm -> X-Plane body Y   (+Y = up)
+       Matrix rows: Roll (-Z), Pitch (+X), Yaw (+Y), T.
+  */
+
   const PRESETS = {
     hex_x: {
       name: 'Hex X',
+      mode: 'px4_xy',
       Ct: 1, Cm: 0.05,
       motors: [
         {x: 0.00,  y:  1.00, dir: -1, name: 'right'},
@@ -213,6 +223,7 @@ svg text { font-family: var(--font-sans); }
     },
     hex_plus: {
       name: 'Hex + (star, one arm forward)',
+      mode: 'px4_xy',
       Ct: 1, Cm: 0.05,
       motors: [
         {x: 1.00,  y: 0.00,   dir: -1, name: 'front'},
@@ -225,6 +236,7 @@ svg text { font-family: var(--font-sans); }
     },
     stretched: {
       name: 'Stretched hex',
+      mode: 'px4_xy',
       Ct: 1, Cm: 0.05,
       motors: [
         {x: 1.20, y: 0.35, dir: -1, name: 'front-right'},
@@ -236,20 +248,36 @@ svg text { font-family: var(--font-sans); }
       ]
     },
     h_frame: {
-      name: 'H frame (two rails of three)',
+      name: 'H frame',
+      mode: 'px4_xy',
       Ct: 1, Cm: 0.05,
       motors: [
-        {x: 0.60, y:  0.40, dir:  1, name: 'front-right'},
-        {x: 0.60, y: -0.40, dir: -1, name: 'front-left'},
-        {x: 0.00, y:  0.40, dir: -1, name: 'mid-right'},
-        {x: 0.00, y: -0.40, dir:  1, name: 'mid-left'},
-        {x:-0.60, y:  0.40, dir:  1, name: 'rear-right'},
-        {x:-0.60, y: -0.40, dir: -1, name: 'rear-left'},
+        {x:-5.00, y: -4.33, dir:  1, name: 'motor_1'},
+        {x: 0.00, y: -4.33, dir: -1, name: 'motor_2'},
+        {x: 5.00, y: -4.33, dir: -1, name: 'motor_3'},
+        {x: 5.00, y:  4.33, dir:  1, name: 'motor_4'},
+        {x: 0.00, y:  4.33, dir:  1, name: 'motor_5'},
+        {x:-5.00, y:  4.33, dir: -1, name: 'motor_6'},
+      ]
+    },
+    h_frame_xplane: {
+      name: 'H frame Xplane (Plane Maker arms)',
+      mode: 'xplane_pm',
+      Ct: 1, Cm: 0.05,
+      motors: [
+        // User-supplied Plane Maker motor arms.
+        // Spin sequence: M1 CCW, then CW/CCW alternating by motor number.
+        {long_arm: -5.00, lat_arm: -4.33, vert_arm: 0.50, dir:  1, name: 'motor_1'},
+        {long_arm:  0.00, lat_arm: -4.33, vert_arm: 0.50, dir: -1, name: 'motor_2'},
+        {long_arm:  5.00, lat_arm: -4.33, vert_arm: 0.50, dir:  1, name: 'motor_3'},
+        {long_arm:  5.00, lat_arm:  4.33, vert_arm: 0.50, dir: -1, name: 'motor_4'},
+        {long_arm:  0.00, lat_arm:  4.33, vert_arm: 0.50, dir:  1, name: 'motor_5'},
+        {long_arm: -5.00, lat_arm:  4.33, vert_arm: 0.50, dir: -1, name: 'motor_6'},
       ]
     }
   };
 
-  let state = JSON.parse(JSON.stringify(PRESETS.hex_x));
+  let state = JSON.parse(JSON.stringify(PRESETS.h_frame_xplane));
 
   const mz = (r,c)=>Array.from({length:r},()=>Array(c).fill(0));
   function matmul(A,B){const r=A.length,k=A[0].length,c=B[0].length;const R=mz(r,c);for(let i=0;i<r;i++)for(let j=0;j<c;j++){let s=0;for(let t=0;t<k;t++)s+=A[i][t]*B[t][j];R[i][j]=s;}return R;}
@@ -267,16 +295,56 @@ svg text { font-family: var(--font-sans); }
   }
   function pinv(A){const AT=transp(A);const AAT=matmul(A,AT);const inv=invN(AAT);if(!inv) return null;return matmul(AT,inv);}
 
+  const f=(v,p=3)=>{const r=Math.abs(v)<1e-9?0:v;return r.toFixed(p).replace(/-0\.000/,'0.000');};
+  const isXplane=()=>state.mode==='xplane_pm';
+
+  function axisInfo(){
+    if(isXplane()){
+      return {
+        rows: ['Roll (-Z)','Pitch (+X)','Yaw (+Y)','T'],
+        cols: ['u_r','u_p','u_y','u_t'],
+        vector: '[Roll (-Z), Pitch (+X), Yaw (+Y), T]ᵀ',
+        note: 'X-Plane body axes: +X right, +Y up, +Z aft/tail. Nose/forward is −Z, so controls are labelled Roll (−Z), Pitch (+X), Yaw (+Y).',
+        diagramTitle: 'X-Plane body axes top view: +X right →, +Z aft/tail ↓, nose = −Z ↑, +Y up',
+        inputTitle: 'Plane Maker motor arms & spin'
+      };
+    }
+    return {
+      rows: ['Roll (+X)','Pitch (+Y)','Yaw (+Z)','T'],
+      cols: ['u_r','u_p','u_y','u_t'],
+      vector: '[Roll (+X), Pitch (+Y), Yaw (+Z), T]ᵀ',
+      note: 'PX4/conventional body axes used by these presets: +X forward, +Y right, +Z yaw axis. The matrix rows are explicit control-axis labels.',
+      diagramTitle: 'Top view: +X forward ↑, +Y right →',
+      inputTitle: 'Motor positions & spin'
+    };
+  }
+
+  function bodyXYZ(m){
+    return {X:+m.lat_arm||0, Y:+m.vert_arm||0, Z:+m.long_arm||0};
+  }
+
   function compute(){
     const n=state.motors.length;
     const {Ct,Cm}=state;
     const A=mz(4,n);
     for(let i=0;i<n;i++){
-      const {x,y,dir}=state.motors[i];
-      A[0][i]=-y*Ct;
-      A[1][i]= x*Ct;
-      A[2][i]= dir*Cm;
-      A[3][i]= Ct;
+      const m=state.motors[i];
+      if(isXplane()){
+        const b=bodyXYZ(m);
+        // X-Plane labels: Roll is around -Z, Pitch around +X, Yaw around +Y.
+        // With thrust along +Y: torque r×F gives torque around +X = -Z*T and around +Z = +X*T.
+        // Therefore Roll(-Z) = -(torque around +Z) = -X*T, and Pitch(+X) = torque around +X = -Z*T.
+        A[0][i]=-b.X*Ct;        // Roll (-Z)
+        A[1][i]=-b.Z*Ct;        // Pitch (+X)
+        A[2][i]=m.dir*Cm;       // Yaw (+Y), CCW = +1, CW = -1
+        A[3][i]=Ct;
+      } else {
+        const x=+m.x||0, y=+m.y||0;
+        A[0][i]=-y*Ct;          // Roll (+X)
+        A[1][i]= x*Ct;          // Pitch (+Y)
+        A[2][i]=m.dir*Cm;       // Yaw (+Z)
+        A[3][i]=Ct;
+      }
     }
     const Ap=pinv(A);
     if(!Ap) return {A,Ap:null};
@@ -293,7 +361,6 @@ svg text { font-family: var(--font-sans); }
     return {A,Ap,M,rMax,pMax,yMax,tMax,rpScale};
   }
 
-  const f=(v,p=3)=>{const r=Math.abs(v)<1e-9?0:v;return r.toFixed(p).replace(/-0\.000/,'0.000');};
   function matTable(M,rowLabels,colLabels,cls=''){
     let h='<table class="mat '+cls+'">';
     if(colLabels){h+='<tr><td class="lbl"></td>';for(const c of colLabels)h+='<td class="lbl">'+c+'</td>';h+='</tr>';}
@@ -301,22 +368,64 @@ svg text { font-family: var(--font-sans); }
     h+='</table>';return h;
   }
 
+  function renderHeader(){
+    const th=document.getElementById('motor-thead');
+    if(isXplane()){
+      th.innerHTML=`
+        <tr style="color: var(--color-text-secondary);">
+          <th style="text-align: left; padding: 4px;">M</th>
+          <th style="text-align: left; padding: 4px;">long_arm<br><span style="font-weight:400;color:var(--color-text-secondary);">Z/aft</span></th>
+          <th style="text-align: left; padding: 4px;">lat_arm<br><span style="font-weight:400;color:var(--color-text-secondary);">X/right</span></th>
+          <th style="text-align: left; padding: 4px;">vert_arm<br><span style="font-weight:400;color:var(--color-text-secondary);">Y/up</span></th>
+          <th style="text-align: left; padding: 4px;">spin</th>
+        </tr>`;
+    } else {
+      th.innerHTML=`
+        <tr style="color: var(--color-text-secondary);">
+          <th style="text-align: left; padding: 4px;">M</th>
+          <th style="text-align: left; padding: 4px;">x<br><span style="font-weight:400;color:var(--color-text-secondary);">+X/fwd</span></th>
+          <th style="text-align: left; padding: 4px;">y<br><span style="font-weight:400;color:var(--color-text-secondary);">+Y/right</span></th>
+          <th style="text-align: left; padding: 4px;">spin</th>
+        </tr>`;
+    }
+  }
+
   function renderTbody(){
+    const info=axisInfo();
+    document.getElementById('input-title').textContent=info.inputTitle;
+    document.getElementById('diagram-title').textContent=info.diagramTitle;
+    renderHeader();
     const tb=document.getElementById('motor-tbody');
-    tb.innerHTML=state.motors.map((m,i)=>`
-      <tr>
-        <td style="padding:4px; color: var(--color-text-secondary);">${i+1}</td>
-        <td style="padding:2px;"><input data-idx="${i}" data-k="x" type="number" step="0.01" value="${m.x}"></td>
-        <td style="padding:2px;"><input data-idx="${i}" data-k="y" type="number" step="0.01" value="${m.y}"></td>
-        <td style="padding:2px;">
-          <select data-idx="${i}" data-k="dir">
-            <option value="1"${m.dir===1?' selected':''}>CCW</option>
-            <option value="-1"${m.dir===-1?' selected':''}>CW</option>
-          </select>
-        </td>
-      </tr>`).join('');
+    if(isXplane()){
+      tb.innerHTML=state.motors.map((m,i)=>`
+        <tr>
+          <td style="padding:4px; color: var(--color-text-secondary);">${i+1}</td>
+          <td style="padding:2px;"><input data-idx="${i}" data-k="long_arm" type="number" step="0.01" value="${m.long_arm}"></td>
+          <td style="padding:2px;"><input data-idx="${i}" data-k="lat_arm" type="number" step="0.01" value="${m.lat_arm}"></td>
+          <td style="padding:2px;"><input data-idx="${i}" data-k="vert_arm" type="number" step="0.01" value="${m.vert_arm}"></td>
+          <td style="padding:2px;">
+            <select data-idx="${i}" data-k="dir">
+              <option value="1"${m.dir===1?' selected':''}>CCW (+1)</option>
+              <option value="-1"${m.dir===-1?' selected':''}>CW (-1)</option>
+            </select>
+          </td>
+        </tr>`).join('');
+    } else {
+      tb.innerHTML=state.motors.map((m,i)=>`
+        <tr>
+          <td style="padding:4px; color: var(--color-text-secondary);">${i+1}</td>
+          <td style="padding:2px;"><input data-idx="${i}" data-k="x" type="number" step="0.01" value="${m.x}"></td>
+          <td style="padding:2px;"><input data-idx="${i}" data-k="y" type="number" step="0.01" value="${m.y}"></td>
+          <td style="padding:2px;">
+            <select data-idx="${i}" data-k="dir">
+              <option value="1"${m.dir===1?' selected':''}>CCW (+1)</option>
+              <option value="-1"${m.dir===-1?' selected':''}>CW (-1)</option>
+            </select>
+          </td>
+        </tr>`).join('');
+    }
     tb.querySelectorAll('input, select').forEach(el=>{
-      el.addEventListener('input',e=>{
+      el.addEventListener('input',()=>{
         const i=+el.dataset.idx,k=el.dataset.k;
         state.motors[i][k]=k==='dir'?+el.value:parseFloat(el.value)||0;
         renderAll();
@@ -328,20 +437,58 @@ svg text { font-family: var(--font-sans); }
 
   function renderDiagram(){
     const svg=document.getElementById('diagram');
+    if(isXplane()) renderDiagramXplane(svg); else renderDiagramPx4(svg);
+  }
+
+  function renderDiagramPx4(svg){
     const maxR=Math.max(1.2,...state.motors.map(m=>Math.sqrt(m.x*m.x+m.y*m.y)*1.15));
     svg.setAttribute('viewBox',`${-maxR} ${-maxR} ${2*maxR} ${2*maxR}`);
     let h='';
-    h+=`<line x1="${-maxR}" y1="0" x2="${maxR}" y2="0" stroke="var(--color-border-tertiary)" stroke-width="${maxR*0.005}"/>`;
-    h+=`<line x1="0" y1="${-maxR}" x2="0" y2="${maxR}" stroke="var(--color-border-tertiary)" stroke-width="${maxR*0.005}"/>`;
-    h+=`<path d="M 0 ${-maxR*0.95} L ${-maxR*0.03} ${-maxR*0.85} L ${maxR*0.03} ${-maxR*0.85} Z" fill="var(--color-text-secondary)"/>`;
-    h+=`<text x="${maxR*0.05}" y="${-maxR*0.85}" font-size="${maxR*0.08}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">x</text>`;
-    h+=`<text x="${maxR*0.85}" y="${-maxR*0.03}" font-size="${maxR*0.08}" fill="var(--color-text-secondary)" font-family="var(--font-sans)" text-anchor="end">y →</text>`;
+    const sw=maxR*0.006;
+    h+=`<line x1="${-maxR}" y1="0" x2="${maxR}" y2="0" stroke="var(--color-border-tertiary)" stroke-width="${sw}"/>`;
+    h+=`<line x1="0" y1="${-maxR}" x2="0" y2="${maxR}" stroke="var(--color-border-tertiary)" stroke-width="${sw}"/>`;
+    h+=`<path d="M 0 ${-maxR*0.92} L ${-maxR*0.035} ${-maxR*0.82} L ${maxR*0.035} ${-maxR*0.82} Z" fill="var(--color-text-secondary)"/>`;
+    h+=`<text x="${maxR*0.05}" y="${-maxR*0.84}" font-size="${maxR*0.075}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">+X forward</text>`;
+    h+=`<path d="M ${maxR*0.92} 0 L ${maxR*0.82} ${-maxR*0.035} L ${maxR*0.82} ${maxR*0.035} Z" fill="var(--color-text-secondary)"/>`;
+    h+=`<text x="${maxR*0.62}" y="${-maxR*0.06}" font-size="${maxR*0.075}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">+Y right</text>`;
     state.motors.forEach((m,i)=>{
       const px=m.y, py=-m.x;
       const color=m.dir===1?'#378ADD':'#E24B4A';
       h+=`<line x1="0" y1="0" x2="${px}" y2="${py}" stroke="var(--color-border-secondary)" stroke-width="${maxR*0.008}"/>`;
-      h+=`<circle cx="${px}" cy="${py}" r="${maxR*0.08}" fill="${color}" opacity="0.85"/>`;
-      h+=`<text x="${px}" y="${py+maxR*0.025}" text-anchor="middle" font-size="${maxR*0.09}" fill="white" font-family="var(--font-sans)" font-weight="500">${i+1}</text>`;
+      h+=`<circle cx="${px}" cy="${py}" r="${maxR*0.08}" fill="${color}" opacity="0.88"/>`;
+      h+=`<text x="${px}" y="${py+maxR*0.026}" text-anchor="middle" font-size="${maxR*0.09}" fill="white" font-family="var(--font-sans)" font-weight="500">${i+1}</text>`;
+      h+=`<text x="${px}" y="${py+maxR*0.17}" text-anchor="middle" font-size="${maxR*0.052}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${m.dir===1?'CCW':'CW'}</text>`;
+    });
+    svg.innerHTML=h;
+  }
+
+  function renderDiagramXplane(svg){
+    const bodyMotors=state.motors.map(bodyXYZ);
+    const maxR=Math.max(1.2,...bodyMotors.map(m=>Math.sqrt(m.X*m.X+m.Z*m.Z)*1.15));
+    svg.setAttribute('viewBox',`${-maxR} ${-maxR} ${2*maxR} ${2*maxR}`);
+    let h='';
+    const sw=maxR*0.006;
+    // SVG x = X-Plane body X. SVG y = X-Plane body Z.
+    // Thus +Z/aft is down, and nose/forward (-Z) is up.
+    h+=`<line x1="${-maxR}" y1="0" x2="${maxR}" y2="0" stroke="var(--color-border-tertiary)" stroke-width="${sw}"/>`;
+    h+=`<line x1="0" y1="${-maxR}" x2="0" y2="${maxR}" stroke="var(--color-border-tertiary)" stroke-width="${sw}"/>`;
+    h+=`<path d="M ${maxR*0.92} 0 L ${maxR*0.82} ${-maxR*0.035} L ${maxR*0.82} ${maxR*0.035} Z" fill="var(--color-text-secondary)"/>`;
+    h+=`<text x="${maxR*0.66}" y="${-maxR*0.06}" font-size="${maxR*0.075}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">+X right</text>`;
+    h+=`<path d="M 0 ${maxR*0.92} L ${-maxR*0.035} ${maxR*0.82} L ${maxR*0.035} ${maxR*0.82} Z" fill="var(--color-text-secondary)"/>`;
+    h+=`<text x="${maxR*0.05}" y="${maxR*0.82}" font-size="${maxR*0.075}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">+Z aft/tail</text>`;
+    h+=`<path d="M 0 ${-maxR*0.92} L ${-maxR*0.035} ${-maxR*0.82} L ${maxR*0.035} ${-maxR*0.82} Z" fill="var(--color-text-secondary)" opacity="0.65"/>`;
+    h+=`<text x="${maxR*0.05}" y="${-maxR*0.84}" font-size="${maxR*0.075}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">nose / −Z</text>`;
+    h+=`<circle cx="0" cy="0" r="${maxR*0.045}" fill="none" stroke="var(--color-text-secondary)" stroke-width="${sw}"/>`;
+    h+=`<circle cx="0" cy="0" r="${maxR*0.018}" fill="var(--color-text-secondary)"/>`;
+    h+=`<text x="${maxR*0.05}" y="${maxR*0.14}" font-size="${maxR*0.065}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">+Y up</text>`;
+    state.motors.forEach((m,i)=>{
+      const b=bodyXYZ(m);
+      const px=b.X, py=b.Z;
+      const color=m.dir===1?'#378ADD':'#E24B4A';
+      h+=`<line x1="0" y1="0" x2="${px}" y2="${py}" stroke="var(--color-border-secondary)" stroke-width="${maxR*0.008}"/>`;
+      h+=`<circle cx="${px}" cy="${py}" r="${maxR*0.08}" fill="${color}" opacity="0.88"/>`;
+      h+=`<text x="${px}" y="${py+maxR*0.026}" text-anchor="middle" font-size="${maxR*0.09}" fill="white" font-family="var(--font-sans)" font-weight="500">${i+1}</text>`;
+      h+=`<text x="${px}" y="${py+maxR*0.17}" text-anchor="middle" font-size="${maxR*0.052}" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${m.dir===1?'CCW':'CW'}</text>`;
     });
     svg.innerHTML=h;
   }
@@ -349,51 +496,72 @@ svg text { font-family: var(--font-sans); }
   function renderSteps(){
     const r=compute();
     const box=document.getElementById('steps');
+    const info=axisInfo();
     if(!r.Ap){box.innerHTML='<div class="step-card">Matrix is singular for this configuration (A·Aᵀ not invertible). Adjust positions.</div>';return;}
     const {A,Ap,M,rMax,pMax,yMax,rpScale}=r;
     const n=state.motors.length;
     const mLbl=Array.from({length:n},(_,i)=>'M'+(i+1));
-    const rowLbl=['Mx','My','Mz','T'];
-    const colLbl=['u_r','u_p','u_y','u_t'];
 
     let s12='<div class="eq-list">';
-    state.motors.forEach((m,i)=>{
-      const drag=m.dir===1?'+Cm':'-Cm';
-      s12+=`<div><b>M${i+1}</b> <span class="muted">(${m.name}, ${m.dir===1?'CCW':'CW'}, x=${f(m.x,2)}, y=${f(m.y,2)}):</span>
-        Mx = ${f(-m.y,3)}·Ct·ω²  &nbsp;
-        My = ${f(m.x,3)}·Ct·ω²  &nbsp;
-        Mz = ${drag}·ω²  &nbsp;
-        T = Ct·ω²</div>`;
-    });
+    s12+=`<div class="muted" style="margin-bottom:6px;">${info.note}</div>`;
+    if(isXplane()){
+      s12+=`<div class="muted" style="margin-bottom:6px;">Plane Maker → X-Plane body: <code>X = lat_arm</code>, <code>Y = vert_arm</code>, <code>Z = long_arm</code>.</div>`;
+      state.motors.forEach((m,i)=>{
+        const b=bodyXYZ(m);
+        const drag=m.dir===1?'+Cm':'-Cm';
+        s12+=`<div><b>M${i+1}</b> <span class="muted">(${m.name}, ${m.dir===1?'CCW':'CW'}, long=${f(m.long_arm,2)}, lat=${f(m.lat_arm,2)}, vert=${f(m.vert_arm,2)} → X=${f(b.X,2)}, Y=${f(b.Y,2)}, Z=${f(b.Z,2)}):</span>
+          Roll(-Z) = ${f(-b.X,3)}·Ct·ω² &nbsp;
+          Pitch(+X) = ${f(-b.Z,3)}·Ct·ω² &nbsp;
+          Yaw(+Y) = ${drag}·ω² &nbsp;
+          T = Ct·ω²</div>`;
+      });
+    } else {
+      state.motors.forEach((m,i)=>{
+        const drag=m.dir===1?'+Cm':'-Cm';
+        s12+=`<div><b>M${i+1}</b> <span class="muted">(${m.name}, ${m.dir===1?'CCW':'CW'}, x=${f(m.x,2)}, y=${f(m.y,2)}):</span>
+          Roll(+X) = ${f(-m.y,3)}·Ct·ω² &nbsp;
+          Pitch(+Y) = ${f(m.x,3)}·Ct·ω² &nbsp;
+          Yaw(+Z) = ${drag}·ω² &nbsp;
+          T = Ct·ω²</div>`;
+      });
+    }
     s12+='</div>';
 
     const kRp=rpScale,kY=yMax,kT=r.tMax;
     const dom=pMax>rMax?'pitch':'roll';
+    const spinNote = isXplane()
+      ? '<div><b>Spin rule:</b> M1 = CCW, then alternate by motor number: M2 = CW, M3 = CCW, M4 = CW, M5 = CCW, M6 = CW.</div>'
+      : '';
 
     box.innerHTML=`
       <div class="step-card">
-        <div class="step-title">Step ①②  single-motor moment equations</div>
+        <div class="step-title">Preset: ${state.name}</div>
+        <div class="step-body">${spinNote || '<span class="muted">Select a preset or edit motor positions and spin directions.</span>'}</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-title">Step ①②  single-motor equations</div>
         <div class="step-body">${s12}</div>
       </div>
 
       <div class="step-card">
         <div class="step-title">Step ③  assemble control-effectiveness matrix A  (4×${n})</div>
         <div class="step-body">
-          <div class="muted" style="margin-bottom:4px;">[Mx, My, Mz, T]ᵀ = A · [ω₁², …, ω${n}²]ᵀ</div>
-          ${matTable(A,rowLbl,mLbl)}
+          <div class="muted" style="margin-bottom:4px;">${info.vector} = A · [ω₁², …, ω${n}²]ᵀ</div>
+          ${matTable(A,info.rows,mLbl)}
         </div>
       </div>
 
       <div class="step-card">
         <div class="step-title">Step ④  pseudo-inverse  A⁺ = Aᵀ(A·Aᵀ)⁻¹  (${n}×4)</div>
         <div class="step-body">
-          <div class="muted" style="margin-bottom:4px;">[ω₁², …, ω${n}²]ᵀ = A⁺ · [Mx, My, Mz, T]ᵀ. Six motors, four DOFs — over-actuated, so use Moore–Penrose pseudo-inverse (minimum-norm solution).</div>
-          ${matTable(Ap,mLbl,rowLbl)}
+          <div class="muted" style="margin-bottom:4px;">[ω₁², …, ω${n}²]ᵀ = A⁺ · ${info.vector.replace('ᵀ','')}. Six motors, four DOFs — over-actuated, so use Moore–Penrose pseudo-inverse (minimum-norm solution).</div>
+          ${matTable(Ap,mLbl,info.rows)}
         </div>
       </div>
 
       <div class="step-card">
-        <div class="step-title">Step ⑤  extract PX4 normalization scales</div>
+        <div class="step-title">Step ⑤  extract normalization scales</div>
         <div class="step-body">
           <div>Per-column maxima of A⁺:
             <code>|r|ₘₐₓ = ${f(rMax,4)}</code>,
@@ -401,13 +569,12 @@ svg text { font-family: var(--font-sans); }
             <code>|y|ₘₐₓ = ${f(yMax,4)}</code>,
             <code>|T|ₘₐₓ = ${f(r.tMax,4)}</code>
           </div>
-          <div style="margin-top:6px;">PX4 hex rule (differs from quad: no extra √2):</div>
-          <div style="margin-top:4px;">
+          <div style="margin-top:6px;">
             <code>k_rp = max(|r|ₘₐₓ, |p|ₘₐₓ) = ${f(kRp,4)}</code>  (dominated by <b>${dom}</b>)<br>
             <code>k_y  = |y|ₘₐₓ = ${f(kY,4)}</code><br>
             <code>k_t  = |T|ₘₐₓ = ${f(kT,4)}</code>
           </div>
-          <div class="muted" style="margin-top:6px;">Normalized inputs: u_r = k_rp·Mx, u_p = k_rp·My, u_y = k_y·Mz, u_t = k_t·T — all fall in [−1, 1].</div>
+          <div class="muted" style="margin-top:6px;">Normalized inputs: u_r = k_rp·roll, u_p = k_rp·pitch, u_y = k_y·yaw, u_t = k_t·T — all fall in [−1, 1].</div>
         </div>
       </div>
 
@@ -415,15 +582,23 @@ svg text { font-family: var(--font-sans); }
         <div class="step-title">Step ⑥  final mixer matrix</div>
         <div class="step-body">
           <div class="muted" style="margin-bottom:4px;">[ω₁², …, ω${n}²]ᵀ = M · [u_r, u_p, u_y, u_t]ᵀ</div>
-          ${matTable(M,mLbl,colLbl,'highlight')}
-          <div class="muted" style="margin-top:6px;">Rounded to 2 decimals (PX4-source form):</div>
-          ${matTable(M.map(r=>r.map(v=>+v.toFixed(2))),mLbl,colLbl)}
+          ${matTable(M,mLbl,info.cols,'highlight')}
+          <div class="muted" style="margin-top:6px;">Rounded to 2 decimals:</div>
+          ${matTable(M.map(r=>r.map(v=>+v.toFixed(2))),mLbl,info.cols)}
         </div>
       </div>
     `;
   }
 
-  function renderAll(){renderTbody();renderDiagram();renderSteps();}
+  function setActiveButton(){
+    document.querySelectorAll('button[data-preset]').forEach(b=>{
+      const active=b.dataset.preset && PRESETS[b.dataset.preset] && PRESETS[b.dataset.preset].name===state.name;
+      b.style.background=active?'var(--color-background-info)':'transparent';
+      b.style.borderColor=active?'var(--color-border-info)':'var(--color-border-secondary)';
+    });
+  }
+
+  function renderAll(){renderTbody();renderDiagram();renderSteps();setActiveButton();}
 
   document.querySelectorAll('button[data-preset]').forEach(b=>{
     b.addEventListener('click',()=>{state=JSON.parse(JSON.stringify(PRESETS[b.dataset.preset]));renderAll();});
@@ -459,5 +634,9 @@ svg text { font-family: var(--font-sans); }
   </div>
 </div>
 
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
