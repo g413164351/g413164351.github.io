@@ -1,0 +1,2637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="从零开始系统学习 ADRC：总扰动、TD、ESO、NLSEF、LADRC、带宽整定、离散实现与交互仿真。" />
+  <title>从零开始学 ADRC｜自抗扰控制系统教程</title>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    :root{
+      --bg:#f7f8fb;
+      --panel:#ffffff;
+      --panel-2:#f0f4ff;
+      --text:#172033;
+      --muted:#647089;
+      --border:#dfe5ef;
+      --primary:#3157d5;
+      --primary-2:#6f86ef;
+      --accent:#0b8f70;
+      --warning:#b56b00;
+      --danger:#c43c4b;
+      --code:#0f172a;
+      --code-text:#dbeafe;
+      --shadow:0 16px 40px rgba(32,55,100,.09);
+      --radius:18px;
+      --content-width:1180px;
+      --font-scale:1;
+    }
+
+    html[data-theme="dark"]{
+      --bg:#0c1220;
+      --panel:#121a2b;
+      --panel-2:#18223a;
+      --text:#edf2ff;
+      --muted:#aeb9d0;
+      --border:#27324a;
+      --primary:#8ba4ff;
+      --primary-2:#6f86ef;
+      --accent:#54d2ae;
+      --warning:#ffc36b;
+      --danger:#ff8793;
+      --code:#080d18;
+      --code-text:#dbeafe;
+      --shadow:0 20px 48px rgba(0,0,0,.26);
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:
+        Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+        system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size:calc(16px * var(--font-scale));
+      line-height:1.75;
+    }
+
+    a{color:inherit}
+    button,input{font:inherit}
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:100;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:10px 22px;
+      background:color-mix(in srgb, var(--panel) 88%, transparent);
+      backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--border);
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+
+    .brand-mark{
+      width:34px;
+      height:34px;
+      border-radius:11px;
+      display:grid;
+      place-items:center;
+      color:white;
+      background:linear-gradient(135deg,#3157d5,#12a68a);
+      box-shadow:0 8px 22px rgba(49,87,213,.28);
+    }
+
+    .top-actions{display:flex;gap:8px;align-items:center}
+    .icon-btn{
+      border:1px solid var(--border);
+      color:var(--text);
+      background:var(--panel);
+      padding:7px 11px;
+      border-radius:10px;
+      cursor:pointer;
+    }
+    .icon-btn:hover{border-color:var(--primary)}
+
+    .progress{
+      position:fixed;
+      top:55px;
+      left:0;
+      height:3px;
+      width:0;
+      background:linear-gradient(90deg,var(--primary),var(--accent));
+      z-index:120;
+    }
+
+    .hero{
+      max-width:var(--content-width);
+      margin:0 auto;
+      padding:72px 24px 48px;
+      display:grid;
+      grid-template-columns:1.25fr .75fr;
+      gap:36px;
+      align-items:center;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 12px;
+      border-radius:999px;
+      color:var(--primary);
+      background:var(--panel-2);
+      border:1px solid var(--border);
+      font-weight:700;
+      font-size:.88em;
+    }
+
+    h1{
+      font-size:clamp(2.35rem,6vw,4.8rem);
+      line-height:1.04;
+      letter-spacing:-.045em;
+      margin:20px 0 18px;
+    }
+
+    .hero p{
+      color:var(--muted);
+      font-size:1.08em;
+      max-width:760px;
+    }
+
+    .hero-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:26px;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+      border-radius:12px;
+      padding:11px 16px;
+      font-weight:750;
+      border:1px solid var(--border);
+      background:var(--panel);
+    }
+    .btn.primary{
+      color:#fff;
+      border:none;
+      background:linear-gradient(135deg,#3157d5,#5378ef);
+      box-shadow:0 12px 24px rgba(49,87,213,.24);
+    }
+
+    .hero-card{
+      background:linear-gradient(160deg,var(--panel),var(--panel-2));
+      border:1px solid var(--border);
+      border-radius:26px;
+      padding:24px;
+      box-shadow:var(--shadow);
+    }
+
+    .hero-card h3{margin:0 0 14px}
+    .path-step{
+      display:grid;
+      grid-template-columns:34px 1fr;
+      gap:12px;
+      align-items:start;
+      padding:10px 0;
+    }
+    .path-step .num{
+      width:30px;height:30px;border-radius:10px;
+      display:grid;place-items:center;
+      background:var(--panel);
+      border:1px solid var(--border);
+      font-weight:800;color:var(--primary);
+    }
+    .path-step small{color:var(--muted)}
+
+    .layout{
+      max-width:var(--content-width);
+      margin:0 auto;
+      padding:0 24px 72px;
+      display:grid;
+      grid-template-columns:260px minmax(0,1fr);
+      gap:34px;
+    }
+
+    .toc{
+      position:sticky;
+      top:82px;
+      align-self:start;
+      max-height:calc(100vh - 104px);
+      overflow:auto;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+
+    .toc strong{display:block;margin-bottom:8px}
+    .toc a{
+      display:block;
+      text-decoration:none;
+      color:var(--muted);
+      padding:6px 9px;
+      border-radius:8px;
+      font-size:.92em;
+    }
+    .toc a:hover,.toc a.active{
+      color:var(--primary);
+      background:var(--panel-2);
+    }
+    .toc a.sub{padding-left:24px;font-size:.85em}
+
+    main{min-width:0}
+    section{
+      scroll-margin-top:90px;
+      margin:0 0 34px;
+      padding:30px;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      background:var(--panel);
+      box-shadow:var(--shadow);
+    }
+
+    h2{
+      margin:0 0 16px;
+      font-size:clamp(1.55rem,3vw,2.2rem);
+      letter-spacing:-.02em;
+    }
+    h3{margin:26px 0 10px}
+    h4{margin:20px 0 8px}
+    p{margin:10px 0}
+    .muted{color:var(--muted)}
+    .lead{font-size:1.08em;color:var(--muted)}
+
+    .grid-2,.grid-3{
+      display:grid;
+      gap:16px;
+    }
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+    .card{
+      padding:18px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:color-mix(in srgb,var(--panel) 78%,var(--panel-2));
+    }
+    .card h3,.card h4{margin-top:0}
+    .card .tag{
+      display:inline-block;
+      font-size:.78em;
+      color:var(--primary);
+      background:var(--panel-2);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:3px 8px;
+      margin-bottom:8px;
+      font-weight:700;
+    }
+
+    .callout{
+      margin:18px 0;
+      padding:16px 18px;
+      border-radius:13px;
+      border-left:4px solid var(--primary);
+      background:var(--panel-2);
+    }
+    .callout.good{border-left-color:var(--accent)}
+    .callout.warn{border-left-color:var(--warning)}
+    .callout.danger{border-left-color:var(--danger)}
+    .callout strong{display:block;margin-bottom:3px}
+
+    .formula{
+      overflow-x:auto;
+      margin:16px 0;
+      padding:14px 16px;
+      text-align:center;
+      border-radius:12px;
+      background:var(--panel-2);
+      border:1px solid var(--border);
+    }
+
+    .flow{
+      display:grid;
+      grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;
+      align-items:center;
+      gap:10px;
+      margin:22px 0;
+    }
+    .flow-node{
+      padding:15px 12px;
+      border:1px solid var(--border);
+      border-radius:13px;
+      text-align:center;
+      background:var(--panel-2);
+      min-height:86px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .arrow{font-size:1.45em;color:var(--primary);font-weight:900}
+
+    .svg-wrap{
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:var(--panel-2);
+      padding:12px;
+      margin:18px 0;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin:16px 0;
+      font-size:.95em;
+    }
+    th,td{
+      border:1px solid var(--border);
+      padding:10px 12px;
+      text-align:left;
+      vertical-align:top;
+    }
+    th{background:var(--panel-2)}
+    .table-wrap{overflow:auto}
+
+    pre{
+      position:relative;
+      overflow:auto;
+      margin:16px 0;
+      padding:18px;
+      border-radius:14px;
+      background:var(--code);
+      color:var(--code-text);
+      line-height:1.55;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+    .copy-btn{
+      position:absolute;
+      top:10px;right:10px;
+      border:1px solid rgba(255,255,255,.18);
+      color:#e5edff;
+      background:rgba(255,255,255,.08);
+      border-radius:8px;
+      padding:5px 8px;
+      cursor:pointer;
+      font-size:.8em;
+    }
+
+    .calculator,.simulator{
+      display:grid;
+      grid-template-columns:300px minmax(0,1fr);
+      gap:20px;
+      align-items:start;
+    }
+
+    .controls{
+      padding:16px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:var(--panel-2);
+    }
+    .control{margin-bottom:16px}
+    .control label{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+    input[type="range"]{width:100%}
+    input[type="number"],select{
+      width:100%;
+      padding:9px 10px;
+      color:var(--text);
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:9px;
+    }
+
+    .results{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+    }
+    .metric{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:14px;
+      background:var(--panel);
+    }
+    .metric small{display:block;color:var(--muted)}
+    .metric strong{
+      display:block;
+      margin-top:4px;
+      font-size:1.15em;
+      color:var(--primary);
+      word-break:break-word;
+    }
+
+    canvas{
+      width:100%;
+      height:320px;
+      display:block;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:12px;
+    }
+    .chart-stack{display:grid;gap:14px}
+
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      color:var(--muted);
+      font-size:.87em;
+      margin:8px 0 0;
+    }
+    .legend span::before{
+      content:"";
+      display:inline-block;
+      width:16px;height:3px;
+      margin-right:6px;
+      vertical-align:middle;
+      background:currentColor;
+      border-radius:10px;
+    }
+
+    details{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px 14px;
+      margin:10px 0;
+      background:color-mix(in srgb,var(--panel) 82%,var(--panel-2));
+    }
+    summary{cursor:pointer;font-weight:750}
+
+    .checklist{
+      padding:0;
+      list-style:none;
+    }
+    .checklist li{
+      position:relative;
+      padding-left:28px;
+      margin:9px 0;
+    }
+    .checklist li::before{
+      content:"✓";
+      position:absolute;
+      left:0;top:0;
+      width:20px;height:20px;
+      display:grid;place-items:center;
+      border-radius:50%;
+      color:white;
+      background:var(--accent);
+      font-size:.75em;
+      font-weight:900;
+    }
+
+    .quiz{
+      border:1px dashed var(--primary);
+      border-radius:14px;
+      padding:16px;
+      background:var(--panel-2);
+    }
+    .quiz button{
+      margin-top:10px;
+      border:0;
+      border-radius:9px;
+      padding:8px 12px;
+      color:white;
+      background:var(--primary);
+      cursor:pointer;
+    }
+    .quiz .answer{display:none;margin-top:10px;color:var(--accent);font-weight:700}
+
+    footer{
+      text-align:center;
+      color:var(--muted);
+      padding:18px 24px 50px;
+    }
+
+    @media (max-width:980px){
+      .hero{grid-template-columns:1fr}
+      .layout{grid-template-columns:1fr}
+      .toc{
+        position:relative;
+        top:0;
+        max-height:none;
+      }
+      .calculator,.simulator{grid-template-columns:1fr}
+    }
+
+    @media (max-width:720px){
+      .topbar{padding:9px 12px}
+      .hero{padding:52px 16px 34px}
+      .layout{padding:0 14px 54px}
+      section{padding:22px 17px}
+      .grid-2,.grid-3,.results{grid-template-columns:1fr}
+      .flow{grid-template-columns:1fr}
+      .arrow{transform:rotate(90deg);text-align:center}
+      .brand span:last-child{display:none}
+      canvas{height:270px}
+    }
+
+    @media print{
+      .topbar,.progress,.toc,.hero-actions,.copy-btn{display:none!important}
+      body{background:white;color:black}
+      .hero,.layout{display:block;max-width:none}
+      section,.hero-card{box-shadow:none;break-inside:avoid}
+      .layout{padding:0}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="progress" id="progress"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <span>ADRC 从零到系统理解</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="fontDown" title="减小字号">A−</button>
+      <button class="icon-btn" id="fontUp" title="增大字号">A+</button>
+      <button class="icon-btn" id="themeToggle" title="切换深浅色">◐</button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <span class="eyebrow">控制理论 · 从直觉到实现</span>
+      <h1>从零开始<br/>系统理解 ADRC</h1>
+      <p>
+        这不是一份只堆公式的笔记。我们从“为什么传统控制会被模型误差和扰动难住”讲起，
+        一步一步建立总扰动、扩张状态、ESO、控制律、LADRC 带宽整定以及数字实现。
+      </p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#problem">开始学习</a>
+        <a class="btn" href="#calculator">直接调参</a>
+        <a class="btn" href="#simulation">打开仿真</a>
+      </div>
+    </div>
+
+    <aside class="hero-card">
+      <h3>推荐学习路线</h3>
+      <div class="path-step">
+        <div class="num">1</div>
+        <div><b>先理解总扰动</b><br/><small>把未知动态统一打包</small></div>
+      </div>
+      <div class="path-step">
+        <div class="num">2</div>
+        <div><b>再理解 ESO</b><br/><small>把总扰动当作状态估计</small></div>
+      </div>
+      <div class="path-step">
+        <div class="num">3</div>
+        <div><b>最后理解补偿</b><br/><small>估计出来，再主动抵消</small></div>
+      </div>
+      <div class="path-step">
+        <div class="num">4</div>
+        <div><b>用带宽统一调参</b><br/><small>\(\omega_c\) 管控制，\(\omega_o\) 管观测</small></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" id="toc">
+      <strong>目录</strong>
+      <a href="#problem">1. ADRC 要解决什么</a>
+      <a href="#idea">2. 一句话核心思想</a>
+      <a href="#architecture">3. 完整结构</a>
+      <a class="sub" href="#ch3-1">3.1 大框架</a>
+      <a class="sub" href="#ch3-2">3.2 详细框架</a>
+      <a class="sub" href="#ch3-3">3.3 每条线的含义</a>
+      <a href="#total-disturbance">4. 总扰动</a>
+      <a href="#td">5. TD 跟踪微分器</a>
+      <a href="#eso">6. ESO 扩张状态观测器</a>
+      <a href="#control-law">7. 控制律与补偿</a>
+      <a href="#ladrc">8. LADRC</a>
+      <a href="#first-order">9. 一阶 LADRC</a>
+      <a href="#second-order">10. 二阶 LADRC</a>
+      <a href="#bandwidth">11. 带宽整定</a>
+      <a href="#calculator">12. 参数计算器</a>
+      <a href="#simulation">13. 交互仿真</a>
+      <a href="#discrete">14. 离散实现</a>
+      <a href="#tuning">15. 调参流程</a>
+      <a href="#pitfalls">16. 常见问题</a>
+      <a href="#pid">17. 与 PID 对比</a>
+      <a href="#summary">18. 最终总结</a>
+      <a href="#memory">19. 记忆卡</a>
+      <a class="sub" href="#ch19-3">· 推箱子：PID vs ADRC</a>
+      <a class="sub" href="#ch19-8">· 观测器特征值</a>
+    </nav>
+
+    <main>
+      <section id="problem">
+        <h2>1. ADRC 到底想解决什么？</h2>
+        <p class="lead">
+          控制器最怕的不是“系统有动态”，而是：我们不知道真实动态到底是什么，而且它还会变化。
+        </p>
+
+        <div class="grid-3">
+          <div class="card">
+            <span class="tag">模型误差</span>
+            <h3>算出来的模型不等于真实对象</h3>
+            <p>摩擦、死区、柔性、温漂、负载变化，往往没有被准确写进模型。</p>
+          </div>
+          <div class="card">
+            <span class="tag">外部扰动</span>
+            <h3>环境会突然改变系统</h3>
+            <p>负载突变、风扰、冲击、供电波动，都可能让原本稳定的控制效果变差。</p>
+          </div>
+          <div class="card">
+            <span class="tag">参数变化</span>
+            <h3>今天的参数未必等于明天</h3>
+            <p>质量、转动惯量、电阻、增益等，会随工作状态和时间变化。</p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong>传统思路</strong>
+          尽可能准确建模，然后按模型设计控制器。
+        </div>
+        <div class="callout good">
+          <strong>ADRC 思路</strong>
+          不强求知道所有细节，而是在线估计“这些未知因素合起来造成了多大影响”，然后实时补偿。
+        </div>
+      </section>
+
+      <section id="idea">
+        <h2>2. ADRC 的一句话核心思想</h2>
+        <div class="formula">
+          \[
+          \boxed{\text{把未知动态与外部扰动统一看成总扰动，在线估计，再主动抵消}}
+          \]
+        </div>
+
+        <p>这个思路可以拆成三个动作：</p>
+
+        <div class="flow">
+          <div class="flow-node"><b>看目标</b><span class="muted">参考输入 \(r\)</span></div>
+          <div class="arrow">→</div>
+          <div class="flow-node"><b>看系统</b><span class="muted">测量输出 \(y\)</span></div>
+          <div class="arrow">→</div>
+          <div class="flow-node"><b>估计未知影响</b><span class="muted">ESO 得到 \(\hat F\)</span></div>
+          <div class="arrow">→</div>
+          <div class="flow-node"><b>主动补偿</b><span class="muted">控制量中减去 \(\hat F\)</span></div>
+        </div>
+
+        <div class="callout warn">
+          <strong>关键认识</strong>
+          ADRC 不是“完全不要模型”。它通常仍需知道系统大致阶次、控制方向，以及输入增益的估计值 \(b_0\)。
+          更准确地说，它是<strong>弱模型依赖</strong>。
+        </div>
+      </section>
+
+      
+      <section id="architecture">
+        <h2>3. ADRC 的完整结构</h2>
+
+        <p>
+          先不要急着背公式。你可以先把 ADRC 看成一条非常清晰的“信息流”：
+          <b>目标信号进入 → 形成期望轨迹 → 和估计状态比较 → 得到基础控制量 → 用扰动估计补偿 → 驱动对象 → 再用输出修正估计。</b>
+        </p>
+
+        <p>经典 ADRC 通常包含三个部分：</p>
+        <div class="grid-3">
+          <div class="card">
+            <span class="tag">TD</span>
+            <h3>跟踪微分器</h3>
+            <p>把参考输入 \(r\) 变成更平滑、更可跟踪的信号 \(v_1\)，并给出其导数 \(v_2\)。</p>
+          </div>
+          <div class="card">
+            <span class="tag">ESO</span>
+            <h3>扩张状态观测器</h3>
+            <p>根据输出 \(y\) 和输入 \(u\)，估计系统状态 \(z_1,z_2,\dots\) 以及总扰动 \(z_{n+1}\)。</p>
+          </div>
+          <div class="card">
+            <span class="tag">SEF / NLSEF</span>
+            <h3>状态误差反馈</h3>
+            <p>根据误差 \(e_1=v_1-z_1,\ e_2=v_2-z_2\) 生成基础控制量 \(u_0\)，再进行扰动补偿。</p>
+          </div>
+        </div>
+
+        <h3 id="ch3-1">3.1 大框架：ADRC 在回路里做什么</h3>
+        <p>
+          先只记一件事：ADRC 站在参考输入和被控对象之间，比传统控制器多做了一步——
+          <b>先估计出对象受到的总扰动，再把它从控制量里减掉</b>。
+        </p>
+
+        <div class="svg-wrap">
+          <svg viewBox="0 0 900 300" width="100%" style="min-width:660px" role="img"
+               aria-label="ADRC 大框架：参考输入经 ADRC 控制器驱动被控对象，输出反馈回控制器，总扰动作用于对象">
+            <defs>
+              <marker id="mkFwd" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--primary)"/>
+              </marker>
+              <marker id="mkFb" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--accent)"/>
+              </marker>
+              <marker id="mkDist" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--danger)"/>
+              </marker>
+            </defs>
+            <style>
+              .oBox{fill:var(--panel-2);stroke:var(--primary);stroke-width:2.4}
+              .oPlant{fill:var(--panel-2);stroke:var(--accent);stroke-width:2.4}
+              .oT{font:700 21px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--text)}
+              .oM{font:600 16px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--text)}
+              .oS{font:14px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--muted)}
+              .oFwd{stroke:var(--primary);stroke-width:3;fill:none;marker-end:url(#mkFwd)}
+              .oFb{stroke:var(--accent);stroke-width:3;fill:none;marker-end:url(#mkFb)}
+              .oDist{stroke:var(--danger);stroke-width:3;fill:none;marker-end:url(#mkDist)}
+            </style>
+
+            <text class="oS" x="12" y="96">参考 r</text>
+            <path class="oFwd" d="M10 110 L58 110"/>
+
+            <rect class="oBox" x="64" y="48" rx="16" width="280" height="124"/>
+            <text class="oT" x="204" y="86" text-anchor="middle">ADRC 控制器</text>
+            <text class="oS" x="204" y="116" text-anchor="middle">① 在线估计总扰动</text>
+            <text class="oS" x="204" y="142" text-anchor="middle">② 在控制量中主动抵消</text>
+
+            <path class="oFwd" d="M344 110 L452 110"/>
+            <text class="oM" x="398" y="96" text-anchor="middle">u</text>
+
+            <rect class="oPlant" x="460" y="48" rx="16" width="280" height="124"/>
+            <text class="oT" x="600" y="86" text-anchor="middle">被控对象</text>
+            <text class="oM" x="600" y="116" text-anchor="middle">ÿ = F + b₀·u</text>
+            <text class="oS" x="600" y="142" text-anchor="middle">真实动态未知</text>
+
+            <path class="oDist" d="M600 12 L600 44"/>
+            <text class="oS" x="584" y="30" text-anchor="end">总扰动 F ＝ 未建模动态 ＋ 外扰 ＋ 参数变化</text>
+
+            <path class="oFwd" d="M740 110 L852 110"/>
+            <text class="oM" x="796" y="96" text-anchor="middle">y</text>
+
+            <path class="oFb" d="M826 110 L826 238 L210 238 L210 178"/>
+            <text class="oS" x="518" y="228" text-anchor="middle">测量输出 y 反馈给控制器</text>
+
+            <rect x="64" y="268" rx="4" width="24" height="8" fill="var(--primary)"/>
+            <text class="oS" x="96" y="276">前向控制通道</text>
+            <rect x="244" y="268" rx="4" width="24" height="8" fill="var(--accent)"/>
+            <text class="oS" x="276" y="276">测量反馈通道</text>
+            <rect x="424" y="268" rx="4" width="24" height="8" fill="var(--danger)"/>
+            <text class="oS" x="456" y="276">扰动与不确定性</text>
+          </svg>
+        </div>
+
+        <h4>图中字母的含义</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th style="width:14%">符号</th><th style="width:30%">名称</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>\(r\)</td><td>参考输入</td><td>你希望输出达到的目标值，由外部给定。</td></tr>
+              <tr><td>\(u\)</td><td>控制量</td><td>控制器最终施加到对象上的输入，也是执行器实际执行的量。</td></tr>
+              <tr><td>\(y\)</td><td>测量输出</td><td>传感器测到的对象输出，含噪声，是回路里唯一能直接拿到的真实信息。</td></tr>
+              <tr><td>\(\ddot y\)</td><td>输出的二阶导数</td><td>二阶对象的最高阶导数。图中 \(\ddot y=F+b_0u\) 就是 ADRC 的标准形式。</td></tr>
+              <tr><td>\(F\)</td><td>总扰动</td><td><b>真实存在但不可测</b>。把未建模动态、外部扰动、参数变化、增益误差全部打包成的一项。</td></tr>
+              <tr><td>\(b_0\)</td><td>输入增益估计</td><td>控制器唯一需要人为给定的模型参数，是真实增益 \(b\) 的粗略估计。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout good">
+          <strong>大框架只有三种线</strong>
+          蓝色是前向控制通道 \(r\to u\to y\)；绿色是测量反馈通道，把真实输出送回控制器；
+          红色是所有不确定性汇总成的总扰动 \(F\)。传统控制器只有蓝、绿两条，ADRC 多了“对红色这一项做估计并抵消”的能力。
+        </div>
+
+        <h3 id="ch3-2">3.2 详细框架：把控制器方块打开</h3>
+        <p>
+          把上图中的“ADRC 控制器”展开，就得到下面的完整结构：TD 负责整理目标，SEF 负责生成基础控制量，
+          ESO 负责估计状态与总扰动，补偿节点负责把扰动估计减掉。
+        </p>
+
+        <div class="svg-wrap">
+          <svg viewBox="0 0 900 680" width="100%" style="min-width:680px" role="img"
+               aria-label="ADRC 详细框图：TD、状态误差反馈、补偿节点、1/b0、被控对象与扩张状态观测器的完整连接">
+            <defs>
+              <marker id="mkF2" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--primary)"/>
+              </marker>
+              <marker id="mkB2" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--accent)"/>
+              </marker>
+              <marker id="mkE2" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="#8b5cf6"/>
+              </marker>
+              <marker id="mkD2" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--danger)"/>
+              </marker>
+            </defs>
+            <style>
+              .dBox{fill:var(--panel-2);stroke:var(--primary);stroke-width:2.2}
+              .dPlant{fill:var(--panel-2);stroke:var(--accent);stroke-width:2.2}
+              .dEso{fill:var(--panel-2);stroke:#8b5cf6;stroke-width:2.2}
+              .dSum{fill:var(--panel);stroke:var(--warning);stroke-width:2.4}
+              .dT{font:700 19px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--text)}
+              .dM{font:600 15px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--text)}
+              .dS{font:13px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--muted)}
+              .dFwd{stroke:var(--primary);stroke-width:2.8;fill:none;marker-end:url(#mkF2)}
+              .dMeas{stroke:var(--accent);stroke-width:2.6;fill:none;marker-end:url(#mkB2)}
+              .dEst{stroke:#8b5cf6;stroke-width:2.6;fill:none;marker-end:url(#mkE2)}
+              .dDist{stroke:var(--danger);stroke-width:2.6;fill:none;marker-end:url(#mkD2)}
+              .dDash{stroke-dasharray:7 6}
+            </style>
+
+            <text class="dS" x="12" y="96">参考 r</text>
+            <path class="dFwd" d="M10 110 L58 110"/>
+
+            <rect class="dBox" x="62" y="56" rx="14" width="124" height="108"/>
+            <text class="dT" x="124" y="92" text-anchor="middle">TD</text>
+            <text class="dS" x="124" y="118" text-anchor="middle">跟踪微分器</text>
+            <text class="dS" x="124" y="142" text-anchor="middle">输出 v₁, v₂</text>
+
+            <path class="dFwd" d="M186 110 L240 110"/>
+            <text class="dS" x="214" y="98" text-anchor="middle">v₁, v₂</text>
+
+            <rect class="dBox" x="248" y="44" rx="14" width="196" height="132"/>
+            <text class="dT" x="346" y="74" text-anchor="middle">SEF / NLSEF</text>
+            <text class="dS" x="346" y="100" text-anchor="middle">e₁ = v₁ − z₁</text>
+            <text class="dS" x="346" y="124" text-anchor="middle">e₂ = v₂ − z₂</text>
+            <text class="dM" x="346" y="152" text-anchor="middle">u₀ = kp·e₁ + kd·e₂</text>
+
+            <path class="dFwd" d="M444 110 L488 110"/>
+            <text class="dS" x="466" y="98" text-anchor="middle">u₀</text>
+
+            <circle class="dSum" cx="522" cy="110" r="30"/>
+            <text class="dT" x="522" y="118" text-anchor="middle">Σ</text>
+            <text class="dM" x="492" y="102">＋</text>
+            <text class="dM" x="536" y="156">−</text>
+
+            <path class="dFwd" d="M552 110 L596 110"/>
+
+            <rect class="dBox" x="600" y="76" rx="12" width="112" height="68"/>
+            <text class="dM" x="656" y="106" text-anchor="middle">1 / b₀</text>
+            <text class="dS" x="656" y="128" text-anchor="middle">＋ 输出限幅</text>
+
+            <path class="dFwd" d="M712 110 L758 110"/>
+            <text class="dM" x="735" y="98" text-anchor="middle">u</text>
+
+            <rect class="dPlant" x="762" y="56" rx="14" width="128" height="108"/>
+            <text class="dT" x="826" y="90" text-anchor="middle">被控对象</text>
+            <text class="dS" x="826" y="116" text-anchor="middle">ÿ = f + b·u</text>
+            <text class="dS" x="826" y="140" text-anchor="middle">输出 y</text>
+
+            <path class="dDist" d="M826 16 L826 52"/>
+            <text class="dS" x="812" y="32" text-anchor="end">外扰 w、参数变化、未建模动态</text>
+
+            <path class="dMeas" d="M826 164 L826 504 L698 504"/>
+            <text class="dS" x="762" y="492" text-anchor="middle">测量输出 y</text>
+
+            <path class="dMeas dDash" d="M740 110 L740 444 L698 444"/>
+            <text class="dS" x="768" y="432" text-anchor="middle">实际控制量 u</text>
+
+            <rect class="dEso" x="120" y="390" rx="16" width="570" height="230"/>
+            <text class="dT" x="405" y="426" text-anchor="middle">ESO 扩张状态观测器</text>
+            <text class="dS" x="150" y="458">e₀ = y − z₁</text>
+            <text class="dS" x="150" y="484">ż₁ = z₂ + β₁·e₀</text>
+            <text class="dS" x="150" y="510">ż₂ = z₃ + b₀·u + β₂·e₀</text>
+            <text class="dS" x="150" y="536">ż₃ = β₃·e₀</text>
+            <text class="dM" x="150" y="570">z₁ ≈ y，z₂ ≈ ẏ，z₃ ≈ F（总扰动）</text>
+            <text class="dS" x="150" y="596">比对象阶次多一阶，多出来的状态就是总扰动</text>
+
+            <path class="dEst" d="M340 388 L340 182"/>
+            <text class="dS" x="350" y="264">估计状态 z₁, z₂</text>
+            <text class="dS" x="350" y="284">送去构成误差</text>
+
+            <path class="dEst" d="M600 388 L600 300 L522 300 L522 146"/>
+            <text class="dS" x="610" y="342">扰动估计 z₃</text>
+            <text class="dS" x="610" y="362">在此被减掉</text>
+
+            <rect x="14" y="642" rx="4" width="24" height="8" fill="var(--primary)"/>
+            <text class="dS" x="46" y="650">前向控制通道</text>
+            <rect x="200" y="642" rx="4" width="24" height="8" fill="var(--accent)"/>
+            <text class="dS" x="232" y="650">测量信号送给 ESO</text>
+            <rect x="424" y="642" rx="4" width="24" height="8" fill="#8b5cf6"/>
+            <text class="dS" x="456" y="650">状态与扰动估计</text>
+            <rect x="640" y="642" rx="4" width="24" height="8" fill="var(--danger)"/>
+            <text class="dS" x="672" y="650">扰动与不确定性</text>
+          </svg>
+        </div>
+
+        <div class="callout warn">
+          <strong>先记住三个字母前缀，这张图就不会看错</strong>
+          <b>\(v\) 是“想要的”</b>——TD 给出的期望轨迹；
+          <b>\(z\) 是“估计的”</b>——ESO 算出来的估计值，<u>不是真实值，也不是测量值</u>；
+          <b>\(e\) 是“差出来的”</b>——期望与估计之差，或测量与估计之差。
+          带下标 0 的 \(b_0,u_0\) 表示“标称的、补偿之前的”量。
+        </div>
+
+        <h4>信号：图中每个字母是什么</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th style="width:12%">符号</th><th style="width:30%">含义</th><th style="width:20%">性质</th><th>补充说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>\(r\)</td><td>原始参考输入</td><td>外部给定</td><td>可以是阶跃、斜坡或任意指令。</td></tr>
+              <tr><td>\(v_1\)</td><td>平滑后的期望轨迹</td><td>TD 输出，<b>期望值</b></td><td>把突变的 \(r\) 变成对象追得上的轨迹。</td></tr>
+              <tr><td>\(v_2\)</td><td>期望轨迹的导数</td><td>TD 输出，<b>期望值</b></td><td>\(v_2\approx\dot v_1\)，供速度误差使用，避免直接对 \(r\) 求导。</td></tr>
+              <tr><td>\(y\)</td><td>对象实际输出</td><td><b>真值 ＋ 噪声</b>，可测</td><td>回路中唯一直接测到的量。</td></tr>
+              <tr><td>\(\dot y\)</td><td>输出的真实导数</td><td><b>真值</b>，通常不可测</td><td>正因为测不到，才要用 ESO 估出 \(z_2\)。</td></tr>
+              <tr><td>\(F\)</td><td>总扰动</td><td><b>真值</b>，不可测</td><td>\(F=f+(b-b_0)u\)，见第 4 章。</td></tr>
+              <tr><td>\(w\)</td><td>外部扰动</td><td><b>真值</b>，不可测</td><td>只是 \(F\) 的一部分，不等于 \(F\)。</td></tr>
+              <tr><td>\(z_1\)</td><td>对 \(y\) 的估计</td><td>ESO 输出，<b>估计值</b></td><td>\(z_1\approx y\)，相当于滤波后的输出。</td></tr>
+              <tr><td>\(z_2\)</td><td>对 \(\dot y\) 的估计</td><td>ESO 输出，<b>估计值</b></td><td>\(z_2\approx\dot y\)，代替差分求导。</td></tr>
+              <tr><td>\(z_3\)</td><td>对 \(F\) 的估计</td><td>ESO 输出，<b>估计值</b></td><td>整个 ADRC 的核心，就是它被减到控制量里。</td></tr>
+              <tr><td>\(e_0\)</td><td>观测误差</td><td>ESO 内部信号</td><td>\(e_0=y-z_1\)，观测器靠它自我校正。</td></tr>
+              <tr><td>\(e_1\)</td><td>位置误差</td><td>SEF 内部信号</td><td>\(e_1=v_1-z_1\)。注意用的是 \(z_1\) 而<b>不是</b> \(y\)。</td></tr>
+              <tr><td>\(e_2\)</td><td>速度误差</td><td>SEF 内部信号</td><td>\(e_2=v_2-z_2\)。</td></tr>
+              <tr><td>\(u_0\)</td><td>基础控制量</td><td>SEF 输出</td><td>补偿之前的控制量，只管“跟踪”，不管“抗扰”。</td></tr>
+              <tr><td>\(u\)</td><td>实际控制量</td><td>施加到对象</td><td>\(u=(u_0-z_3)/b_0\)，再经限幅后输出。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>参数：需要你来定的量</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th style="width:16%">符号</th><th style="width:30%">含义</th><th>怎么来的</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>\(b\)</td><td>对象真实输入增益</td><td><b>真值，未知</b>。它和 \(b_0\) 的差值会自动进入 \(F\)。</td></tr>
+              <tr><td>\(b_0\)</td><td>输入增益估计</td><td>人为设定，只要符号正确、数量级合理即可。</td></tr>
+              <tr><td>\(k_p,\ k_d\)</td><td>状态误差反馈增益</td><td>由控制器带宽决定：\(k_p=\omega_c^2,\ k_d=2\omega_c\)。</td></tr>
+              <tr><td>\(\beta_1,\beta_2,\beta_3\)</td><td>观测器增益</td><td>由观测器带宽决定：\(3\omega_o,\ 3\omega_o^2,\ \omega_o^3\)。</td></tr>
+              <tr><td>\(\omega_c\)</td><td>控制器带宽</td><td>决定系统“跑多快”，见第 11 章。</td></tr>
+              <tr><td>\(\omega_o\)</td><td>观测器带宽</td><td>决定观测器“看多快”，一般取 \((3\sim5)\omega_c\)。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <strong>按这个顺序读第二张图</strong>
+          ① 参考 \(r\) 经 TD 变成平滑轨迹 \(v_1,v_2\)；
+          ② SEF 把 \(v_1,v_2\) 与估计状态 \(z_1,z_2\) 作差，得到基础控制量 \(u_0\)；
+          ③ 补偿节点减去扰动估计 \(z_3\)，再乘 \(1/b_0\)、限幅后得到真正施加的 \(u\)；
+          ④ ESO 同时拿到实际输入 \(u\) 和测量输出 \(y\)，反过来修正 \(z_1,z_2,z_3\)。
+          若 \(z_3\approx F\)，则 \(\ddot y\approx u_0\)，复杂对象被“整理”成双积分器。
+        </div>
+
+        <div class="callout warn">
+          <strong>两张图的关系</strong>
+          第一张图里的“ADRC 控制器”方块，等于第二张图里 TD ＋ SEF ＋ Σ ＋ \(1/b_0\) ＋ ESO 的全部内容。
+          第一张图用来记住思想，第二张图用来对照写代码。
+        </div>
+
+        <h3 id="ch3-3">3.3 详细框图里每条线代表什么</h3>
+        <p class="muted">
+          下面六张卡片用通用阶次记号：\(n\) 阶对象配 \(n+1\) 阶 ESO，多出来的那个状态记作 \(z_{n+1}\)。
+          二阶时 \(z_{n+1}\) 就是上图里的 \(z_3\)。
+        </p>
+        <div class="grid-2">
+          <div class="card">
+            <h4>1）\(r \rightarrow TD\)</h4>
+            <p>原始参考输入 \(r\) 进入 TD。TD 输出更平滑的参考轨迹 \(v_1\) 和它的导数 \(v_2\)。</p>
+          </div>
+          <div class="card">
+            <h4>2）TD \(\rightarrow\) Feedback</h4>
+            <p>反馈器并不一定直接拿 \(r\) 做控制，而是拿 TD 给出的 \(v_1,v_2\) 做“想要达到的状态”。</p>
+          </div>
+          <div class="card">
+            <h4>3）ESO \(\rightarrow\) Feedback</h4>
+            <p>ESO 提供 \(z_1,z_2,\dots,z_n\)，它们是对象状态的估计值。反馈器根据这些量形成误差 \(e_1,e_2,\dots\)。</p>
+          </div>
+          <div class="card">
+            <h4>4）Feedback \(\rightarrow u_0\)</h4>
+            <p>反馈器先产生“基础控制量” \(u_0\)。这个时候还没有补偿未知扰动。</p>
+          </div>
+          <div class="card">
+            <h4>5）ESO \(\rightarrow\) 补偿节点</h4>
+            <p>ESO 给出总扰动估计 \(z_{n+1}\approx F\)。控制器在求实际输入 \(u\) 时把这部分减掉，从而主动抗扰。</p>
+          </div>
+          <div class="card">
+            <h4>6）Plant \(\rightarrow y\rightarrow ESO\)</h4>
+            <p>对象输出 \(y\) 回送给 ESO，ESO 再结合实际控制输入 \(u\) 修正状态与扰动估计。</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          \[
+          \boxed{
+          \text{ADRC 的主逻辑：}
+          \quad
+          r \xrightarrow{\text{TD}} (v_1,v_2)
+          \xrightarrow{\text{Feedback}} u_0
+          \xrightarrow{\text{扰动补偿}} u
+          \xrightarrow{\text{Plant}} y
+          \xrightarrow{\text{ESO}} (z_1,z_2,\dots,z_{n+1})
+          }
+          \]
+        </div>
+
+        <p class="muted">
+          如果只讨论 LADRC，第二张图还能进一步简化：TD 可以弱化甚至省略，Feedback 改成线性 P/PD，
+          ESO 改成线性 ESO，最终结构会更简洁。
+        </p>
+      </section>
+
+
+      <section id="total-disturbance">
+        <h2>4. 最关键的一步：定义“总扰动”</h2>
+
+        <p>以常见二阶对象为例：</p>
+
+        <div class="formula">
+          \[
+          \ddot y=f(y,\dot y,t,w)+bu
+          \]
+        </div>
+
+        <p>其中 \(f(\cdot)\) 可以包含：</p>
+        <ul>
+          <li>对象内部未知动态；</li>
+          <li>非线性、摩擦和耦合；</li>
+          <li>外部扰动 \(w\)；</li>
+          <li>参数变化。</li>
+        </ul>
+
+        <p>我们只选一个大致的输入增益 \(b_0\)，把原式改写为：</p>
+
+        <div class="formula">
+          \[
+          \ddot y
+          =
+          \underbrace{f+(b-b_0)u}_{F}
+          +
+          b_0u
+          \]
+        </div>
+
+        <p>定义：</p>
+
+        <div class="formula">
+          \[
+          \boxed{F=f+(b-b_0)u}
+          \]
+        </div>
+
+        <p>于是：</p>
+
+        <div class="formula">
+          \[
+          \boxed{\ddot y=F+b_0u}
+          \]
+        </div>
+
+        <div class="callout good">
+          <strong>这一步为什么强大？</strong>
+          因为 \(F\) 不只代表外部扰动。模型错误、参数不准、未建模动态，甚至 \(b_0\) 选得不完全准确，
+          都可以被一起装进 \(F\)。
+        </div>
+
+        <div class="quiz">
+          <b>自测：</b>如果真实输入增益是 \(b\)，而控制器使用的是 \(b_0\)，两者差异去哪了？
+          <br/>
+          <button onclick="this.nextElementSibling.style.display='block'">显示答案</button>
+          <div class="answer">进入总扰动中的 \((b-b_0)u\)。</div>
+        </div>
+      </section>
+
+      <section id="td">
+        <h2>5. TD：为什么目标信号也要处理？</h2>
+
+        <p>
+          如果参考输入从 0 突然跳到 1，理想导数在跳变时刻非常大。
+          直接把这种指令送进高增益控制器，容易引起控制冲击、饱和或机械振动。
+        </p>
+
+        <p>TD 的任务通常有两个：</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>平滑参考轨迹</h3>
+            <p>生成平滑的 \(v_1\)，让系统不必瞬间完成不可能的动作。</p>
+          </div>
+          <div class="card">
+            <h3>获得参考导数</h3>
+            <p>同时给出 \(v_2\approx \dot v_1\)，供速度误差反馈使用。</p>
+          </div>
+        </div>
+
+        <p>一个便于理解的线性二阶 TD 可以写成：</p>
+
+        <div class="formula">
+          \[
+          \begin{cases}
+          \dot v_1=v_2\\
+          \dot v_2=-2\omega_t v_2-\omega_t^2(v_1-r)
+          \end{cases}
+          \]
+        </div>
+
+        <p>它本质上是一个临界阻尼二阶跟踪系统：</p>
+
+        <div class="formula">
+          \[
+          (s+\omega_t)^2
+          \]
+        </div>
+
+        <div class="callout">
+          <strong>初学建议</strong>
+          学 LADRC 时可以先把 TD 暂时拿掉，令 \(v_1=r\)、\(v_2=\dot r\)，先集中理解 ESO 和扰动补偿。
+          等主干理解清楚，再回来学习 TD。
+        </div>
+      </section>
+
+      <section id="eso">
+        <h2>6. ESO：把扰动当成一个“看得见的状态”</h2>
+
+        <p>对二阶系统：</p>
+
+        <div class="formula">
+          \[
+          \ddot y=F+b_0u
+          \]
+        </div>
+
+        <p>定义扩张状态：</p>
+
+        <div class="formula">
+          \[
+          x_1=y,\qquad x_2=\dot y,\qquad x_3=F
+          \]
+        </div>
+
+        <p>则系统变为：</p>
+
+        <div class="formula">
+          \[
+          \begin{cases}
+          \dot x_1=x_2\\
+          \dot x_2=x_3+b_0u\\
+          \dot x_3=h\\
+          y=x_1
+          \end{cases}
+          \]
+        </div>
+
+        <p>
+          这里 \(h=\dot F\) 未知。ESO 的目标不是知道 \(h\)，而是通过测量误差不断校正，
+          让 \(z_1,z_2,z_3\) 分别逼近 \(x_1,x_2,x_3\)。
+        </p>
+
+        <h3>三阶线性 ESO</h3>
+
+        <p>定义观测误差：</p>
+
+        <div class="formula">
+          \[
+          e_o=y-z_1
+          \]
+        </div>
+
+        <div class="formula">
+          \[
+          \begin{cases}
+          \dot z_1=z_2+\beta_1e_o\\
+          \dot z_2=z_3+b_0u+\beta_2e_o\\
+          \dot z_3=\beta_3e_o
+          \end{cases}
+          \]
+        </div>
+
+        <div class="grid-3">
+          <div class="card"><h3>\(z_1\)</h3><p>输出估计，\(z_1\approx y\)</p></div>
+          <div class="card"><h3>\(z_2\)</h3><p>速度估计，\(z_2\approx \dot y\)</p></div>
+          <div class="card"><h3>\(z_3\)</h3><p>总扰动估计，\(z_3\approx F\)</p></div>
+        </div>
+
+        <div class="callout warn">
+          <strong>ESO 不是魔法</strong>
+          它能估计的前提是：系统可观测、采样足够快、噪声不过分、总扰动变化速度在观测器能力范围内。
+        </div>
+      </section>
+
+      <section id="control-law">
+        <h2>7. 控制律：先控制，再把扰动抵消</h2>
+
+        <p>先设计一个“理想情况下”的基础控制量：</p>
+
+        <div class="formula">
+          \[
+          u_0=k_p(r-z_1)+k_d(\dot r-z_2)
+          \]
+        </div>
+
+        <p>然后使用 ESO 给出的扰动估计 \(z_3\) 进行补偿：</p>
+
+        <div class="formula">
+          \[
+          \boxed{u=\frac{u_0-z_3}{b_0}}
+          \]
+        </div>
+
+        <p>代入对象：</p>
+
+        <div class="formula">
+          \[
+          \ddot y=F+b_0u
+          =F+b_0\frac{u_0-z_3}{b_0}
+          =u_0+(F-z_3)
+          \]
+        </div>
+
+        <p>当 ESO 估计准确，即 \(z_3\approx F\) 时：</p>
+
+        <div class="formula">
+          \[
+          \boxed{\ddot y\approx u_0}
+          \]
+        </div>
+
+        <div class="callout good">
+          <strong>最核心的理解</strong>
+          一个复杂、非线性、受扰动的对象，在补偿后被“整理”为近似二重积分器。
+          接下来只需要用简单 PD 配置想要的闭环动态。
+        </div>
+
+        <h3>为什么经典 LADRC 常常不用积分 I？</h3>
+        <p>
+          因为恒定或缓慢变化的扰动由 \(z_3\) 直接估计并补偿，不必再依赖误差积分慢慢累积补偿量。
+          同时，PD 可以保持干净的二阶闭环：
+        </p>
+
+        <div class="formula">
+          \[
+          s^2+k_ds+k_p
+          \]
+        </div>
+
+        <p>加入积分后会变成三阶：</p>
+
+        <div class="formula">
+          \[
+          s^3+k_ds^2+k_ps+k_i
+          \]
+        </div>
+
+        <p>因此极点配置、参数解释和抗饱和处理都会更复杂。</p>
+      </section>
+
+      <section id="ladrc">
+        <h2>8. LADRC：把 ADRC 变得更容易调</h2>
+
+        <p>
+          原始 ADRC 常使用非线性 ESO、非线性反馈和非线性 TD。
+          LADRC 则把关键环节线性化，并用带宽统一参数化。
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>项目</th><th>经典 ADRC</th><th>LADRC</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>观测器</td><td>可用 fal 等非线性函数</td><td>线性 ESO</td></tr>
+              <tr><td>反馈</td><td>非线性状态误差反馈</td><td>P 或 PD 线性反馈</td></tr>
+              <tr><td>整定</td><td>参数较多</td><td>以 \(\omega_c,\omega_o\) 为主</td></tr>
+              <tr><td>理解难度</td><td>较高</td><td>更适合工程入门</td></tr>
+              <tr><td>核心思想</td><td colspan="2">完全相同：估计总扰动并主动补偿</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <strong>推荐学习顺序</strong>
+          先掌握 LADRC，再理解非线性 ADRC。因为两者的主干完全相同，而 LADRC 的数学结构更清楚。
+        </div>
+      </section>
+
+      <section id="first-order">
+        <h2>9. 一阶 LADRC</h2>
+
+        <p>假设对象可以近似写成：</p>
+
+        <div class="formula">
+          \[
+          \dot y=F+b_0u
+          \]
+        </div>
+
+        <h3>二阶 LESO</h3>
+
+        <div class="formula">
+          \[
+          \begin{cases}
+          e_o=y-z_1\\
+          \dot z_1=z_2+b_0u+\beta_1e_o\\
+          \dot z_2=\beta_2e_o
+          \end{cases}
+          \]
+        </div>
+
+        <h3>控制律</h3>
+
+        <div class="formula">
+          \[
+          u_0=k_p(r-z_1),\qquad
+          u=\frac{u_0-z_2}{b_0}
+          \]
+        </div>
+
+        <h3>带宽参数化</h3>
+
+        <div class="formula">
+          \[
+          k_p=\omega_c,\qquad
+          \beta_1=2\omega_o,\qquad
+          \beta_2=\omega_o^2
+          \]
+        </div>
+
+        <p class="muted">
+          一阶对象配二阶 ESO；ESO 比对象阶次多一阶，多出来的状态就是总扰动。
+        </p>
+      </section>
+
+      <section id="second-order">
+        <h2>10. 二阶 LADRC</h2>
+
+        <p>对象：</p>
+
+        <div class="formula">
+          \[
+          \ddot y=F+b_0u
+          \]
+        </div>
+
+        <h3>三阶 LESO</h3>
+
+        <div class="formula">
+          \[
+          \begin{cases}
+          e_o=y-z_1\\
+          \dot z_1=z_2+\beta_1e_o\\
+          \dot z_2=z_3+b_0u+\beta_2e_o\\
+          \dot z_3=\beta_3e_o
+          \end{cases}
+          \]
+        </div>
+
+        <h3>控制律</h3>
+
+        <div class="formula">
+          \[
+          u_0=k_p(r-z_1)+k_d(\dot r-z_2)
+          \]
+          \[
+          u=\frac{u_0-z_3}{b_0}
+          \]
+        </div>
+
+        <h3>带宽参数化</h3>
+
+        <div class="formula">
+          \[
+          k_p=\omega_c^2,\qquad k_d=2\omega_c
+          \]
+          \[
+          \beta_1=3\omega_o,\qquad
+          \beta_2=3\omega_o^2,\qquad
+          \beta_3=\omega_o^3
+          \]
+        </div>
+      </section>
+
+      <section id="bandwidth">
+        <h2>11. \(\omega_c\) 与 \(\omega_o\)：一个管“跑”，一个管“看”</h2>
+
+        <div class="grid-2">
+          <div class="card">
+            <span class="tag">Controller bandwidth</span>
+            <h3>\(\omega_c\)：控制器带宽</h3>
+            <p>决定闭环响应速度，进而决定 \(k_p,k_d\)。</p>
+            <div class="formula">
+              \[
+              k_p=\omega_c^2,\qquad k_d=2\omega_c
+              \]
+            </div>
+          </div>
+          <div class="card">
+            <span class="tag">Observer bandwidth</span>
+            <h3>\(\omega_o\)：观测器带宽</h3>
+            <p>决定 ESO 状态和扰动估计速度，进而决定 \(\beta_1,\beta_2,\beta_3\)。</p>
+            <div class="formula">
+              \[
+              \beta_1=3\omega_o,\quad
+              \beta_2=3\omega_o^2,\quad
+              \beta_3=\omega_o^3
+              \]
+            </div>
+          </div>
+        </div>
+
+        <h3>为什么 \(k_p,k_d\) 是这样来的？</h3>
+
+        <p>希望二阶闭环为临界阻尼：</p>
+
+        <div class="formula">
+          \[
+          s^2+k_ds+k_p=(s+\omega_c)^2
+          \]
+        </div>
+
+        <p>展开并对比系数：</p>
+
+        <div class="formula">
+          \[
+          (s+\omega_c)^2=s^2+2\omega_cs+\omega_c^2
+          \]
+        </div>
+
+        <p>所以：</p>
+
+        <div class="formula">
+          \[
+          k_p=\omega_c^2,\qquad k_d=2\omega_c
+          \]
+        </div>
+
+        <h3>为什么 \(\beta_1,\beta_2,\beta_3\) 是这样来的？</h3>
+
+        <p>把三个 ESO 极点都配置在 \(-\omega_o\)：</p>
+
+        <div class="formula">
+          \[
+          s^3+\beta_1s^2+\beta_2s+\beta_3=(s+\omega_o)^3
+          \]
+        </div>
+
+        <div class="formula">
+          \[
+          (s+\omega_o)^3
+          =s^3+3\omega_os^2+3\omega_o^2s+\omega_o^3
+          \]
+        </div>
+
+        <h3>两者通常怎么选？</h3>
+
+        <div class="formula">
+          \[
+          \omega_o=k_o\omega_c,\qquad k_o\approx 3\sim 10
+          \]
+        </div>
+
+        <p>
+          工程上常从 \(3\sim5\) 倍开始。观测器通常要比控制器快，但过快会放大测量噪声和离散误差。
+        </p>
+
+        <div class="callout warn">
+          <strong>不是越大越好</strong>
+          提高 \(\omega_c\) 会加快响应，但增加控制量和未建模高频风险；
+          提高 \(\omega_o\) 会加快估计，但会放大噪声，尤其 \(\beta_3=\omega_o^3\) 增长很快。
+        </div>
+
+        <h3>从调节时间反推 \(\omega_c\)</h3>
+
+        <p>临界阻尼、2% 误差带下，可用：</p>
+
+        <div class="formula">
+          \[
+          T_s\approx \frac{6}{\omega_c}
+          \qquad\Longleftrightarrow\qquad
+          \omega_c\approx\frac{6}{T_s}
+          \]
+        </div>
+      </section>
+
+      <section id="calculator">
+        <h2>12. LADRC 参数计算器</h2>
+        <p class="lead">
+          先给出期望调节时间，再选择观测器相对速度，自动得到二阶 LADRC 参数。
+        </p>
+
+        <div class="calculator">
+          <div class="controls">
+            <div class="control">
+              <label><span>期望调节时间 \(T_s\)</span><span id="tsLabel">0.30 s</span></label>
+              <input id="tsRange" type="range" min="0.10" max="2.00" step="0.01" value="0.30"/>
+            </div>
+            <div class="control">
+              <label><span>带宽比 \(\omega_o/\omega_c\)</span><span id="ratioLabel">5.0</span></label>
+              <input id="ratioRange" type="range" min="2" max="10" step="0.1" value="5"/>
+            </div>
+            <div class="control">
+              <label><span>输入增益估计 \(b_0\)</span><span id="b0Label">1.00</span></label>
+              <input id="b0Range" type="range" min="0.2" max="5" step="0.05" value="1"/>
+            </div>
+            <div class="control">
+              <label><span>你的实际采样频率</span><span id="fsLabel">2.0 kHz</span></label>
+              <input id="fsRange" type="range" min="100" max="20000" step="100" value="2000"/>
+            </div>
+
+            <div class="callout" style="margin-bottom:0">
+              <strong>计算假设</strong>
+              二阶 LADRC、临界阻尼、2% 调节时间近似。
+            </div>
+          </div>
+
+          <div>
+            <div class="results">
+              <div class="metric"><small>\(\omega_c\)</small><strong id="wcOut">20.000</strong></div>
+              <div class="metric"><small>\(\omega_o\)</small><strong id="woOut">100.000</strong></div>
+              <div class="metric"><small>\(b_0\)</small><strong id="b0Out">1.000</strong></div>
+              <div class="metric"><small>\(k_p\)</small><strong id="kpOut">400.000</strong></div>
+              <div class="metric"><small>\(k_d\)</small><strong id="kdOut">40.000</strong></div>
+              <div class="metric"><small>\(\beta_1\)</small><strong id="beta1Out">300.000</strong></div>
+              <div class="metric"><small>\(\beta_2\)</small><strong id="beta2Out">30000.000</strong></div>
+              <div class="metric"><small>\(\beta_3\)</small><strong id="beta3Out">1000000.000</strong></div>
+              <div class="metric"><small>建议初始步长</small><strong id="dtOut">≤ 0.00050 s</strong></div>
+              <div class="metric"><small>实际步长 \(T_s\)</small><strong id="tsActOut">—</strong></div>
+              <div class="metric"><small>离散裕度 \(\omega_oT_s\)</small><strong id="woTsOut">—</strong></div>
+              <div class="metric"><small>该采样率下 \(\omega_o\) 上限</small><strong id="woMaxOut">—</strong></div>
+            </div>
+
+            <div class="callout" id="dtVerdict"></div>
+
+            <div class="callout warn">
+              <strong>注意</strong>
+              参数计算只是起点。实际还要结合采样率、噪声、执行器限幅、对象共振和时延进行修正。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="simulation">
+        <h2>13. 交互仿真：观察跟踪、抗扰与噪声</h2>
+
+        <p>仿真对象为：</p>
+
+        <div class="formula">
+          \[
+          \ddot y=-a_1\dot y-a_0y+bu+d(t)
+          \]
+        </div>
+
+        <p>
+          LADRC 不直接使用 \(a_0,a_1\)，只使用 \(b_0\)。对象内部动态与扰动统一进入总扰动。
+        </p>
+
+        <div class="simulator">
+          <div class="controls">
+            <div class="control">
+              <label><span>\(\omega_c\)</span><span id="simWcLabel">10.0</span></label>
+              <input id="simWc" type="range" min="2" max="25" step="0.5" value="10"/>
+            </div>
+            <div class="control">
+              <label><span>\(\omega_o/\omega_c\)</span><span id="simRatioLabel">4.0</span></label>
+              <input id="simRatio" type="range" min="2" max="8" step="0.25" value="4"/>
+            </div>
+            <div class="control">
+              <label><span>真实输入增益 \(b\)</span><span id="simBLabel">1.00</span></label>
+              <input id="simB" type="range" min="0.5" max="1.8" step="0.05" value="1"/>
+            </div>
+            <div class="control">
+              <label><span>控制器使用 \(b_0\)</span><span id="simB0Label">1.00</span></label>
+              <input id="simB0" type="range" min="0.5" max="1.8" step="0.05" value="1"/>
+            </div>
+            <div class="control">
+              <label><span>扰动幅值</span><span id="simDLabel">2.0</span></label>
+              <input id="simD" type="range" min="0" max="6" step="0.25" value="2"/>
+            </div>
+            <div class="control">
+              <label><span>测量噪声</span><span id="simNoiseLabel">0.000</span></label>
+              <input id="simNoise" type="range" min="0" max="0.03" step="0.001" value="0"/>
+            </div>
+            <button class="btn primary" id="runSim" style="width:100%;cursor:pointer">重新仿真</button>
+          </div>
+
+          <div class="chart-stack">
+            <div>
+              <canvas id="responseCanvas" width="900" height="320"></canvas>
+              <div class="legend">
+                <span style="color:#3157d5">Reference r</span>
+                <span style="color:#0b8f70">Output y</span>
+              </div>
+            </div>
+            <div>
+              <canvas id="distCanvas" width="900" height="300"></canvas>
+              <div class="legend">
+                <span style="color:#c43c4b">True total disturbance F</span>
+                <span style="color:#8b5cf6">Estimated disturbance z₃</span>
+              </div>
+            </div>
+            <div>
+              <canvas id="uCanvas" width="900" height="300"></canvas>
+              <div class="legend">
+                <span style="color:#b56b00">Control effort u</span>
+                <span style="color:#c43c4b">Actuator limit ±80</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <strong>第三张图才是最该看的</strong>
+          输出曲线好看不代表参数能用。ADRC 在实机上翻车，八成栽在控制量上：撞满限幅、高频抖振、
+          \(\omega_o\) 一大 \(u\) 就长毛刺。把 \(\omega_o/\omega_c\) 推到 8、再把噪声拉到 0.03，
+          看看 \(u\) 会变成什么样——这时候输出曲线可能还是挺漂亮的。
+        </div>
+
+        <div class="callout">
+          <strong>建议你这样观察</strong>
+          先固定 \(b=b_0\)，增加扰动，看输出能否快速恢复；再故意让 \(b\neq b_0\)，观察增益误差如何被 ESO 并入总扰动；
+          最后增加噪声，观察高 \(\omega_o\) 的代价。
+        </div>
+      </section>
+
+      <section id="discrete">
+        <h2>14. 数字控制器如何实现？</h2>
+
+        <p>连续公式最终要在单片机、DSP、PLC 或实时程序中离散执行。</p>
+
+        <h3>二阶 LADRC 的最小实现流程</h3>
+
+        <pre><button class="copy-btn">复制</button><code>// 每个采样周期执行一次
+// 输入：reference r, reference derivative r_dot, measured output y
+// 状态：z1, z2, z3
+// 参数：b0, wc, wo, dt
+
+kp = wc * wc
+kd = 2 * wc
+
+beta1 = 3 * wo
+beta2 = 3 * wo * wo
+beta3 = wo * wo * wo
+
+// 1) 计算观测误差
+eo = y - z1
+
+// 2) 更新 LESO
+z1_dot = z2 + beta1 * eo
+z2_dot = z3 + b0 * u_prev + beta2 * eo
+z3_dot = beta3 * eo
+
+z1 += dt * z1_dot
+z2 += dt * z2_dot
+z3 += dt * z3_dot
+
+// 3) 状态误差反馈
+u0 = kp * (r - z1) + kd * (r_dot - z2)
+
+// 4) 扰动补偿
+u = (u0 - z3) / b0
+
+// 5) 输出限幅
+u = clamp(u, u_min, u_max)
+
+u_prev = u</code></pre>
+
+        <div class="callout warn">
+          <strong>细节一：用哪个时刻的 \(u\)</strong>
+          ESO 方程中使用哪个时刻的 \(u\)，必须在程序里定义清楚。常见做法是使用上一采样周期实际施加的 \(u_{k-1}\)，
+          保持计算因果性。上面伪代码中 \(z_2\) 的更新用的就是 <code>u_prev</code>。
+        </div>
+
+        <div class="callout danger">
+          <strong>细节二：回送给 ESO 的必须是<u>限幅之后</u>的 \(u\)</strong>
+          注意伪代码里 <code>u_prev = u</code> 写在 <code>clamp()</code> <b>之后</b>，这不是随手写的顺序，是必须的。
+          ESO 的全部逻辑是“拿我施加的输入和实测输出做对比”。执行器一旦饱和，实际施加的就不是算出来的那个大值；
+          如果仍把限幅前的 \(u\) 记账，ESO 就会认为“我使了这么大劲，输出却没动”，
+          于是把<b>没施加上去的那部分</b>全部误判成扰动，\(z_3\) 单向越积越大，控制量继续要求更大的补偿——
+          正反馈，观测器直接跑飞。
+          <br/>
+          这比 PID 的积分饱和更隐蔽：PID 的 I 顶到上限后至少还是有界的，而这里是<b>错误的模型输入</b>，
+          错的是 ESO 对世界的认知。除了顺序写对，工程上通常还要给 \(z_3\) 本身加限幅，
+          并在检测到持续饱和时冻结 \(z_3\) 的积分。
+        </div>
+
+        <h3>实际工程还需要加入</h3>
+        <ul class="checklist">
+          <li>控制输出限幅与变化率限制；</li>
+          <li>启动阶段的状态初始化；</li>
+          <li>传感器异常值处理；</li>
+          <li>必要的测量滤波，但避免引入过大相位滞后；</li>
+          <li>无扰切换与手自动切换；</li>
+          <li>对 \(z_3\) 或补偿量进行合理限幅；</li>
+          <li>更稳定的离散化方法，例如双线性变换或精确离散模型。</li>
+        </ul>
+      </section>
+
+      <section id="tuning">
+        <h2>15. 推荐调参流程</h2>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>步骤 1：确定对象阶次</h3>
+            <p>主要动态像一阶，就先用一阶 LADRC；主要动态像位置—速度关系，就先用二阶 LADRC。</p>
+          </div>
+          <div class="card">
+            <h3>步骤 2：估计 \(b_0\)</h3>
+            <p>先保证符号正确，再保证数量级合理。它表示控制输入对最高阶输出导数的直接增益。
+              具体估法（阶跃初始斜率法）和“宁大勿小”的原因见
+              <a href="#ch19-9">第 19 章记忆点 9</a>。</p>
+          </div>
+          <div class="card">
+            <h3>步骤 3：选 \(\omega_c\)</h3>
+            <p>可由期望调节时间初估：\(\omega_c\approx6/T_s\)。从保守值开始。</p>
+          </div>
+          <div class="card">
+            <h3>步骤 4：选 \(\omega_o\)</h3>
+            <p>先取 \(\omega_o=(3\sim5)\omega_c\)，再根据抗扰速度和噪声折中。</p>
+          </div>
+          <div class="card">
+            <h3>步骤 5：加入限幅</h3>
+            <p>不带限幅的仿真参数，不能直接照搬到真实执行器。</p>
+          </div>
+          <div class="card">
+            <h3>步骤 6：逐项排查</h3>
+            <p>先看估计，再看控制；先解决符号和尺度，再追求速度。</p>
+          </div>
+        </div>
+
+        <h3>现象—原因—处理</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>现象</th><th>可能原因</th><th>处理方向</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>整体响应太慢</td><td>\(\omega_c\) 太小</td><td>逐步提高 \(\omega_c\)</td></tr>
+              <tr><td>扰动后恢复太慢</td><td>\(\omega_o\) 太小</td><td>适当提高 \(\omega_o\)</td></tr>
+              <tr><td>控制量抖动明显</td><td>\(\omega_o\) 太大或噪声高</td><td>降低 \(\omega_o\)，检查采样与滤波</td></tr>
+              <tr><td>一开始就向错误方向跑</td><td>\(b_0\) 符号错误</td><td>立即检查控制方向</td></tr>
+              <tr><td>仿真稳定，实机振荡</td><td>时延、饱和、共振未建模</td><td>降低带宽，加入真实限制</td></tr>
+              <tr><td>\(z_3\) 很大</td><td>不一定异常，可能是量纲或 \(b_0\) 偏差</td><td>结合实际控制量与单位判断</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="pitfalls">
+        <h2>16. 初学者最容易踩的坑</h2>
+
+        <details open>
+          <summary>坑 1：把总扰动理解成“只有外部扰动”</summary>
+          <p>
+            总扰动还包括内部未知动态、非线性、参数误差以及 \((b-b_0)u\)。
+          </p>
+        </details>
+
+        <details>
+          <summary>坑 2：认为 ADRC 完全不需要模型</summary>
+          <p>
+            至少需要大致阶次、输入方向和合理的 \(b_0\)。对象若有明显时延、非最小相位零点或柔性共振，也必须考虑。
+          </p>
+        </details>
+
+        <details>
+          <summary>坑 3：盲目增大 \(\omega_o\)</summary>
+          <p>
+            观测器越快，噪声和离散误差通常越严重。尤其 \(\beta_3=\omega_o^3\)，参数会快速增长。
+          </p>
+        </details>
+
+        <details>
+          <summary>坑 4：忽略控制饱和</summary>
+          <p>
+            ESO 估计到大扰动后，控制器可能要求超过执行器能力的补偿量。真实系统必须限制幅值与变化率。
+          </p>
+        </details>
+
+        <details>
+          <summary>坑 5：把 \(z_3\) 当成某一个物理扰动</summary>
+          <p>
+            \(z_3\) 估计的是“合成后的等效影响”，它未必等于某个单独可测的力、转矩或负载。
+          </p>
+        </details>
+
+        <details>
+          <summary>坑 6：只看输出，不看 ESO 状态</summary>
+          <p>
+            调试时要同时观察 \(z_1,z_2,z_3\)、控制量和限幅状态，否则很难判断问题来自观测器还是控制器。
+          </p>
+        </details>
+      </section>
+
+      <section id="pid">
+        <h2>17. ADRC 与 PID：不是谁“绝对更好”</h2>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>比较维度</th><th>PID</th><th>ADRC / LADRC</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>核心信息</td><td>主要使用跟踪误差</td><td>使用误差、状态估计和扰动估计</td></tr>
+              <tr><td>抗恒定扰动</td><td>常依靠积分累积</td><td>由 ESO 估计并直接补偿</td></tr>
+              <tr><td>模型需求</td><td>通常较低</td><td>大致阶次与 \(b_0\)</td></tr>
+              <tr><td>参数解释</td><td>\(K_p,K_i,K_d\)</td><td>\(\omega_c,\omega_o,b_0\)</td></tr>
+              <tr><td>实现复杂度</td><td>低</td><td>中等</td></tr>
+              <tr><td>噪声敏感</td><td>D 项敏感</td><td>高带宽 ESO 敏感</td></tr>
+              <tr><td>适用场景</td><td>对象稳定、需求常规、工程成熟</td><td>扰动明显、参数变化、模型不确定</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout good">
+          <strong>实用判断</strong>
+          PID 能稳定可靠地完成任务时，没有必要为了“高级”而更换。
+          ADRC 的价值在于：当扰动和不确定性成为主要矛盾时，它提供了更直接的处理框架。
+        </div>
+      </section>
+
+      <section id="summary">
+        <h2>18. 用一张逻辑链把 ADRC 记住</h2>
+
+        <div class="flow">
+          <div class="flow-node"><b>对象复杂</b><span class="muted">模型不准、有扰动</span></div>
+          <div class="arrow">→</div>
+          <div class="flow-node"><b>统一打包</b><span class="muted">定义总扰动 \(F\)</span></div>
+          <div class="arrow">→</div>
+          <div class="flow-node"><b>扩张状态</b><span class="muted">把 \(F\) 当成新状态</span></div>
+          <div class="arrow">→</div>
+          <div class="flow-node"><b>估计并补偿</b><span class="muted">ESO + \(u=(u_0-\hat F)/b_0\)</span></div>
+        </div>
+
+        <div class="formula">
+          \[
+          \boxed{
+          \begin{aligned}
+          \ddot y&=F+b_0u\\
+          z_3&\approx F\\
+          u_0&=k_p(r-z_1)+k_d(\dot r-z_2)\\
+          u&=\frac{u_0-z_3}{b_0}
+          \end{aligned}}
+          \]
+        </div>
+
+        <div class="formula">
+          \[
+          \boxed{
+          \begin{aligned}
+          k_p&=\omega_c^2,\qquad k_d=2\omega_c\\
+          \beta_1&=3\omega_o,\qquad
+          \beta_2=3\omega_o^2,\qquad
+          \beta_3=\omega_o^3
+          \end{aligned}}
+          \]
+        </div>
+
+        <div class="callout good">
+          <strong>最终记忆句</strong>
+          \(\omega_c\) 决定系统“跑多快”，\(\omega_o\) 决定观测器“看多快”，
+          \(b_0\) 决定控制输入按什么尺度进入系统。
+        </div>
+      </section>
+      <section id="memory">
+        <h2>19. 记忆卡：把 ADRC 压成十句话</h2>
+        <p class="lead">
+          前面十八章是“为什么这样做”。这一章只留“考试前五分钟要看的东西”——
+          每个记忆点都是一句可以背下来的结论，加上它成立的理由。
+        </p>
+
+        <h3 id="ch19-1">记忆点 1：所有机关只为一件事——把对象变成积分串联型</h3>
+        <div class="callout good">
+          <strong>一句话</strong>
+          ESO 负责把对象“洗”成标准件（\(\ddot y\approx u_0\)），PD 负责给标准件配速度。
+        </div>
+        <p>
+          补偿之后 \(\ddot y\approx u_0\)，对象在控制器眼里就是一个纯双积分器 \(1/s^2\)——
+          没有摩擦、没有耦合、没有参数变化、没有负载。这种“\(\dot x_1=x_2,\ \dot x_2=u\)”的结构叫
+          <b>积分串联型</b>（cascade / chain of integrators）。
+        </p>
+        <p>
+          一旦成了积分串联型，控制就没有难度了：\(u_0=k_p e_1+k_d e_2\)，闭环 \((s+\omega_c)^2\)，
+          \(k_p=\omega_c^2,\ k_d=2\omega_c\)。<b>PD 之所以够用，是因为难的部分已经被 ESO 干掉了</b>，
+          而不是因为对象本来就简单。
+        </p>
+        <div class="callout warn">
+          <strong>反过来推论</strong>
+          如果实机上 PD 段怎么调都不对，问题几乎一定不在 \(k_p,k_d\)，而在“对象没被洗干净”——
+          即 \(z_3\) 没跟上 \(F\)。先看估计，再看控制。
+        </div>
+
+        <h3 id="ch19-2">记忆点 2：观测器带宽必须比控制器带宽大</h3>
+        <div class="callout good">
+          <strong>一句话</strong>
+          眼睛要比腿快：\(\omega_o=(3\sim10)\,\omega_c\)，工程起点 \(3\sim5\) 倍。
+        </div>
+        <p>
+          原因在于控制律用的全是估计值：\(u_0=k_p(v_1-z_1)+k_d(v_2-z_2)\)，补偿量也是估计值 \(z_3\)。
+          如果 ESO 比控制器慢，控制器就是在<b>拿过期的状态做高增益反馈</b>——等价于回路里插了一段相位滞后，
+          结果就是振荡甚至失稳。所以“先看得清，才能跑得快”，顺序不能反。
+        </p>
+        <p>但也不是越大越好，代价有三条，都随 \(\omega_o\) 迅速变坏：</p>
+        <div class="grid-3">
+          <div class="card">
+            <span class="tag">噪声</span>
+            <h4>按 \(\omega_o^3\) 放大</h4>
+            <p>\(\beta_3=\omega_o^3\)，测量噪声经 \(e_0\) 直接乘进扰动估计，最后全跑到控制量上。</p>
+          </div>
+          <div class="card">
+            <span class="tag">离散</span>
+            <h4>受 \(\omega_o T_s\) 限制</h4>
+            <p>采样率跟不上时，观测器自己就会发散，与对象无关。见第 12 章的离散裕度判定。</p>
+          </div>
+          <div class="card">
+            <span class="tag">未建模</span>
+            <h4>会“看见”高频动态</h4>
+            <p>\(\omega_o\) 一旦跨过柔性共振或时延对应的频率，ESO 会把它当成扰动去补偿，越补越振。</p>
+          </div>
+        </div>
+
+        <h3 id="ch19-3">记忆点 3：推箱子——ADRC 比 PID 多用了两条信息</h3>
+        <p>
+          场景：你要把一个箱子沿桌面推到某个位置。同一个任务，PID 和 ADRC 手里握着的信息量完全不同。
+        </p>
+
+        <div class="svg-wrap">
+          <svg viewBox="0 0 900 320" width="100%" style="min-width:660px" role="img"
+               aria-label="PID 与 ADRC 使用信息的对比：PID 只用跟踪误差，ADRC 额外使用自身施加的控制量和标称模型给出的预期">
+            <defs>
+              <marker id="mkM1" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--muted)"/>
+              </marker>
+              <marker id="mkM2" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L0,8 L10,4 z" fill="var(--primary)"/>
+              </marker>
+            </defs>
+            <style>
+              .mPid{fill:var(--panel);stroke:var(--muted);stroke-width:2.2}
+              .mAdrc{fill:var(--panel-2);stroke:var(--primary);stroke-width:2.6}
+              .mPill{fill:var(--panel);stroke:var(--primary);stroke-width:1.6}
+              .mH{font:700 17px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--text)}
+              .mT{font:700 20px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--text)}
+              .mS{font:13px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--muted)}
+              .mK{font:600 13px Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:var(--text)}
+              .mA1{stroke:var(--muted);stroke-width:2.6;fill:none;marker-end:url(#mkM1)}
+              .mA2{stroke:var(--primary);stroke-width:2.6;fill:none;marker-end:url(#mkM2)}
+            </style>
+
+            <text class="mH" x="20" y="34">PID 手里的信息</text>
+            <text class="mH" x="480" y="34">ADRC 手里的信息</text>
+            <path d="M452 46 L452 300" stroke="var(--border)" stroke-width="2" stroke-dasharray="6 6" fill="none"/>
+
+            <text class="mK" x="20" y="152">误差 e ＝ r − y</text>
+            <path class="mA1" d="M20 166 L166 166"/>
+            <rect class="mPid" x="170" y="132" rx="12" width="140" height="68"/>
+            <text class="mT" x="240" y="174" text-anchor="middle">PID</text>
+            <path class="mA1" d="M312 166 L408 166"/>
+            <text class="mK" x="360" y="152" text-anchor="middle">u</text>
+
+            <text class="mS" x="235" y="236" text-anchor="middle">只知道“现在差多少”</text>
+            <text class="mS" x="235" y="258" text-anchor="middle">比例、积分、微分三条腿</text>
+            <text class="mS" x="235" y="280" text-anchor="middle">全都长在同一条信息 e 上</text>
+
+            <rect class="mPill" x="480" y="60" rx="16" width="196" height="32"/>
+            <text class="mK" x="578" y="81" text-anchor="middle">① 误差 v − z</text>
+            <path class="mA2" d="M678 76 L700 76 L700 116"/>
+
+            <rect class="mPill" x="480" y="116" rx="16" width="196" height="32"/>
+            <text class="mK" x="578" y="137" text-anchor="middle">② 我施加的 u</text>
+            <path class="mA2" d="M678 132 L716 132"/>
+
+            <rect class="mPill" x="480" y="172" rx="16" width="196" height="32"/>
+            <text class="mK" x="578" y="193" text-anchor="middle">③ 模型预期 b₀·u</text>
+            <path class="mA2" d="M678 188 L700 188 L700 150"/>
+
+            <rect class="mAdrc" x="720" y="102" rx="14" width="164" height="96"/>
+            <text class="mT" x="802" y="134" text-anchor="middle">ADRC</text>
+            <text class="mS" x="802" y="158" text-anchor="middle">内含 ESO</text>
+            <text class="mK" x="802" y="182" text-anchor="middle">u ＝ (u₀ − z₃)/b₀</text>
+
+            <text class="mS" x="680" y="242" text-anchor="middle">③ 与实测一比，差出来的就是“意外”</text>
+            <text class="mK" x="680" y="266" text-anchor="middle">z₃ ＝ 桌面变涩了 ＋ 箱子里有铁块 ＋ 有人在拽</text>
+            <text class="mS" x="680" y="290" text-anchor="middle">当场从控制量里减掉，不必等误差积累起来</text>
+          </svg>
+        </div>
+
+        <p><b>把这个故事讲全，就是四步：</b></p>
+        <ol>
+          <li><b>我知道自己使了多大劲。</b>这就是把 \(u\) 送进 ESO 的那条线。PID 从头到尾<u>不使用</u> \(u\)——
+            它只看结果，不看自己的动作。</li>
+          <li><b>我心里有个“本该如何”的模型。</b>以我这个力气推这么个箱子，本该产生这么大的加速度，
+            这就是 \(b_0u\)：一个粗糙但够用的标称模型。</li>
+          <li><b>我把“本该走多快”和“眼睛看到的实际走多快”一对比。</b>差出来的部分就是我没料到的东西——
+            桌面涩了、箱子里装了铁块、有人在另一边拽。这个<b>持续对比并修正</b>的过程就是 ESO，
+            它的依据正是 \(e_0=y-z_1\)，它的结论正是 \(z_3\)。</li>
+          <li><b>于是我立刻多加这么多劲把它抵掉</b>（\(u=(u_0-z_3)/b_0\)），
+            而不是像积分项那样，等误差攒够了再慢慢加力。</li>
+        </ol>
+
+        <div class="callout good">
+          <strong>一句话</strong>
+          PID 只用了“结果偏差”一条信息；ADRC 额外用了“我施加了多少输入”和“按标称模型本该得到什么结果”两条。
+          <b>抗扰更快不是玄学，就是多用了两条信息换来的。</b>
+        </div>
+
+        <div class="callout danger">
+          <strong>这个故事也解释了 ADRC 的软肋</strong>
+          它的判断建立在“我知道自己使了多大劲”之上。一旦这条信息不准——执行器饱和了却仍按算出来的 \(u\) 记账、
+          有传输延时、\(b_0\) 数量级错——ADRC 会把“没施加上去的那部分”误判成扰动，
+          于是<b>比 PID 更容易被带偏</b>。参见第 14 章关于“送进 ESO 的必须是限幅后的 \(u\)”那一条。
+        </div>
+
+        <h3 id="ch19-4">记忆点 4：“扩张状态”四个字，逐字拆开就懂了</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th style="width:16%">字</th><th style="width:34%">意思</th><th>在 ADRC 里指什么</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>状态</b></td>
+                <td>凡是“给它一个导数、就能被积分出来”的量</td>
+                <td>\(\dot y\) 是状态，因为 \(y\) 是它积分来的；反过来，只要一个量有导数，它就有资格当状态。</td>
+              </tr>
+              <tr>
+                <td><b>扩张</b></td>
+                <td>在原有 \(n\) 个状态之外，额外挂一个</td>
+                <td>令 \(x_{n+1}=F\)，把本来是“外生输入”的总扰动，强行变成系统<b>内部的一个状态变量</b>。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout good">
+          <strong>一句话</strong>
+          能被积分出来的就能当状态，能当状态的就能被观测器估出来。这两句连起来，就是 ESO 全部的合法性。
+        </div>
+        <p>
+          之所以敢这么干，是因为我们只需要假设 \(\dot F=h\) <b>有界</b>，完全不需要知道 \(h\) 是什么。
+          有了这个假设，\(F\) 就满足状态的定义，标准观测器理论直接套上来即可——
+          “扩张”一词的全部含义，就是<b>把不可测的未知量升格成状态，从而合法地去估计它</b>。
+        </p>
+
+        <h3 id="ch19-5">记忆点 5：ESO 里那个积分，消的是“我的模型”和“实机”之间的稳态误差</h3>
+        <p>看 \(z_3\) 的方程，它是一个<b>纯积分器</b>：</p>
+        <div class="formula">
+          \[
+          \dot z_3=\beta_3\,e_0,\qquad e_0=y-z_1
+          \]
+        </div>
+        <p>
+          只要 \(e_0\neq0\)（我的估计和实机对不上），这个积分就一直往上爬，直到 \(e_0\to0\)。
+          这跟 PI 里的 I 消除稳态误差是<b>同一个机理</b>，区别只在“积的是谁的误差、顶出来的是什么量”：
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th style="width:22%">对比</th><th>PID 的 I</th><th>ESO 里的积分</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>积的是什么误差</td><td>输出与目标之差 \(r-y\)</td><td>实机与我的估计之差 \(y-z_1\)</td></tr>
+              <tr><td>顶出来的是什么</td><td>直接顶出控制量</td><td>顶出扰动估计值 \(z_3\)</td></tr>
+              <tr><td>装在哪里</td><td><b>串在闭环主通道上</b></td><td><b>装在观测器里，不在主通道上</b></td></tr>
+              <tr><td>副作用</td><td>额外 \(-90^\circ\) 相位、积分饱和</td><td>不动主回路相位；但 \(z_3\) 仍需限幅</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout good">
+          <strong>一句话</strong>
+          ADRC 不是“不要积分”，是<b>把积分从误差回路搬到了观测回路</b>。
+        </div>
+        <p>
+          由此可以直接读出两个结论：ESO 稳态时必然 \(e_0=0\)，即 \(z_1=y\)；
+          对<b>常值</b>总扰动，\(z_3\) 零稳态误差地收敛到 \(F\)。
+          但如果 \(F\) 是斜坡（\(\dot F=\)常数），三阶 ESO 会留下一个固定的稳态偏差——
+          要消掉它，就得再扩一阶（把 \(\dot F\) 也当成状态）。
+        </p>
+
+        <h3 id="ch19-6">记忆点 6：积分串联型 ＋ PD 比 PI 少一阶</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th style="width:26%"></th><th>PI(D) 控双积分器</th><th>ADRC 补偿后配 PD</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>闭环特征方程</td><td>\(s^3+k_ds^2+k_ps+k_i\)</td><td>\(s^2+k_ds+k_p=(s+\omega_c)^2\)</td></tr>
+              <tr><td>阶次</td><td>三阶</td><td><b>二阶</b></td></tr>
+              <tr><td>需要配的极点</td><td>3 个，且要在三者之间折中</td><td>1 个位置（重根 \(-\omega_c\)）</td></tr>
+              <tr><td>可调旋钮</td><td>\(k_p,k_i,k_d\) 三个，互相耦合</td><td>\(\omega_c\) 一个</td></tr>
+              <tr><td>相位代价</td><td>原点极点带来固定 \(-90^\circ\)</td><td>主回路无积分器，无此代价</td></tr>
+              <tr><td>饱和处理</td><td>要做抗积分饱和</td><td>只需对 \(u\) 和 \(z_3\) 限幅</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout good">
+          <strong>一句话</strong>
+          I 项是“用相位换静差”，\(z_3\) 补偿是“用信息换静差”。少一阶 ＝ 少一份要牺牲的相位裕度
+          ＝ 同样稳定裕度下能开更高带宽。
+        </div>
+
+        <h3 id="ch19-7">记忆点 7：极点配置在这里只干一件事——把 5 个参数绑成 2 个</h3>
+        <p>全篇一共只做了两次极点配置，各管一件事：</p>
+        <div class="grid-2">
+          <div class="card">
+            <span class="tag">控制器侧</span>
+            <h4>\(s^2+k_ds+k_p=(s+\omega_c)^2\)</h4>
+            <p>双重极点配在 \(-\omega_c\)，得 \(k_p=\omega_c^2,\ k_d=2\omega_c\)。
+              取重根就是临界阻尼：对标称的双积分器不超调。</p>
+          </div>
+          <div class="card">
+            <span class="tag">观测器侧</span>
+            <h4>\(s^3+\beta_1s^2+\beta_2s+\beta_3=(s+\omega_o)^3\)</h4>
+            <p>三重极点配在 \(-\omega_o\)，得 \(\beta_1=3\omega_o,\ \beta_2=3\omega_o^2,\ \beta_3=\omega_o^3\)。</p>
+          </div>
+        </div>
+        <div class="callout good">
+          <strong>一句话</strong>
+          带宽参数化的本质，就是用极点配置把 \(k_p,k_d,\beta_1,\beta_2,\beta_3\) 这 5 个参数，
+          绑成 \(\omega_c\) 和 \(\omega_o\) 这 2 个。
+        </div>
+        <p>
+          为什么都取重根？<b>不是因为最优，是因为最省参数</b>：重根让整组增益只由一个数决定，
+          而且没有振荡模态。如果你愿意多花参数，把三个观测器极点分散配（例如把最快那个拉回来一点）
+          可以换来更低的噪声灵敏度，代价是失去“一个旋钮”的便利。
+        </p>
+
+        <h3 id="ch19-8">记忆点 8：观测器矩阵的特征值，就是估计误差的衰减率</h3>
+        <p>令估计误差 \(\varepsilon=x-z\)，把对象方程减去 ESO 方程，误差动态是：</p>
+        <div class="formula">
+          \[
+          \dot{\varepsilon}=(A-LC)\,\varepsilon+\begin{bmatrix}0\\0\\h\end{bmatrix},
+          \qquad
+          L=\begin{bmatrix}\beta_1\\\beta_2\\\beta_3\end{bmatrix},
+          \qquad h=\dot F
+          \]
+        </div>
+        <p>关键在于 \(A-LC\) 的特征多项式恰好就是上一节配置的那个：</p>
+        <div class="formula">
+          \[
+          \det\!\big(sI-(A-LC)\big)=s^3+\beta_1s^2+\beta_2s+\beta_3=(s+\omega_o)^3
+          \]
+        </div>
+        <div class="callout good">
+          <strong>一句话</strong>
+          \(A-LC\) 的特征值全是 \(-\omega_o\)，所以估计误差按 \(e^{-\omega_o t}\) 衰减。
+          这就是“\(\omega_o\) 决定观测器看多快”的严格出处，不是比喻。
+        </div>
+        <p>从这一个式子能直接读出四件事：</p>
+        <ul>
+          <li><b>为什么 \(\beta\) 不能乱填。</b>特征值必须全在左半平面，否则观测器自己先发散——
+            和对象稳不稳定完全无关。</li>
+          <li><b>误差为什么不会归零。</b>驱动项里还剩 \(h=\dot F\)。\(h\) 有界时误差有界，
+            界随 \(\omega_o\) 增大而缩小。这就是“ESO 估不了变化太快的扰动”的定量含义。</li>
+          <li><b>三重根的形状。</b>重根意味着衰减包含 \(t\,e^{-\omega_o t}\)、\(t^2e^{-\omega_o t}\) 这类项，
+            起步略慢、无振荡，这正是 ESO 上电初期那段“甩头”的来源，可用状态初始化缓解。</li>
+          <li><b>离散化的硬约束。</b>前向欧拉后误差矩阵变成 \(I+T_s(A-LC)\)，特征值是 \(1-\omega_oT_s\)（三重）。
+            要求 \(|1-\omega_oT_s|<1\)，即 \(\omega_oT_s<2\) 才是数学上的稳定边界；
+            工程上要留精度余量，取 \(\omega_oT_s\le0.1\)。这条判定已经做进第 12 章的计算器。</li>
+        </ul>
+
+        <h3 id="ch19-9">记忆点 9：\(b_0\) 是唯一必须由你给的模型信息</h3>
+        <p>
+          \(b_0\) 回答一个问题：<b>我施加一个单位的输入，最高阶导数应该变多少</b>。
+          它有三条硬性要求，严格程度递减：
+        </p>
+        <ol>
+          <li><b>符号必须对。</b>错了就是正反馈，一上电直接往错误方向跑。这是第一个要检查的东西。</li>
+          <li><b>数量级要对。</b>差 2～3 倍通常都能被 \((b-b_0)u\) 吸收进总扰动，由 ESO 兜住。</li>
+          <li><b>宁大勿小。</b>见下面的实测。</li>
+        </ol>
+        <div class="callout warn">
+          <strong>更正一个常见说法（也更正我自己之前的说法）</strong>
+          “\(b_0\) 估小比较保守”是<b>错的</b>。因为 \(u=(u_0-z_3)/b_0\)，\(b_0\) 偏小会让实际控制量放大，
+          等效回路增益变成 \(b/b_0>1\)——这是<b>更激进</b>，不是更保守。
+          在本页这种无时延的理想仿真里你看不出代价（ESO 很快，把增益误差都吸收了）；
+          但真实系统一旦有延时，界限立刻收紧：\(\omega_c=10,\ \omega_o=4\omega_c\) 时，
+          5 ms 延时下 \(b_0\) 低于约 \(0.35b\) 就发散，20 ms 延时下低于约 \(0.65b\) 就发散。
+          反过来 \(b_0\) 偏大只是把回路增益压到 1 以下，表现为变钝、超调增大，但不容易直接失稳。
+          <b>所以实机上宁大勿小。</b>这也是“仿真好好的、上机就振”的一个具体成因。
+        </div>
+        <p><b>怎么估：阶跃初始斜率法。</b></p>
+        <ul>
+          <li>开环（或低增益闭环）给一个已知幅值的输入阶跃 \(u^\ast\)；</li>
+          <li>看输出最高阶导数在阶跃瞬间的初值：二阶对象看 \(\ddot y|_{t=0^+}\)，一阶对象看 \(\dot y|_{t=0^+}\)；</li>
+          <li>则 \(b_0\approx\ddot y|_{0^+}/u^\ast\)。取初始时刻是因为此时对象内部动态还没起作用，
+            \(f\approx0\)，测到的几乎是纯输入增益。</li>
+        </ul>
+
+        <h3 id="ch19-10">记忆点 10：三个最容易反过来记的点</h3>
+        <div class="grid-3">
+          <div class="card">
+            <span class="tag">别记反</span>
+            <h4>误差用 \(z_1\)，不用 \(y\)</h4>
+            <p>\(e_1=v_1-z_1\)。用 \(z_1\) 相当于自带滤波，也保证反馈的都是同一套估计状态。</p>
+          </div>
+          <div class="card">
+            <span class="tag">别记反</span>
+            <h4>\(z_3\) 不是某个物理扰动</h4>
+            <p>它是“合成后的等效影响”，含 \((b-b_0)u\) 和未建模动态，未必等于任何一个可测的力或转矩。</p>
+          </div>
+          <div class="card">
+            <span class="tag">别记反</span>
+            <h4>送进 ESO 的是限幅后的 \(u\)</h4>
+            <p>必须是执行器真正执行的那个值，否则 ESO 会把“没施加上去的部分”记成扰动。</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          \[
+          \boxed{
+          \begin{aligned}
+          &\textbf{一条链：}\;
+          \text{打包} \Rightarrow \text{扩张} \Rightarrow \text{观测} \Rightarrow \text{补偿} \Rightarrow \text{积分串联型} \Rightarrow \text{PD}\\
+          &\textbf{两个旋钮：}\;\omega_c\ \text{管跑多快}，\ \omega_o\ \text{管看多快}，\ \omega_o=(3\sim5)\omega_c\\
+          &\textbf{三个约束：}\;b_0\ \text{符号对}，\ \omega_oT_s\le0.1，\ \text{限幅后的}\ u\ \text{回送 ESO}
+          \end{aligned}}
+          \]
+        </div>
+
+        <div class="quiz">
+          <b>最后一道自测：</b>为什么说“ADRC 抗常值扰动比 PI 快”，不是因为它增益更高？
+          <br/>
+          <button onclick="this.nextElementSibling.style.display='block'">显示答案</button>
+          <div class="answer">
+            因为 PI 必须<b>先让误差出现</b>，再靠积分把补偿量攒出来，攒的速度受 \(k_i\) 和稳定性限制；
+            ADRC 的 \(z_3\) 是从 \(u\) 与 \(y\) 的不一致中<b>直接算出来</b>的，扰动一进来 \(e_0\) 就变，
+            不需要等误差长大。快的来源是信息，不是增益。
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    ADRC interactive tutorial · 单文件 HTML · 可打印、可离线保存页面内容
+  </footer>
+
+  <script>
+    // ---------- UI ----------
+    const root = document.documentElement;
+    const savedTheme = localStorage.getItem('adrc-theme');
+    if (savedTheme) root.dataset.theme = savedTheme;
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      localStorage.setItem('adrc-theme', next);
+      drawAll();
+    });
+
+    let fontScale = Number(localStorage.getItem('adrc-font-scale') || 1);
+    function applyFontScale(){
+      fontScale = Math.max(.88, Math.min(1.22, fontScale));
+      root.style.setProperty('--font-scale', fontScale);
+      localStorage.setItem('adrc-font-scale', fontScale);
+    }
+    applyFontScale();
+    document.getElementById('fontUp').addEventListener('click',()=>{fontScale+=.05;applyFontScale()});
+    document.getElementById('fontDown').addEventListener('click',()=>{fontScale-=.05;applyFontScale()});
+
+    window.addEventListener('scroll', () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      document.getElementById('progress').style.width = `${h > 0 ? (window.scrollY / h) * 100 : 0}%`;
+    });
+
+    const sections = [...document.querySelectorAll('main section')];
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          tocLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
+        }
+      });
+    }, {rootMargin:'-25% 0px -65% 0px'});
+    sections.forEach(s => observer.observe(s));
+
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const text = btn.parentElement.querySelector('code').innerText;
+        await navigator.clipboard.writeText(text);
+        const old = btn.textContent;
+        btn.textContent = '已复制';
+        setTimeout(()=>btn.textContent=old,1200);
+      });
+    });
+
+    // ---------- Calculator ----------
+    const tsRange = document.getElementById('tsRange');
+    const ratioRange = document.getElementById('ratioRange');
+    const b0Range = document.getElementById('b0Range');
+    const fsRange = document.getElementById('fsRange');
+
+    function fmt(x){
+      if (Math.abs(x) >= 1e6) return x.toExponential(3);
+      if (Math.abs(x) >= 1000) return x.toFixed(1);
+      return x.toFixed(3);
+    }
+
+    function updateCalculator(){
+      const Ts = +tsRange.value;
+      const ratio = +ratioRange.value;
+      const b0 = +b0Range.value;
+      const wc = 6 / Ts;
+      const wo = ratio * wc;
+      const kp = wc * wc;
+      const kd = 2 * wc;
+      const beta1 = 3 * wo;
+      const beta2 = 3 * wo * wo;
+      const beta3 = wo * wo * wo;
+      const dtSuggest = 1 / (20 * wo);
+
+      document.getElementById('tsLabel').textContent = `${Ts.toFixed(2)} s`;
+      document.getElementById('ratioLabel').textContent = ratio.toFixed(1);
+      document.getElementById('b0Label').textContent = b0.toFixed(2);
+
+      document.getElementById('wcOut').textContent = fmt(wc);
+      document.getElementById('woOut').textContent = fmt(wo);
+      document.getElementById('b0Out').textContent = fmt(b0);
+      document.getElementById('kpOut').textContent = fmt(kp);
+      document.getElementById('kdOut').textContent = fmt(kd);
+      document.getElementById('beta1Out').textContent = fmt(beta1);
+      document.getElementById('beta2Out').textContent = fmt(beta2);
+      document.getElementById('beta3Out').textContent = fmt(beta3);
+      document.getElementById('dtOut').textContent = `≤ ${dtSuggest.toFixed(6)} s`;
+
+      // 实际采样率 vs 观测器带宽：前向欧拉 LESO 的离散裕度
+      const fs = +fsRange.value;
+      const TsAct = 1 / fs;
+      const woTs = wo * TsAct;
+      document.getElementById('fsLabel').textContent =
+        fs >= 1000 ? `${(fs/1000).toFixed(1)} kHz` : `${fs} Hz`;
+      document.getElementById('tsActOut').textContent = `${(TsAct*1000).toFixed(3)} ms`;
+      document.getElementById('woTsOut').textContent = woTs.toFixed(3);
+      document.getElementById('woMaxOut').textContent = `${fmt(0.1*fs)} rad/s`;
+
+      const verdict = document.getElementById('dtVerdict');
+      const woMaxTxt = `本采样率下建议 ωo ≤ ${fmt(0.1*fs)} rad/s（当前 ${fmt(wo)}）。`;
+      if (woTs <= 0.1) {
+        verdict.className = 'callout good';
+        verdict.innerHTML =
+          `<strong>离散裕度：安全</strong>ωo·Ts = ${woTs.toFixed(3)} ≤ 0.1，` +
+          `前向欧拉的 LESO 在这个采样率下可以放心用。${woMaxTxt}`;
+      } else if (woTs <= 0.3) {
+        verdict.className = 'callout warn';
+        verdict.innerHTML =
+          `<strong>离散裕度：偏激进</strong>ωo·Ts = ${woTs.toFixed(3)} 已进入 0.1～0.3 区间，` +
+          `观测器还能收敛，但离散误差开始明显，扰动突变时 z₃ 容易过冲。` +
+          `建议降 ωo、提采样率，或改用双线性／零阶保持离散的 LESO。${woMaxTxt}`;
+      } else if (woTs < 2) {
+        verdict.className = 'callout danger';
+        verdict.innerHTML =
+          `<strong>离散裕度：危险</strong>ωo·Ts = ${woTs.toFixed(3)} 已远超工程可用范围。` +
+          `数学上前向欧拉的稳定边界是 ωo·Ts &lt; 2，但离对象、时延、噪声一起算，这个配置在实机上极易振荡。` +
+          `${woMaxTxt}`;
+      } else {
+        verdict.className = 'callout danger';
+        verdict.innerHTML =
+          `<strong>离散裕度：必然发散</strong>ωo·Ts = ${woTs.toFixed(3)} ≥ 2，` +
+          `前向欧拉离散后观测器误差极点为 1 − ωo·Ts = ${(1-woTs).toFixed(2)}，已在单位圆外。` +
+          `<b>观测器自己就会发散，和对象稳不稳定无关。</b>${woMaxTxt}`;
+      }
+    }
+    [tsRange,ratioRange,b0Range,fsRange].forEach(el=>el.addEventListener('input',updateCalculator));
+    updateCalculator();
+
+    // ---------- Simulation ----------
+    const simIds = ['simWc','simRatio','simB','simB0','simD','simNoise'];
+    simIds.forEach(id => document.getElementById(id).addEventListener('input', updateSimLabels));
+
+    function updateSimLabels(){
+      document.getElementById('simWcLabel').textContent = (+document.getElementById('simWc').value).toFixed(1);
+      document.getElementById('simRatioLabel').textContent = (+document.getElementById('simRatio').value).toFixed(2);
+      document.getElementById('simBLabel').textContent = (+document.getElementById('simB').value).toFixed(2);
+      document.getElementById('simB0Label').textContent = (+document.getElementById('simB0').value).toFixed(2);
+      document.getElementById('simDLabel').textContent = (+document.getElementById('simD').value).toFixed(2);
+      document.getElementById('simNoiseLabel').textContent = (+document.getElementById('simNoise').value).toFixed(3);
+    }
+
+    function seededNoiseFactory(seed=1234567){
+      let s = seed >>> 0;
+      return () => {
+        s = (1664525 * s + 1013904223) >>> 0;
+        return (s / 4294967296) * 2 - 1;
+      };
+    }
+
+    const U_MAX = 80;
+
+    function simulate(){
+      const wc = +document.getElementById('simWc').value;
+      const ratio = +document.getElementById('simRatio').value;
+      const b = +document.getElementById('simB').value;
+      const b0 = +document.getElementById('simB0').value;
+      const dAmp = +document.getElementById('simD').value;
+      const noiseAmp = +document.getElementById('simNoise').value;
+
+      const wo = ratio * wc;
+      const kp = wc * wc;
+      const kd = 2 * wc;
+      const beta1 = 3 * wo;
+      const beta2 = 3 * wo * wo;
+      const beta3 = wo * wo * wo;
+
+      const T = 5;
+      const dt = Math.min(0.0005, 1/(80*wo));
+      const steps = Math.ceil(T/dt);
+      const sampleEvery = Math.max(1, Math.floor(steps/1600));
+
+      let y = 0, v = 0;
+      let z1 = 0, z2 = 0, z3 = 0;
+      let u = 0;
+      const a0 = 1.0, a1 = 2.0;
+      const rand = seededNoiseFactory(20260730);
+
+      const data = [];
+      for(let k=0;k<=steps;k++){
+        const t = k*dt;
+        const r = t >= 0.5 ? 1 : 0;
+        const rdot = 0;
+        const d = t >= 2.5 ? dAmp : 0;
+
+        const yMeas = y + noiseAmp * rand();
+        const eo = yMeas - z1;
+
+        const z1dot = z2 + beta1 * eo;
+        const z2dot = z3 + b0 * u + beta2 * eo;
+        const z3dot = beta3 * eo;
+
+        z1 += dt * z1dot;
+        z2 += dt * z2dot;
+        z3 += dt * z3dot;
+
+        const u0 = kp * (r - z1) + kd * (rdot - z2);
+        u = (u0 - z3) / b0;
+        const uMax = U_MAX;
+        u = Math.max(-uMax, Math.min(uMax, u));
+
+        const Ftrue = -a1*v - a0*y + (b-b0)*u + d;
+        const acc = -a1*v - a0*y + b*u + d;
+
+        v += dt * acc;
+        y += dt * v;
+
+        if(k % sampleEvery === 0){
+          data.push({t,r,y,z3,Ftrue,u});
+        }
+      }
+      return data;
+    }
+
+    function cssVar(name){
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function drawChart(canvas, series, options){
+      const ctx = canvas.getContext('2d');
+      const ratio = window.devicePixelRatio || 1;
+      const cssW = canvas.clientWidth;
+      const cssH = canvas.clientHeight;
+      canvas.width = Math.floor(cssW * ratio);
+      canvas.height = Math.floor(cssH * ratio);
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+
+      const W = cssW, H = cssH;
+      const pad = {l:54,r:16,t:30,b:42};
+      const plotW = W-pad.l-pad.r;
+      const plotH = H-pad.t-pad.b;
+
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle = cssVar('--panel');
+      ctx.fillRect(0,0,W,H);
+
+      let xs=[], ys=[];
+      series.forEach(s=>{
+        s.data.forEach(p=>{xs.push(p.x);ys.push(p.y)});
+      });
+      (options.hlines||[]).forEach(h=>ys.push(h.y));
+      const xMin = Math.min(...xs), xMax = Math.max(...xs);
+      let yMin = Math.min(...ys), yMax = Math.max(...ys);
+      if(options.yMin !== undefined) yMin = options.yMin;
+      if(options.yMax !== undefined) yMax = options.yMax;
+      if(Math.abs(yMax-yMin)<1e-9){yMax+=1;yMin-=1}
+      const margin=(yMax-yMin)*0.08;
+      yMin-=margin;yMax+=margin;
+
+      const X=x=>pad.l+(x-xMin)/(xMax-xMin)*plotW;
+      const Y=y=>pad.t+(yMax-y)/(yMax-yMin)*plotH;
+
+      ctx.strokeStyle = cssVar('--border');
+      ctx.lineWidth = 1;
+      ctx.fillStyle = cssVar('--muted');
+      ctx.font = '12px sans-serif';
+      ctx.textAlign='center';
+
+      const xTicks=5, yTicks=5;
+      for(let i=0;i<=xTicks;i++){
+        const x=xMin+(xMax-xMin)*i/xTicks;
+        const px=X(x);
+        ctx.beginPath();ctx.moveTo(px,pad.t);ctx.lineTo(px,H-pad.b);ctx.stroke();
+        ctx.fillText(x.toFixed(1),px,H-pad.b+20);
+      }
+      ctx.textAlign='right';
+      for(let i=0;i<=yTicks;i++){
+        const y=yMin+(yMax-yMin)*i/yTicks;
+        const py=Y(y);
+        ctx.beginPath();ctx.moveTo(pad.l,py);ctx.lineTo(W-pad.r,py);ctx.stroke();
+        ctx.fillText(y.toFixed(2),pad.l-7,py+4);
+      }
+
+      ctx.fillStyle = cssVar('--text');
+      ctx.textAlign='left';
+      ctx.font='600 14px sans-serif';
+      ctx.fillText(options.title, pad.l, 19);
+
+      ctx.font='12px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillStyle = cssVar('--muted');
+      ctx.fillText('Time (s)',pad.l+plotW/2,H-8);
+
+      ctx.save();
+      ctx.translate(13,pad.t+plotH/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.fillText(options.yLabel,0,0);
+      ctx.restore();
+
+      (options.hlines||[]).forEach(h=>{
+        ctx.save();
+        ctx.strokeStyle=h.color;
+        ctx.lineWidth=1.6;
+        ctx.setLineDash([7,5]);
+        ctx.beginPath();
+        ctx.moveTo(pad.l,Y(h.y));
+        ctx.lineTo(W-pad.r,Y(h.y));
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle=h.color;
+        ctx.font='11px sans-serif';
+        ctx.textAlign='left';
+        ctx.fillText(h.label,pad.l+6,Y(h.y)-6);
+      });
+
+      series.forEach(s=>{
+        ctx.strokeStyle=s.color;
+        ctx.lineWidth=s.width||2;
+        ctx.beginPath();
+        s.data.forEach((p,i)=>{
+          const px=X(p.x),py=Y(p.y);
+          if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        });
+        ctx.stroke();
+      });
+    }
+
+    let lastData = null;
+    function drawAll(){
+      if(!lastData) lastData=simulate();
+      drawChart(
+        document.getElementById('responseCanvas'),
+        [
+          {color:'#3157d5',width:2,data:lastData.map(d=>({x:d.t,y:d.r}))},
+          {color:'#0b8f70',width:2.3,data:lastData.map(d=>({x:d.t,y:d.y}))}
+        ],
+        {title:'Closed-loop response',yLabel:'Amplitude'}
+      );
+
+      drawChart(
+        document.getElementById('distCanvas'),
+        [
+          {color:'#c43c4b',width:2,data:lastData.map(d=>({x:d.t,y:d.Ftrue}))},
+          {color:'#8b5cf6',width:2,data:lastData.map(d=>({x:d.t,y:d.z3}))}
+        ],
+        {title:'Total disturbance estimation',yLabel:'Disturbance'}
+      );
+
+      drawChart(
+        document.getElementById('uCanvas'),
+        [
+          {color:'#b56b00',width:1.8,data:lastData.map(d=>({x:d.t,y:d.u}))}
+        ],
+        {
+          title:'Control effort u (watch the limits)',
+          yLabel:'u',
+          hlines:[
+            {y:U_MAX,color:'#c43c4b',label:'+u_max'},
+            {y:-U_MAX,color:'#c43c4b',label:'-u_max'}
+          ]
+        }
+      );
+    }
+
+    document.getElementById('runSim').addEventListener('click',()=>{
+      updateSimLabels();
+      lastData=simulate();
+      drawAll();
+    });
+    simIds.forEach(id=>document.getElementById(id).addEventListener('change',()=>{
+      lastData=simulate();drawAll();
+    }));
+
+    updateSimLabels();
+    lastData=simulate();
+    drawAll();
+    window.addEventListener('resize',()=>drawAll());
+  </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730"}' crossorigin="anonymous"></script>
+</body>
+</html>
