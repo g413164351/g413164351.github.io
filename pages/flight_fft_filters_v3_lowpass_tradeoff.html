@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>飞行日志 FFT 与滤波：真实例子版</title>
+<style>
+:root{--bg:#07111e;--panel:#0e1d2e;--text:#f1f8ff;--muted:#a7bdd1;--raw:#5ed9ff;--motion:#7af0ae;--motor:#ffd166;--noise:#c6a0ff;--filtered:#fff;--red:#ff7676;--grid:#29435e}
+*{box-sizing:border-box} body{margin:0;color:var(--text);background:linear-gradient(145deg,#06101b,#0a1930 60%,#07111e);font-family:Inter,"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1480px;margin:auto;padding:18px} h1{margin:0 0 6px;font-size:clamp(27px,4vw,45px)} .sub{color:var(--muted);line-height:1.65;margin-bottom:14px}
+.card{background:rgba(14,29,46,.97);border:1px solid #203f5c;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
+.lesson{display:grid;grid-template-columns:minmax(0,1.72fr) 390px;gap:14px}.main{padding:16px}.side{padding:16px;position:sticky;top:10px;height:max-content}
+.progress{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-bottom:14px}.pbar{height:8px;border-radius:99px;background:#203a53}.pbar.done{background:var(--raw)}.pbar.now{background:var(--motor)}
+.title{font-size:23px;font-weight:900;margin:3px 0 5px}.subtitle{color:#bed0e0;line-height:1.6;margin-bottom:12px}.idea{background:#091827;border-left:5px solid var(--motor);border-radius:12px;padding:14px 16px;line-height:1.72;font-size:18px;margin-bottom:13px}
+.legend{display:flex;gap:13px;flex-wrap:wrap;color:#cbddeb;font-size:13px;margin:8px 2px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+canvas{width:100%;display:block;background:#081522;border:1px solid #193852;border-radius:12px}#time{height:260px}#fft{height:315px;margin-top:12px}#spec{height:315px;margin-top:12px}
+#filterResponse{height:220px;margin-top:10px}
+.filterLab{margin-top:12px;background:#0a1929;border:1px solid #25445f;border-radius:14px;padding:12px}
+.filterLab h3{margin:0 0 5px;font-size:17px}.filterLab .mini{color:var(--muted);font-size:13px;line-height:1.55}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.metric{background:#091725;border:1px solid #1c3953;border-radius:10px;padding:9px}.metric b{display:block;font-size:17px}.metric span{font-size:12px;color:var(--muted)}
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.presets button{border:1px solid #315a79;background:#122d48;color:#fff;border-radius:9px;padding:9px;cursor:pointer;font-weight:800}.presets button:hover{background:#183b5a}
+.filterVerdict{margin-top:10px;padding:10px 12px;border-radius:10px;background:#091827;line-height:1.6;font-size:14px}
+@media(max-width:720px){.metrics{grid-template-columns:1fr 1fr}.presets{grid-template-columns:1fr}}
+.cap{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:13px;margin:7px 3px 10px}.explain{background:#091827;border:1px solid #22435f;border-radius:12px;padding:14px 15px;line-height:1.74;color:#d7e5f1;margin-top:12px}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.compare>div{background:#091725;border:1px solid #1d3a54;border-radius:10px;padding:11px}.compare b{display:block;margin-bottom:5px}.compare span{font-size:13px;color:var(--muted);line-height:1.5}
+.side h3{margin:2px 0 10px;font-size:19px}.control{margin:14px 0}.control label{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px}input[type=range]{width:100%}
+.toggle{display:flex;gap:9px;align-items:center;background:#091827;border:1px solid #1d3d59;border-radius:10px;padding:9px 10px;margin:7px 0}.toggle input{transform:scale(1.15)}
+.note{margin-top:12px;background:#0a1929;border-left:4px solid var(--raw);border-radius:10px;padding:12px 13px;color:#ccdeec;line-height:1.67;font-size:14px}.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.kpi{background:#091725;border:1px solid #1c3953;border-radius:10px;padding:10px}.kpi b{display:block;font-size:18px}.kpi span{color:var(--muted);font-size:12px}
+.nav{display:flex;gap:8px;margin-top:16px}.nav button{flex:1;border:1px solid #315a79;background:#122d48;color:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:800}.nav button:hover{background:#183b5a}.nav button:disabled{opacity:.35;cursor:not-allowed}
+.recipe{display:grid;gap:8px;margin-top:12px}.recipe div{background:#091827;border:1px solid #1d3c58;border-radius:10px;padding:10px;line-height:1.5}.recipe small{color:var(--muted)}.hidden{display:none!important}.call{color:#fff;font-weight:850}
+@media(max-width:980px){.lesson{grid-template-columns:1fr}.side{position:static}.compare{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>飞行日志 FFT 与滤波：从“真实的两个峰”讲起</h1>
+<div class="sub">这版把第 5 步彻底改成真实飞行场景：先明确每个峰是谁，再一步一步做 Low-pass、Notch、Dynamic Notch。</div>
+
+<div class="lesson">
+<main class="card main">
+<div class="progress" id="progress"></div>
+<div class="title" id="title"></div>
+<div class="subtitle" id="subtitle"></div>
+<div class="idea" id="idea"></div>
+<div class="legend" id="legend"></div>
+<canvas id="time"></canvas>
+<div class="cap"><span>Time domain</span><span id="timeCap"></span></div>
+<canvas id="fft"></canvas>
+<div class="cap"><span>Frequency domain</span><span id="fftCap"></span></div>
+<div id="filterLab" class="filterLab hidden">
+  <h3>Low-pass 不是一堵墙：看“保留多少 + 滞后多少”</h3>
+  <div class="mini">白色虚线是 cutoff；绿色点是有用 Roll 频率；黄色点是电机振动频率。曲线越低，说明该频率被压得越多。</div>
+  <canvas id="filterResponse"></canvas>
+  <div class="metrics">
+    <div class="metric"><b id="rollKeep">—</b><span>Roll 幅值保留</span></div>
+    <div class="metric"><b id="rollPhase">—</b><span>Roll 相位滞后</span></div>
+    <div class="metric"><b id="rollDelay">—</b><span>该频率等效相位延迟</span></div>
+    <div class="metric"><b id="motorKeep">—</b><span>Motor 幅值保留</span></div>
+  </div>
+  <div class="presets">
+    <button data-fc="9">试 9 Hz：贴着 Roll</button>
+    <button data-fc="30">试 30 Hz：留出余量</button>
+    <button data-fc="80">试 80 Hz：更快但滤得少</button>
+  </div>
+  <div class="filterVerdict" id="filterVerdict"></div>
+</div>
+<div id="specWrap" class="hidden"><canvas id="spec"></canvas><div class="cap"><span>Spectrogram</span><span>很多个局部 FFT 沿时间排起来</span></div></div>
+<div class="explain" id="explain"></div>
+<div class="compare"><div><b>你已经知道</b><span id="oldIdea"></span></div><div><b>这一关只新增</b><span id="newIdea"></span></div></div>
+</main>
+
+<aside class="card side">
+<h3>实验控制</h3>
+<div id="controls"></div>
+<div class="kpis" id="kpis"></div>
+<div class="note" id="task"></div>
+<div class="recipe" id="recipe"></div>
+<div class="nav"><button id="prev">← 上一步</button><button id="next">下一步 →</button></div>
+</aside>
+</div>
+</div>
+
+<script>
+(() => {
+const FS=512,N=512,$=id=>document.getElementById(id);
+let step=1;
+let state={f1:5,f2:12,noiseAmp:.18,offbin:10.5,bodyHz:8,rpm:7200,cutoff:30,notchFreq:120,notchQ:10,dynamicMode:false,showA:true,showB:true,showNoise:true,showRaw:true,showFiltered:true,showMotion:true,showMotor:true};
+let seed=883311;
+function rnd(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}
+function gauss(){const u=Math.max(rnd(),1e-10),v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+const noise=Array.from({length:N},()=>gauss());
+
+function fit(c,h){const d=Math.min(devicePixelRatio||1,2),w=c.clientWidth;c.width=Math.round(w*d);c.height=Math.round(h*d);c.getContext('2d').setTransform(d,0,0,d,0,0)}
+function base(ctx,w,h,xlab,ylab){const L=52,R=16,T=12,B=32;ctx.clearRect(0,0,w,h);ctx.fillStyle='#081522';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#29435e';for(let i=0;i<=5;i++){const x=L+(w-L-R)*i/5;ctx.beginPath();ctx.moveTo(x,T);ctx.lineTo(x,h-B);ctx.stroke()}for(let j=0;j<=4;j++){const y=T+(h-T-B)*j/4;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(w-R,y);ctx.stroke()}ctx.fillStyle='#a7bdd1';ctx.font='12px system-ui';ctx.fillText(xlab,w/2,h-8);ctx.save();ctx.translate(13,h/2);ctx.rotate(-Math.PI/2);ctx.fillText(ylab,0,0);ctx.restore();return{L,R,T,B}}
+function line(ctx,pts,color,width=2,dash=[]){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();ctx.setLineDash([])}
+function sum(arrs){const y=new Float64Array(N);for(const a of arrs)for(let i=0;i<N;i++)y[i]+=a[i];return y}
+
+function components(){
+ const A=new Float64Array(N),B=new Float64Array(N),Noise=new Float64Array(N),Motion=new Float64Array(N),Motor=new Float64Array(N),mf=state.rpm/60;
+ for(let n=0;n<N;n++){const t=n/FS;A[n]=.82*Math.sin(2*Math.PI*state.f1*t);B[n]=.58*Math.sin(2*Math.PI*state.f2*t);Noise[n]=state.noiseAmp*noise[n];Motion[n]=.78*Math.sin(2*Math.PI*state.bodyHz*t)+.15*Math.sin(2*Math.PI*1.1*t+.6);Motor[n]=.36*Math.sin(2*Math.PI*mf*t+.2)}
+ return{A,B,Noise,Motion,Motor};
+}
+function lowpassCoeffs(fc){
+  const Q=1/Math.sqrt(2),w0=2*Math.PI*fc/FS,alpha=Math.sin(w0)/(2*Q),c=Math.cos(w0);
+  let b0=(1-c)/2,b1=1-c,b2=(1-c)/2,a0=1+alpha,a1=-2*c,a2=1-alpha;
+  return {b0:b0/a0,b1:b1/a0,b2:b2/a0,a1:a1/a0,a2:a2/a0};
+}
+function biquadLowpass(x,fc){
+  const q=lowpassCoeffs(fc),y=new Float64Array(N);let x1=0,x2=0,y1=0,y2=0;
+  for(let n=0;n<N;n++){const xn=x[n],yn=q.b0*xn+q.b1*x1+q.b2*x2-q.a1*y1-q.a2*y2;y[n]=yn;x2=x1;x1=xn;y2=y1;y1=yn}
+  return y;
+}
+function lowpassResponse(fc,f){
+  const q=lowpassCoeffs(fc),w=2*Math.PI*f/FS;
+  const c1=Math.cos(w),s1=-Math.sin(w),c2=Math.cos(2*w),s2=-Math.sin(2*w);
+  const nr=q.b0+q.b1*c1+q.b2*c2, ni=q.b1*s1+q.b2*s2;
+  const dr=1+q.a1*c1+q.a2*c2, di=q.a1*s1+q.a2*s2;
+  const den=dr*dr+di*di;
+  const hr=(nr*dr+ni*di)/den, hi=(ni*dr-nr*di)/den;
+  return {mag:Math.hypot(hr,hi),phase:Math.atan2(hi,hr)*180/Math.PI};
+}
+function biquadNotch(x,f0,Q){f0=Math.max(.5,Math.min(FS/2-1,f0));const w0=2*Math.PI*f0/FS,alpha=Math.sin(w0)/(2*Q),c=Math.cos(w0);let b0=1,b1=-2*c,b2=1,a0=1+alpha,a1=-2*c,a2=1-alpha;b0/=a0;b1/=a0;b2/=a0;a1/=a0;a2/=a0;const y=new Float64Array(N);let x1=0,x2=0,y1=0,y2=0;for(let n=0;n<N;n++){const xn=x[n],yn=b0*xn+b1*x1+b2*x2-a1*y1-a2*y2;y[n]=yn;x2=x1;x1=xn;y2=y1;y1=yn}return y}
+function dataset(){
+ const c=components();
+ if(step===1)return{raw:c.A,filtered:c.A,parts:[['A',c.A,'#ffd166']]};
+ if(step===2){const raw=sum([c.A,c.B]);return{raw,filtered:raw,parts:[['A',c.A,'#ffd166'],['B',c.B,'#ff7676']]}};
+ if(step===3){const raw=sum([c.A,c.B,c.Noise]);return{raw,filtered:raw,parts:[['A',c.A,'#ffd166'],['B',c.B,'#ff7676'],['Noise',c.Noise,'#c6a0ff']]}};
+ if(step===4){const pure=new Float64Array(N);for(let n=0;n<N;n++)pure[n]=Math.sin(2*Math.PI*state.offbin*n/FS);return{raw:pure,filtered:pure,parts:[['Signal',pure,'#ffd166']]}};
+ const raw=sum([c.Motion,c.Motor,c.Noise]);
+ if(step===5)return{raw,filtered:raw,parts:[['Motion',c.Motion,'#7af0ae'],['Motor',c.Motor,'#ffd166'],['Noise',c.Noise,'#c6a0ff']]};
+ if(step===6)return{raw,filtered:biquadLowpass(raw,state.cutoff),parts:[['Motion',c.Motion,'#7af0ae'],['Motor',c.Motor,'#ffd166'],['Noise',c.Noise,'#c6a0ff']]};
+ if(step===7)return{raw,filtered:biquadNotch(raw,state.notchFreq,state.notchQ),parts:[['Motion',c.Motion,'#7af0ae'],['Motor',c.Motor,'#ffd166'],['Noise',c.Noise,'#c6a0ff']]};
+ if(step===8){const f0=state.dynamicMode?state.rpm/60:120;return{raw,filtered:biquadNotch(raw,f0,10),parts:[['Motion',c.Motion,'#7af0ae'],['Motor',c.Motor,'#ffd166'],['Noise',c.Noise,'#c6a0ff']]}};
+ return{raw,filtered:biquadNotch(biquadLowpass(raw,70),state.rpm/60,10),parts:[['Motion',c.Motion,'#7af0ae'],['Motor',c.Motor,'#ffd166'],['Noise',c.Noise,'#c6a0ff']]};
+}
+function hann(i,n){return .5-.5*Math.cos(2*Math.PI*i/(n-1))}
+function fft(re,im){const n=re.length;let j=0;for(let i=1;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]]}}for(let len=2;len<=n;len<<=1){const a=-2*Math.PI/len,wr0=Math.cos(a),wi0=Math.sin(a);for(let i=0;i<n;i+=len){let wr=1,wi=0;for(let k=0;k<len/2;k++){const ur=re[i+k],ui=im[i+k],vr=re[i+k+len/2]*wr-im[i+k+len/2]*wi,vi=re[i+k+len/2]*wi+im[i+k+len/2]*wr;re[i+k]=ur+vr;im[i+k]=ui+vi;re[i+k+len/2]=ur-vr;im[i+k+len/2]=ui-vi;const nr=wr*wr0-wi*wi0,ni=wr*wi0+wi*wr0;wr=nr;wi=ni}}}}
+function spectrum(xs,useWindow=true){const re=new Float64Array(N),im=new Float64Array(N);let mean=0;for(const x of xs)mean+=x;mean/=N;let wsum=0;for(let i=0;i<N;i++){const w=useWindow?hann(i,N):1;wsum+=w;re[i]=(xs[i]-mean)*w}fft(re,im);const out=[];for(let k=0;k<=N/2;k++)out.push([k*FS/N,2*Math.hypot(re[k],im[k])/wsum]);return out}
+function visible(name){if(name==='A')return state.showA;if(name==='B')return state.showB;if(name==='Noise')return state.showNoise;if(name==='Motion')return state.showMotion;if(name==='Motor')return state.showMotor;return true}
+function pts(arr,m,w,h,mx){const p=[];for(let i=0;i<N;i++)p.push([m.L+(w-m.L-m.R)*i/(N-1),(m.T+h-m.B)/2-arr[i]/mx*(h-m.T-m.B)*.42]);return p}
+
+function drawTime(){
+ const c=$('time'),ctx=c.getContext('2d'),w=c.clientWidth,h=c.clientHeight,m=base(ctx,w,h,'Time (s)','Gyro rate'),d=dataset();let mx=1;
+ for(const v of d.raw)mx=Math.max(mx,Math.abs(v));for(const v of d.filtered)mx=Math.max(mx,Math.abs(v));d.parts.forEach(([,a])=>{for(const v of a)mx=Math.max(mx,Math.abs(v))});
+ d.parts.forEach(([name,a,col])=>{if(visible(name))line(ctx,pts(a,m,w,h,mx),col,1.15,[5,4])});
+ if(state.showRaw)line(ctx,pts(d.raw,m,w,h,mx),'#5ed9ff',2.45);if(step>=6&&state.showFiltered)line(ctx,pts(d.filtered,m,w,h,mx),'#fff',2.25);
+ ctx.fillStyle='#a7bdd1';ctx.font='12px system-ui';for(let i=0;i<=5;i++)ctx.fillText((i/5).toFixed(1),m.L+(w-m.L-m.R)*i/5-4,h-14);
+}
+function drawFFT(){
+ const c=$('fft'),ctx=c.getContext('2d'),w=c.clientWidth,h=c.clientHeight,m=base(ctx,w,h,'Frequency (Hz)','Magnitude'),d=dataset(),maxF=step>=5?250:30,useWindow=step>=4;
+ const raw=spectrum(d.raw,useWindow).filter(p=>p[0]<=maxF),fil=spectrum(d.filtered,useWindow).filter(p=>p[0]<=maxF),parts=d.parts.map(([n,a,col])=>[n,spectrum(a,useWindow).filter(p=>p[0]<=maxF),col]);
+ let pk=Math.max(...raw.map(p=>p[1]),.01);parts.forEach(([,s])=>pk=Math.max(pk,...s.map(p=>p[1])));const log=step>=3;
+ function yy(a){if(!log)return h-m.B-(h-m.T-m.B)*a/(pk*1.12);const db=20*Math.log10(Math.max(a,1e-5)),mx=20*Math.log10(pk),mn=mx-65;return h-m.B-(h-m.T-m.B)*Math.max(0,Math.min(1,(db-mn)/(mx-mn)))}
+ const cv=sp=>sp.map(([f,a])=>[m.L+(w-m.L-m.R)*f/maxF,yy(a)]);
+ if(step===6){const x=m.L+(w-m.L-m.R)*state.cutoff/maxF;ctx.strokeStyle='#fff';ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(x,m.T);ctx.lineTo(x,h-m.B);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#fff';ctx.font='bold 12px system-ui';ctx.fillText(`cutoff ${state.cutoff.toFixed(0)} Hz`,Math.min(x+5,w-105),m.T+16)}
+ if(step===7||step===8){const f0=step===7?state.notchFreq:(state.dynamicMode?state.rpm/60:120),Q=step===7?state.notchQ:10,bw=Math.max(2,f0/Q),x0=m.L+(w-m.L-m.R)*Math.max(0,f0-bw)/maxF,x1=m.L+(w-m.L-m.R)*Math.min(maxF,f0+bw)/maxF,xc=(x0+x1)/2;ctx.fillStyle='rgba(255,118,118,.10)';ctx.fillRect(x0,m.T,x1-x0,h-m.B-m.T);ctx.strokeStyle='#fff';ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(xc,m.T);ctx.lineTo(xc,h-m.B);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#fff';ctx.font='bold 12px system-ui';ctx.fillText(`notch ${f0.toFixed(0)} Hz`,Math.min(xc+5,w-105),m.T+16)}
+ parts.forEach(([name,sp,col])=>{if(visible(name))line(ctx,cv(sp),col,1.35,[5,4])});if(state.showRaw)line(ctx,cv(raw),'#5ed9ff',2.4);if(step>=6&&state.showFiltered)line(ctx,cv(fil),'#fff',2.2);
+ ctx.fillStyle='#a7bdd1';ctx.font='12px system-ui';for(let i=0;i<=5;i++)ctx.fillText((maxF*i/5).toFixed(0),m.L+(w-m.L-m.R)*i/5-5,h-14);
+}
+
+function drawFilterLab(){
+  const lab=$('filterLab');
+  lab.classList.toggle('hidden',step!==6);
+  if(step!==6)return;
+  const c=$('filterResponse'),ctx=c.getContext('2d'),w=c.clientWidth,h=c.clientHeight;
+  const L=48,R=16,T=12,B=30,maxF=160;
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#081522';ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#29435e';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=T+(h-T-B)*i/4;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(w-R,y);ctx.stroke()}
+  for(let i=0;i<=4;i++){const x=L+(w-L-R)*i/4;ctx.beginPath();ctx.moveTo(x,T);ctx.lineTo(x,h-B);ctx.stroke()}
+  const pts=[];
+  for(let f=0;f<=maxF;f+=1){const r=lowpassResponse(state.cutoff,f);pts.push([L+(w-L-R)*f/maxF,h-B-(h-T-B)*Math.min(1.05,r.mag)/1.05])}
+  line(ctx,pts,'#ffffff',2.2);
+  function mark(f,color,label){
+    if(f>maxF)return;
+    const r=lowpassResponse(state.cutoff,f),x=L+(w-L-R)*f/maxF,y=h-B-(h-T-B)*Math.min(1.05,r.mag)/1.05;
+    ctx.strokeStyle=color;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(x,T);ctx.lineTo(x,h-B);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+    ctx.font='bold 12px system-ui';ctx.fillStyle=color;ctx.fillText(label,Math.min(x+6,w-110),Math.max(T+14,y-8));
+  }
+  mark(state.bodyHz,'#7af0ae',`Roll ${state.bodyHz.toFixed(1)} Hz`);
+  mark(state.rpm/60,'#ffd166',`Motor ${(state.rpm/60).toFixed(0)} Hz`);
+  const xc=L+(w-L-R)*state.cutoff/maxF;
+  ctx.strokeStyle='#5ed9ff';ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(xc,T);ctx.lineTo(xc,h-B);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#5ed9ff';ctx.font='bold 12px system-ui';ctx.fillText(`fc ${state.cutoff.toFixed(0)} Hz`,Math.min(xc+5,w-85),T+14);
+  ctx.fillStyle='#a7bdd1';ctx.font='12px system-ui';
+  ctx.fillText('1.0',16,T+5);ctx.fillText('0.5',16,T+(h-T-B)/2+4);ctx.fillText('0',28,h-B+4);ctx.fillText('Frequency (Hz)',w/2-40,h-7);
+
+  const roll=lowpassResponse(state.cutoff,state.bodyHz),motor=lowpassResponse(state.cutoff,state.rpm/60);
+  const phase=Math.abs(roll.phase);
+  const delay=state.bodyHz>0 ? phase/360/state.bodyHz*1000 : 0;
+  $('rollKeep').textContent=(roll.mag*100).toFixed(1)+'%';
+  $('rollPhase').textContent=phase.toFixed(1)+'°';
+  $('rollDelay').textContent=delay.toFixed(1)+' ms';
+  $('motorKeep').textContent=(motor.mag*100).toFixed(1)+'%';
+
+  let verdict='';
+  if(roll.mag<0.90 || phase>45){
+    verdict='<b>这个 cutoff 太贴近有用动态。</b> 虽然 Motor 压得很狠，但 Roll 自己也被削弱，而且相位滞后明显。';
+  }else if(motor.mag>0.20){
+    verdict='<b>这个 cutoff 比较宽松。</b> Roll 很完整、滞后小，但 Motor 也留下得更多，可能需要 Notch 来精准处理机械峰。';
+  }else{
+    verdict='<b>这个教学例子里是比较舒服的折中。</b> Roll 基本保留，同时 Motor 已明显衰减。实际飞控仍要按带宽、噪声、相位裕度和滤波器阶数一起定。';
+  }
+  $('filterVerdict').innerHTML=verdict;
+}
+
+function drawSpec(){
+ if(step<9)return;const c=$('spec'),ctx=c.getContext('2d'),w=c.clientWidth,h=c.clientHeight,L=52,R=16,T=12,B=32,maxF=250,cols=190,rows=180;ctx.clearRect(0,0,w,h);ctx.fillStyle='#081522';ctx.fillRect(0,0,w,h);const img=ctx.createImageData(cols,rows);
+ const g=(f,mu,s,a)=>a*Math.exp(-.5*((f-mu)/s)**2);for(let x=0;x<cols;x++){const t=10*x/(cols-1),mf=(3600+600*t)/60;for(let y=0;y<rows;y++){const f=maxF*(1-y/(rows-1));let v=.04+g(f,8,2.0,.48)+g(f,mf,3.2,.58);const z=Math.max(0,Math.min(1,v)),r=Math.round(8+245*Math.pow(z,1.35)),gg=Math.round(25+180*z),b=Math.round(55+120*(1-z)),i=(y*cols+x)*4;img.data[i]=r;img.data[i+1]=gg;img.data[i+2]=b;img.data[i+3]=255}}
+ const off=document.createElement('canvas');off.width=cols;off.height=rows;off.getContext('2d').putImageData(img,0,0);ctx.drawImage(off,L,T,w-L-R,h-T-B);ctx.strokeStyle='#6d879b';ctx.strokeRect(L,T,w-L-R,h-T-B);ctx.fillStyle='#a7bdd1';ctx.font='12px system-ui';for(let i=0;i<=5;i++){ctx.fillText((maxF*i/5).toFixed(0),10,T+(h-T-B)*(1-i/5)+4);ctx.fillText((10*i/5).toFixed(0),L+(w-L-R)*i/5-3,h-14)}ctx.fillText('Time (s)',w/2,h-8);ctx.save();ctx.translate(13,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('Frequency (Hz)',0,0);ctx.restore();
+}
+function slider(label,key,min,max,st,fmt){return `<div class="control"><label><span>${label}</span><b id="${key}Val">${fmt(state[key])}</b></label><input id="${key}" type="range" min="${min}" max="${max}" step="${st}" value="${state[key]}"></div>`}
+function toggle(label,key){return `<label class="toggle"><input id="${key}" type="checkbox" ${state[key]?'checked':''}> ${label}</label>`}
+
+const steps={
+1:{title:'第 1 步：一个黄色来源',subtitle:'一个纯 5 Hz 振动。',idea:'某个周期振动 → FFT 在对应频率出现峰。',time:'黄色来源 = 蓝色记录',fft:'一个主要峰',old:'从零开始。',neu:'频率就是每秒重复多少次。',task:'拖动频率，观察波形和 FFT 峰一起变化。',controls:()=>slider('黄色来源频率','f1',2,18,1,v=>v+' Hz')+toggle('显示黄色来源','showA')+toggle('显示蓝色总信号','showRaw')},
+2:{title:'第 2 步：两个来源叠加',subtitle:'黄色 5 Hz + 红色 12 Hz → 蓝色总信号。',idea:'时域里蓝色变复杂，但 FFT 仍能看出两个来源。',time:'蓝色 = 黄色 + 红色',fft:'两个主要峰',old:'一个来源对应一个峰。',neu:'多个来源能叠加，频域仍能拆开。',task:'开关黄 / 红 / 蓝三条线，看清“分量”和“总和”。',controls:()=>slider('黄色来源 A','f1',2,18,1,v=>v+' Hz')+slider('红色来源 B','f2',3,24,1,v=>v+' Hz')+toggle('显示黄色 A','showA')+toggle('显示红色 B','showB')+toggle('显示蓝色总信号','showRaw')},
+3:{title:'第 3 步：紫色噪声铺在很多频率',subtitle:'在 A + B 上再加入随机噪声。',idea:'规则振动形成峰；随机噪声分散在许多频率。',time:'蓝色 = A + B + Noise',fft:'主峰 + 噪声地板',old:'多个规则振动可以叠加。',neu:'噪声也有频谱，而且不只在高频。',task:'把噪声强度从 0 慢慢调高，看地板升高。',controls:()=>slider('紫色噪声强度','noiseAmp',0,.6,.02,v=>Number(v).toFixed(2))+toggle('显示黄色 A','showA')+toggle('显示红色 B','showB')+toggle('显示紫色噪声','showNoise')+toggle('显示蓝色总信号','showRaw')},
+4:{title:'第 4 步：不是所有小值都是噪声',subtitle:'没有噪声，只保留 10.5 Hz 干净信号和有限窗口。',idea:'频率没对齐 FFT bin 时，能量会向邻近频率泄漏。',time:'时域仍然很干净',fft:'主峰附近有尾巴',old:'小值可能来自噪声。',neu:'也可能来自 spectral leakage。',task:'把 10.5 Hz 调到 10.0 Hz，再调回来。',controls:()=>slider('真实频率','offbin',8,13,.1,v=>Number(v).toFixed(1)+' Hz')+toggle('显示蓝色信号','showRaw')},
+5:{title:'第 5 步：真实例子 —— 这两个峰到底是谁？',subtitle:'四旋翼有明显 Roll 动态；电机约 7200 RPM。',idea:'两个主要峰有明确物理意义：<b>约 8 Hz = 机体真实 Roll 动态；约 120 Hz = 7200 RPM 电机带来的机械振动。</b>',time:'绿色 = 真实机体运动；黄色 = 电机振动；蓝色 = Gyro 实际记录',fft:'8 Hz 想保留；120 Hz 想压制',old:'你已经会看两个峰。',neu:'现在每个峰都有真实来源。',task:'先关掉蓝色 Raw，只看绿色和黄色，再打开蓝色。然后拖 RPM：黄色峰会移动，绿色 Roll 峰不跟 RPM 走。',controls:()=>slider('Motor RPM','rpm',3600,9600,100,v=>Math.round(v))+slider('真实 Roll 动态频率','bodyHz',2,12,.5,v=>Number(v).toFixed(1)+' Hz')+toggle('显示绿色：真实机体运动','showMotion')+toggle('显示黄色：电机振动','showMotor')+toggle('显示紫色：传感器噪声','showNoise')+toggle('显示蓝色：Raw gyro','showRaw')},
+6:{title:'第 6 步：Low-pass 的真正代价 —— 滤噪声，也会伤信号并带来滞后',subtitle:'仍然是刚才同一个真实例子：Roll 约 8 Hz，Motor 约 120 Hz。',idea:'cutoff 不能只“刚大于 8 Hz”。因为真实低通是渐变的：<b>cutoff 越贴近 8 Hz，8 Hz 自己也会被削弱，而且相位滞后会变大。</b>',time:'白色 = Low-pass 后的 Gyro；cutoff 太低时，白色会比绿色更小、更晚',fft:'观察 8 Hz 保留多少，同时观察 120 Hz 被压多少',old:'8 Hz 是想保留的真实动态；120 Hz 是主要机械振动。',neu:'Low-pass 是“滤干净”和“响应快 / 保真”之间的折中。',task:'按顺序点下面 9 Hz、30 Hz、80 Hz 三个预设。9 Hz 会很干净，但会伤 8 Hz 并产生明显相位滞后；30 Hz 在这个教学例子里是较舒服的折中；80 Hz 延迟更小，但 120 Hz 会留下更多。',controls:()=>slider('真实 Roll 动态频率','bodyHz',2,12,.5,v=>Number(v).toFixed(1)+' Hz')+slider('Low-pass cutoff','cutoff',6,160,1,v=>Math.round(v)+' Hz')+toggle('显示绿色：真实机体运动','showMotion')+toggle('显示黄色：电机振动','showMotor')+toggle('显示紫色：噪声','showNoise')+toggle('显示蓝色：Raw','showRaw')+toggle('显示白色：Filtered','showFiltered')},
+7:{title:'第 7 步：为什么还需要 Notch？',subtitle:'Low-pass 会把一大片高频一起压低；Notch 可以只针对一个窄峰。',idea:'Notch 像在 120 Hz 挖一个窄坑：<b>目标峰被强烈压制，附近其他频率尽量保留。</b>',time:'白色 = Notch 后的 Gyro',fft:'白色在目标频率出现深凹口',old:'Low-pass 是高频整体压低。',neu:'Notch 是精准打掉一个窄频带。',task:'把 Notch center 对准 RPM/60，再故意调错 20 Hz，看电机峰是否回来。',controls:()=>slider('Motor RPM','rpm',3600,9600,100,v=>Math.round(v))+slider('Notch center','notchFreq',40,180,2,v=>Math.round(v)+' Hz')+slider('Notch Q','notchQ',3,20,1,v=>Math.round(v))+toggle('显示绿色：机体运动','showMotion')+toggle('显示黄色：电机振动','showMotor')+toggle('显示蓝色：Raw','showRaw')+toggle('显示白色：Filtered','showFiltered')},
+8:{title:'第 8 步：固定 Notch 为什么会失效？',subtitle:'RPM 会变化，电机频率也会变化。',idea:'固定 120 Hz notch 遇到 150 Hz 电机峰时就挖错地方。<b>Dynamic Notch 让坑跟着电机峰移动。</b>',time:'拖 RPM，观察黄色峰变化',fft:'Fixed notch 可能错过；Dynamic notch 跟着峰走',old:'Notch 能精准压一个频率。',neu:'目标会移动时，notch 中心也要移动。',task:'先关闭 Dynamic，把 RPM 拉到 9000；再打开 Dynamic，看白色频谱重新压住黄色峰。',controls:()=>slider('Motor RPM','rpm',3600,9600,100,v=>Math.round(v))+`<label class="toggle"><input id="dynamicMode" type="checkbox" ${state.dynamicMode?'checked':''}> 使用 Dynamic Notch（中心 = RPM/60）</label>`+toggle('显示绿色：机体运动','showMotion')+toggle('显示黄色：电机振动','showMotor')+toggle('显示蓝色：Raw','showRaw')+toggle('显示白色：Filtered','showFiltered')},
+9:{title:'第 9 步：最后才看 Spectrogram',subtitle:'一整趟飞行里 RPM 不断变化。',idea:'Spectrogram = 很多个局部 FFT。<b>斜着移动的亮线就是电机频率随 RPM 变化。</b>',time:'上图仍是一个窗口',fft:'中图仍是一瞬间的 FFT',old:'你已经知道峰是谁，也知道 Low-pass / Notch。',neu:'现在加入时间轴，看峰怎么跑。',task:'看最下面：约 8 Hz 的机体运动靠近低频，电机峰从约 60 Hz 一路移动到约 160 Hz。',controls:()=>'<div class="note">完整思路：Gyro 很乱 → FFT 找峰 → 识别来源 → 选择 Low-pass / Notch → 峰会移动时用 Dynamic Notch。</div>'}
+};
+
+function legend(){
+ if(step<=4){$('legend').innerHTML=step===1?'<span><i class="dot" style="background:#ffd166"></i>Source</span><span><i class="dot" style="background:#5ed9ff"></i>Raw</span>':step===2?'<span><i class="dot" style="background:#ffd166"></i>A</span><span><i class="dot" style="background:#ff7676"></i>B</span><span><i class="dot" style="background:#5ed9ff"></i>Raw</span>':step===3?'<span><i class="dot" style="background:#ffd166"></i>A</span><span><i class="dot" style="background:#ff7676"></i>B</span><span><i class="dot" style="background:#c6a0ff"></i>Noise</span><span><i class="dot" style="background:#5ed9ff"></i>Raw</span>':'<span><i class="dot" style="background:#ffd166"></i>Clean signal</span><span><i class="dot" style="background:#5ed9ff"></i>Spectrum</span>'}
+ else $('legend').innerHTML='<span><i class="dot" style="background:#7af0ae"></i>真实机体运动</span><span><i class="dot" style="background:#ffd166"></i>电机振动</span><span><i class="dot" style="background:#c6a0ff"></i>Noise</span><span><i class="dot" style="background:#5ed9ff"></i>Raw gyro</span>'+(step>=6?'<span><i class="dot" style="background:#fff"></i>Filtered gyro</span>':'');
+}
+function recipe(){
+ const mf=state.rpm/60;
+ if(step===5)$('recipe').innerHTML=`<div><b style="color:#7af0ae">绿色：${state.bodyHz.toFixed(1)} Hz</b><br><small>机体真实 Roll 动态，这个信息应该保留。</small></div><div><b style="color:#ffd166">黄色：${mf.toFixed(0)} Hz</b><br><small>RPM=${Math.round(state.rpm)}，所以转频≈RPM/60=${mf.toFixed(0)} Hz。机械振动。</small></div><div><b style="color:#c6a0ff">紫色：Noise</b><br><small>宽带随机噪声。</small></div>`;
+ else if(step===6)$('recipe').innerHTML=`<div><b>核心不是“fc 刚刚大于 Roll”。</b><br><small>要给有用动态留余量，否则幅值会损失、相位会滞后。</small></div><div><b>fc 太低：</b><small>滤得干净，但信号损失和延迟更明显。</small></div><div><b>fc 太高：</b><small>响应更快、更保真，但会留下更多 Motor / 高频噪声。</small></div>`;
+ else if(step===7)$('recipe').innerHTML=`<div><b>Motor peak：</b><small>${mf.toFixed(0)} Hz</small></div><div><b>Notch center：</b><small>${state.notchFreq.toFixed(0)} Hz。对不准就压不住。</small></div>`;
+ else if(step===8)$('recipe').innerHTML=`<div><b>当前电机：</b><small>${mf.toFixed(0)} Hz</small></div><div><b>Fixed notch：</b><small>始终 120 Hz</small></div><div><b>Dynamic notch：</b><small>当前自动变为 ${mf.toFixed(0)} Hz</small></div>`;
+ else if(step===9)$('recipe').innerHTML='<div><b>读图：</b><small>水平线≈固定频率；斜线≈频率随时间变化；越亮≈该频率越强。</small></div>'; else $('recipe').innerHTML='';
+}
+function kpis(){if(step<5){$('kpis').innerHTML='';return}const mf=state.rpm/60;$('kpis').innerHTML=`<div class="kpi"><b>${state.bodyHz.toFixed(1)} Hz</b><span>真实机体运动</span></div><div class="kpi"><b>${Math.round(state.rpm)}</b><span>Motor RPM</span></div><div class="kpi"><b>${mf.toFixed(0)} Hz</b><span>RPM/60</span></div><div class="kpi"><b>${step===6?Math.round(state.cutoff)+' Hz':'—'}</b><span>${step===6?'Low-pass cutoff':'当前滤波参数'}</span></div>`}
+
+function render(){
+ const s=steps[step];$('progress').innerHTML='';for(let i=1;i<=9;i++){const d=document.createElement('div');d.className='pbar '+(i<step?'done':i===step?'now':'');$('progress').appendChild(d)}
+ $('title').textContent=s.title;$('subtitle').textContent=s.subtitle;$('idea').innerHTML=s.idea;$('timeCap').textContent=s.time;$('fftCap').textContent=s.fft;$('oldIdea').textContent=s.old;$('newIdea').textContent=s.neu;$('task').innerHTML=s.task;$('controls').innerHTML=s.controls();$('specWrap').classList.toggle('hidden',step<9);$('filterLab').classList.toggle('hidden',step!==6);legend();recipe();kpis();
+ $('explain').innerHTML=step===5?'<span class="call">第 5 步只回答一个问题：两个峰到底是什么？</span><br><br>绿色约 '+state.bodyHz.toFixed(1)+' Hz：飞机机体真实 Roll 动态，是有效信息。<br>黄色约 '+(state.rpm/60).toFixed(0)+' Hz：电机机械振动，是我们通常想压下去的成分。':step===6?'<span class="call">Low-pass 不是“cutoff 以下完全保留、以上全部删除”。</span><br><br>它会逐渐衰减，而且会带来相位滞后。所以 fc=9 Hz 虽然比 Roll 8 Hz 大，但已经太贴近有用动态；把 fc 提高，会保真、减小滞后，但同时会放进更多 Motor / 高频噪声。':step===7?'Notch 适合“知道有一个很强、很窄的机械峰”的情况。它不是砍掉所有高频，而是在目标频率附近挖一个窄坑。':step===8?'Fixed notch 失败的核心是：<span class="call">目标峰在动，但坑没动。</span>Dynamic notch 就是让坑跟着 RPM 对应的频率跑。':step===9?'Spectrogram 最后才出现，因为现在你已经知道它要回答什么：<span class="call">这个电机峰在整趟飞行里怎么移动？</span>':'前四步继续只建立 FFT 的基础直觉。';
+ ['f1','f2','noiseAmp','offbin','bodyHz','rpm','cutoff','notchFreq','notchQ'].forEach(key=>{const el=$(key);if(!el)return;el.addEventListener('input',e=>{state[key]=+e.target.value;const v=$(key+'Val');if(v){if(['f1','f2'].includes(key))v.textContent=state[key]+' Hz';else if(key==='noiseAmp')v.textContent=state[key].toFixed(2);else if(['offbin','bodyHz'].includes(key))v.textContent=state[key].toFixed(1)+' Hz';else if(['cutoff','notchFreq'].includes(key))v.textContent=Math.round(state[key])+' Hz';else v.textContent=Math.round(state[key])}recipe();kpis();drawAll()})});
+ ['showA','showB','showNoise','showRaw','showFiltered','showMotion','showMotor'].forEach(key=>{const el=$(key);if(el)el.addEventListener('change',e=>{state[key]=e.target.checked;drawAll()})});
+ const dm=$('dynamicMode');if(dm)dm.addEventListener('change',e=>{state.dynamicMode=e.target.checked;recipe();drawAll()});
+ document.querySelectorAll('[data-fc]').forEach(btn=>btn.addEventListener('click',()=>{
+   state.cutoff=+btn.dataset.fc;
+   const sl=$('cutoff'); if(sl)sl.value=state.cutoff;
+   const vv=$('cutoffVal'); if(vv)vv.textContent=Math.round(state.cutoff)+' Hz';
+   recipe();kpis();drawAll();
+ }));
+ $('prev').disabled=step===1;$('next').disabled=step===9;
+}
+function drawAll(){drawTime();drawFFT();drawFilterLab();if(step===9)drawSpec()}
+$('prev').onclick=()=>{if(step>1){step--;render();drawAll()}};$('next').onclick=()=>{if(step<9){step++;render();drawAll()}};
+function resizeAll(){fit($('time'),260);fit($('fft'),315);fit($('filterResponse'),220);fit($('spec'),315);render();drawAll()}
+window.addEventListener('resize',resizeAll);resizeAll();
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730"}' crossorigin="anonymous"></script>
+</body>
+</html>
