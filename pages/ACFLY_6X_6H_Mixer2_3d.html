@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>六旋翼混控矩阵 · 电机倾角 3D</title>
+<style>
+:root {
+  --bg: #eef1f4; --panel: #ffffff; --panel2: #f4f6f8; --ink: #17202a; --ink2: #56616d; --ink3: #8a949e;
+  --line: rgba(23,32,42,0.14); --accent: #c77d0a; --accent-bg: #fff4df; --info: #1f5fa8; --info-bg: #e8f0fa;
+  --warn: #b3261e; --warn-bg: #fde9e7; --ok: #1d7a45;
+  --view: #dfe5eb;
+  --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161b; --panel: #1a2027; --panel2: #212831; --ink: #e4e9ee; --ink2: #a3adb8; --ink3: #6f7a86;
+    --line: rgba(228,233,238,0.14); --accent: #f0a93a; --accent-bg: #33270f; --info: #8bb8ee; --info-bg: #1b2a3c;
+    --warn: #f28b82; --warn-bg: #3a1d1b; --ok: #7ed3a0; --view: #0e1216;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161b; --panel: #1a2027; --panel2: #212831; --ink: #e4e9ee; --ink2: #a3adb8; --ink3: #6f7a86;
+  --line: rgba(228,233,238,0.14); --accent: #f0a93a; --accent-bg: #33270f; --info: #8bb8ee; --info-bg: #1b2a3c;
+  --warn: #f28b82; --warn-bg: #3a1d1b; --ok: #7ed3a0; --view: #0e1216;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; padding: 20px; background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.6; }
+h1 { font-size: 21px; font-weight: 600; margin: 0 0 4px; }
+.sub { color: var(--ink2); margin: 0 0 16px; max-width: 72ch; }
+a { color: var(--info); }
+button { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+button:hover { background: var(--panel2); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.on { background: var(--accent-bg); border-color: var(--accent); }
+input, select { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink); }
+input[type=number] { width: 70px; font-variant-numeric: tabular-nums; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; margin: 14px 0; }
+@media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.ptitle { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+#view3d { position: relative; width: 100%; height: 440px; background: var(--view); border-radius: 8px; overflow: hidden; touch-action: none; cursor: grab; }
+#view3d:active { cursor: grabbing; }
+#view3d .hint { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: var(--ink3); pointer-events: none; }
+.legend { font-size: 12px; color: var(--ink2); margin-top: 6px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin-right: 3px; }
+.scroll { overflow-x: auto; }
+table.inp { border-collapse: collapse; font-size: 13px; width: 100%; }
+table.inp th { text-align: left; font-weight: 500; color: var(--ink2); padding: 3px 4px; white-space: nowrap; }
+table.inp th small { display: block; font-weight: 400; color: var(--ink3); font-size: 11px; }
+table.inp td { padding: 2px 3px; }
+.tilt-col input { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.group { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+.glabel { font-size: 12px; color: var(--ink2); margin-bottom: 4px; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
+.step h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 6px; }
+.step.final { border: 2px solid var(--info); background: var(--info-bg); }
+.step.warnbox { border-color: var(--warn); background: var(--warn-bg); }
+.muted { color: var(--ink2); }
+.mat { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12.5px; margin: 4px 0; font-family: var(--font-mono); }
+.mat td { padding: 3px 8px; text-align: right; border: 1px solid var(--line); white-space: nowrap; }
+.mat td.lbl { border: none; background: transparent; text-align: left; color: var(--ink2); font-family: var(--font-sans); padding-right: 8px; }
+.mat td.hl { background: var(--panel2); }
+.mat td.warn { background: var(--warn-bg); color: var(--warn); font-weight: 600; }
+.mat td.good { color: var(--ok); font-weight: 600; }
+.mat td.tilted { background: var(--accent-bg); }
+.eq { font-size: 12.5px; line-height: 1.8; font-variant-numeric: tabular-nums; }
+code { font-family: var(--font-mono); font-size: 12px; }
+.chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 12px; background: var(--panel2); border: 1px solid var(--line); margin-right: 4px; }
+.chip.up { color: var(--ok); } .chip.down { color: var(--warn); }
+pre.cpp {
+  margin: 8px 0 0; padding: 12px 14px; overflow: auto; white-space: pre;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--ink); font: 12px/1.55 var(--font-mono);
+}
+.acfly-badge {
+  display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px;
+  background:var(--accent-bg); border:1px solid var(--accent); color:var(--accent); font-size:11px;
+}
+label { white-space: nowrap; }
+</style>
+</head>
+<body>
+<h1>六旋翼混控矩阵推导（含电机倾角）</h1>
+<p class="sub">固定桨距 eVTOL：给每个电机设定前倾角和侧倾角，推力方向随之改变，力矩、控制效率矩阵和混控矩阵实时更新。3D 视图可拖动旋转、滚轮缩放。</p>
+
+<div class="row" id="presets">
+  <button data-preset="hex_x">Hex X (PX4)</button>
+  <button data-preset="hex_plus">Hex +</button>
+  <button data-preset="stretched">Stretched hex</button>
+  <button data-preset="h_frame">H frame</button>
+  <button data-preset="h_frame_xplane">H frame Xplane</button>
+  <button data-preset="h_frame_xplane_tan">H frame Xplane + 5° 切向倾斜</button>
+  <button data-preset="acfly_6x">ACFLY 6X</button>
+  <button data-preset="acfly_6h">ACFLY 6H</button>
+</div>
+
+<div class="top">
+  <div class="panel">
+    <div class="row" style="justify-content: space-between; margin-bottom: 6px;">
+      <div class="ptitle" id="view-title" style="margin:0;">3D 视图</div>
+      <div class="row">
+        <button data-view="iso">等轴</button>
+        <button data-view="top">俯视</button>
+        <button data-view="front">前视</button>
+        <button data-view="side">右视</button>
+        <label style="font-size:12px;"><input type="checkbox" id="chk-spin" checked> 桨叶转动</label>
+      </div>
+    </div>
+    <div id="view3d"><div class="hint">拖动旋转 · 滚轮缩放</div></div>
+    <div class="legend">
+      <span class="dot" style="background:#378ADD"></span>CCW
+      <span class="dot" style="background:#E24B4A; margin-left:10px;"></span>CW
+      <span style="margin-left:10px;">彩色箭头 = 实际推力方向，虚线 = 未倾斜时的竖直参考</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle" id="input-title">电机参数</div>
+    <div class="scroll">
+      <table class="inp"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <label>Ct <input id="inp-ct" type="number" step="0.01"></label>
+      <label>Cm <input id="inp-cm" type="number" step="0.01"></label>
+    </div>
+
+    <div class="group">
+      <div class="glabel">批量设置倾角</div>
+      <div class="row">
+        <label>θ <input id="inp-batch" type="number" step="0.5" value="5">°</label>
+        <button id="b-fwd">全体前倾 θ</button>
+        <button id="b-out">侧向外倾 θ</button>
+        <button id="b-tan">切向倾斜 θ（增强偏航）</button>
+        <button id="b-zero">倾角清零</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="glabel">混控器控制的自由度（Roll、Pitch、Yaw、T 始终包含）</div>
+      <div class="row">
+        <label><input type="checkbox" id="chk-fx"> <span id="lbl-fx">F_x</span></label>
+        <label><input type="checkbox" id="chk-fy"> <span id="lbl-fy">F_y</span></label>
+        <label id="wrap-legacy" style="margin-left:8px;"><input type="checkbox" id="chk-legacy"> Yaw(+Y) 沿用旧版符号</label>
+      </div>
+    </div>
+
+    <div class="group muted" style="font-size:12.5px;" id="tilt-def"></div>
+  </div>
+</div>
+
+<div id="steps"></div>
+
+<div class="step">
+  <h3>参考链接</h3>
+  <ul style="margin:4px 0; padding-left: 20px;">
+    <li><a href="https://github.com/castacks/PX4-fully-actuated/blob/v1.10-master/src/lib/mixer/MultirotorMixer/geometries/hex_x.toml" target="_blank" rel="noopener noreferrer">hex_x.toml</a>：电机位置</li>
+    <li><a href="https://github.com/castacks/PX4-fully-actuated/blob/v1.10-master/src/lib/mixer/MultirotorMixer/mixer_multirotor.py" target="_blank" rel="noopener noreferrer">mixer_multirotor.py</a>：内含多个混控矩阵</li>
+    <li><a href="https://github.com/castacks/PX4-fully-actuated/blob/v1.10-master/src/lib/mixer/MultirotorMixer/geometries/tools/px_generate_mixers.py" target="_blank" rel="noopener noreferrer">px_generate_mixers.py</a>：含系数计算公式（其中 geometry 也支持 axis 字段，即倾斜电机）</li>
+  </ul>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const D2R = Math.PI/180;
+  /*
+    内部统一用 FRD 机体系计算：x 前、y 右、z 下。
+    PX4 预设：输入 x,y,z 即 FRD。
+    X-Plane 预设：X=lat_arm(右), Y=vert_arm(上), Z=long_arm(后)
+      → x_frd = −Z, y_frd = X, z_frd = −Y
+    倾角（两种模式物理含义相同）：
+      ta = 前倾角（推力朝机头方向倾斜为正）
+      tb = 侧倾角（推力朝右侧倾斜为正）
+      推力单位向量 t = [sin ta·cos tb, sin tb, −cos ta·cos tb]
+    单电机：F = Ct·t·ω²，τ = r×F − dir·Cm·t·ω²  (CCW: dir=+1)
+  */
+  const def = m => Object.assign({z:0, ta:0, tb:0}, m);
+  const defX = m => Object.assign({ta:0, tb:0}, m);
+  const PRESETS = {
+    hex_x: { name:'Hex X', mode:'px4', motors:[
+      {x:0,y:1,dir:-1,name:'right'},{x:0,y:-1,dir:1,name:'left'},
+      {x:0.866,y:-0.5,dir:-1,name:'front-left'},{x:-0.866,y:0.5,dir:1,name:'rear-right'},
+      {x:0.866,y:0.5,dir:1,name:'front-right'},{x:-0.866,y:-0.5,dir:-1,name:'rear-left'}].map(def)},
+    hex_plus: { name:'Hex +', mode:'px4', motors:[
+      {x:1,y:0,dir:-1,name:'front'},{x:-1,y:0,dir:1,name:'rear'},
+      {x:0.5,y:0.866,dir:1,name:'front-right'},{x:-0.5,y:-0.866,dir:-1,name:'rear-left'},
+      {x:0.5,y:-0.866,dir:-1,name:'front-left'},{x:-0.5,y:0.866,dir:1,name:'rear-right'}].map(def)},
+    stretched: { name:'Stretched hex', mode:'px4', motors:[
+      {x:1.2,y:0.35,dir:-1,name:'front-right'},{x:1.2,y:-0.35,dir:1,name:'front-left'},
+      {x:0,y:0.6,dir:1,name:'mid-right'},{x:0,y:-0.6,dir:-1,name:'mid-left'},
+      {x:-1.2,y:0.35,dir:1,name:'rear-right'},{x:-1.2,y:-0.35,dir:-1,name:'rear-left'}].map(def)},
+    h_frame: { name:'H frame', mode:'px4', motors:[
+      {x:-5,y:-4.33,dir:1,name:'motor_1'},{x:0,y:-4.33,dir:-1,name:'motor_2'},
+      {x:5,y:-4.33,dir:-1,name:'motor_3'},{x:5,y:4.33,dir:1,name:'motor_4'},
+      {x:0,y:4.33,dir:1,name:'motor_5'},{x:-5,y:4.33,dir:-1,name:'motor_6'}].map(def)},
+    h_frame_xplane: { name:'H frame Xplane', mode:'xplane', motors:[
+      {long_arm:-5,lat_arm:-4.33,vert_arm:0.5,dir:1,name:'motor_1'},
+      {long_arm:0,lat_arm:-4.33,vert_arm:0.5,dir:-1,name:'motor_2'},
+      {long_arm:5,lat_arm:-4.33,vert_arm:0.5,dir:1,name:'motor_3'},
+      {long_arm:5,lat_arm:4.33,vert_arm:0.5,dir:-1,name:'motor_4'},
+      {long_arm:0,lat_arm:4.33,vert_arm:0.5,dir:1,name:'motor_5'},
+      {long_arm:-5,lat_arm:4.33,vert_arm:0.5,dir:-1,name:'motor_6'}].map(defX)},
+
+    // ACFLY presets: motor order is M0..M5 and matches the ACFLY 6X / 6H calculation.
+    acfly_6x: { name:'ACFLY 6X', mode:'px4', acfly:'6x', motors:[
+      {x: Math.sqrt(3)/2, y:-0.5, dir:-1, name:'M0'},
+      {x: 0,              y:-1.0, dir:+1, name:'M1'},
+      {x:-Math.sqrt(3)/2, y:-0.5, dir:-1, name:'M2'},
+      {x:-Math.sqrt(3)/2, y:+0.5, dir:+1, name:'M3'},
+      {x: 0,              y:+1.0, dir:-1, name:'M4'},
+      {x: Math.sqrt(3)/2, y:+0.5, dir:+1, name:'M5'}].map(def)},
+
+    acfly_6h: { name:'ACFLY 6H', mode:'px4', acfly:'6h', motors:[
+      {x:+5, y:-4.33, dir:-1, name:'M0'},
+      {x: 0, y:-4.33, dir:+1, name:'M1'},
+      {x:-5, y:-4.33, dir:-1, name:'M2'},
+      {x:-5, y:+4.33, dir:+1, name:'M3'},
+      {x: 0, y:+4.33, dir:-1, name:'M4'},
+      {x:+5, y:+4.33, dir:+1, name:'M5'}].map(def)},
+  };
+  PRESETS.h_frame_xplane_tan = Object.assign({}, PRESETS.h_frame_xplane, {name:'H frame Xplane + 5° 切向倾斜', postTan:5});
+
+  function loadPreset(key){
+    const p = JSON.parse(JSON.stringify(PRESETS[key]));
+    state = Object.assign({key, Ct:1, Cm:0.05, dofFx:false, dofFy:false, legacyYaw:false}, p);
+    if (p.postTan) applyTangential(p.postTan);
+  }
+  let state;
+
+  // ---------- linear algebra ----------
+  const mz=(r,c)=>Array.from({length:r},()=>Array(c).fill(0));
+  function matmul(A,B){const r=A.length,k=A[0].length,c=B[0].length,R=mz(r,c);for(let i=0;i<r;i++)for(let j=0;j<c;j++){let s=0;for(let t=0;t<k;t++)s+=A[i][t]*B[t][j];R[i][j]=s;}return R;}
+  function transp(A){const R=mz(A[0].length,A.length);A.forEach((row,i)=>row.forEach((v,j)=>R[j][i]=v));return R;}
+  function invN(M){
+    const n=M.length,A=M.map(r=>r.slice()),I=mz(n,n);for(let i=0;i<n;i++)I[i][i]=1;
+    const scale=Math.max(1e-12,...M.flat().map(Math.abs));
+    for(let i=0;i<n;i++){
+      let p=i;for(let j=i+1;j<n;j++)if(Math.abs(A[j][i])>Math.abs(A[p][i]))p=j;
+      if(Math.abs(A[p][i])<1e-10*scale)return null;
+      [A[i],A[p]]=[A[p],A[i]];[I[i],I[p]]=[I[p],I[i]];
+      const d=A[i][i];for(let j=0;j<n;j++){A[i][j]/=d;I[i][j]/=d;}
+      for(let k=0;k<n;k++)if(k!==i){const f=A[k][i];for(let j=0;j<n;j++){A[k][j]-=f*A[i][j];I[k][j]-=f*I[i][j];}}
+    }
+    return I;
+  }
+  function pinv(A){const AT=transp(A),inv=invN(matmul(A,AT));return inv?matmul(AT,inv):null;}
+
+  const f=(v,p=3)=>{const r=Math.abs(v)<5*Math.pow(10,-p-1)?0:v;return r.toFixed(p);};
+  const isX=()=>state.mode==='xplane';
+
+  // ---------- physics ----------
+  function toFRD(m){
+    if(isX()) return {x:-(+m.long_arm||0), y:+m.lat_arm||0, z:-(+m.vert_arm||0)};
+    return {x:+m.x||0, y:+m.y||0, z:+m.z||0};
+  }
+  function thrustDir(m){
+    const a=(+m.ta||0)*D2R, b=(+m.tb||0)*D2R;
+    return [Math.sin(a)*Math.cos(b), Math.sin(b), -Math.cos(a)*Math.cos(b)];
+  }
+  function wrench(m){
+    const r=toFRD(m), t=thrustDir(m), Ct=state.Ct, Cm=state.Cm;
+    const F=t.map(v=>Ct*v);
+    const rc=[r.y*F[2]-r.z*F[1], r.z*F[0]-r.x*F[2], r.x*F[1]-r.y*F[0]];
+    const drag=t.map(v=>-m.dir*Cm*v);
+    return {r,t,F,rc,drag,tau:rc.map((v,i)=>v+drag[i])};
+  }
+  function rowDefs(){
+    const x=isX(), ac=!!state.acfly;
+    return [
+      {k:'roll',  label:x?'Roll (−Z)':'Roll (+X)',  col:'u_r',  get:w=>w.tau[0]},
+      {k:'pitch', label:ac?'Pitch (ACFLY −Y)':(x?'Pitch (+X)':'Pitch (+Y)'), col:'u_p', get:w=>ac?-w.tau[1]:w.tau[1]},
+      {k:'yaw',   label:x?'Yaw (+Y)':'Yaw (+Z)',    col:'u_y',  get:w=>(x&&!state.legacyYaw)?-w.tau[2]:w.tau[2]},
+      {k:'thrust',label:'T (升力)',                  col:'u_t',  get:w=>-w.F[2]},
+      {k:'fx',    label:x?'F_fwd (−Z)':'F_x (+X 前)', col:'u_fx', get:w=>w.F[0]},
+      {k:'fy',    label:x?'F_right (+X)':'F_y (+Y 右)',col:'u_fy', get:w=>w.F[1]},
+    ];
+  }
+
+  function acflyTarget(kind){
+    const q=1/Math.sqrt(3);
+    const R=[q,2*q,q,-q,-2*q,-q];
+    const P=[-1,0,1,1,0,-1];
+    const Y=kind==='6h' ? [-0.5,1,-0.5,0.5,-1,0.5] : [-1,1,-1,1,-1,1];
+    const T=[1,1,1,1,1,1];
+    return {roll:R,pitch:P,yaw:Y,thrust:T};
+  }
+
+  function acflyZeroGains(motors, defs){
+    // Calibrate command strength from the same geometry at zero tilt.
+    // Only the four attitude/thrust rows are used, so the calibration remains
+    // available even when Fx/Fy are enabled for a tilted configuration.
+    const zeroMotors=motors.map(m=>Object.assign({},m,{ta:0,tb:0}));
+    const zeroWs=zeroMotors.map(wrench);
+    const baseKeys=['roll','pitch','yaw','thrust'];
+    const baseDefs=baseKeys.map(k=>defs.find(d=>d.k===k));
+    const A0=baseDefs.map(d=>zeroWs.map(w=>d.get(w)));
+    const Ap0=pinv(A0);
+    if(!Ap0) return null;
+    const target=acflyTarget(state.acfly);
+    const gains={};
+    baseKeys.forEach((k,j)=>{
+      const a=Ap0.map(r=>r[j]), t=target[k];
+      let at=0, aa=0;
+      for(let i=0;i<a.length;i++){at+=a[i]*t[i];aa+=a[i]*a[i];}
+      gains[k]=aa>1e-14?at/aa:0;
+    });
+    return {gains,target,Ap0};
+  }
+
+  function compute(motors){
+    const defs=rowDefs(), ws=motors.map(wrench), n=motors.length;
+    const B6=defs.map(d=>ws.map(w=>d.get(w)));
+    const sel=defs.filter(d=>['roll','pitch','yaw','thrust'].includes(d.k)||(d.k==='fx'&&state.dofFx)||(d.k==='fy'&&state.dofFy));
+    const selIdx=sel.map(d=>defs.indexOf(d));
+    const A=selIdx.map(i=>B6[i]);
+    const Ap=pinv(A);
+    const out={defs,ws,B6,sel,selIdx,A,Ap,n};
+    if(!Ap) return out;
+    const colMax=j=>Math.max(...Ap.map(r=>Math.abs(r[j])));
+    const maxes=sel.map((_,j)=>colMax(j));
+
+    if(state.acfly){
+      const cal=acflyZeroGains(motors,defs);
+      if(!cal) return out;
+      const gains=sel.map((d,j)=>{
+        if(Object.prototype.hasOwnProperty.call(cal.gains,d.k)) return cal.gains[d.k];
+        return maxes[j]>1e-14 ? 1/maxes[j] : 0;
+      });
+      out.maxes=maxes;
+      out.rp=Math.max(maxes[0],maxes[1]);
+      out.acflyGains=gains;
+      out.acflyTarget=cal.target;
+      out.M=Ap.map(r=>r.map((v,j)=>v*gains[j]));
+      out.C=matmul(B6,Ap);
+      return out;
+    }
+
+    const rp=Math.max(maxes[0],maxes[1]);
+    const scales=maxes.map((v,j)=>j<2?rp:v);
+    out.maxes=maxes; out.scales=scales; out.rp=rp;
+    out.M=Ap.map(r=>r.map((v,j)=>v/scales[j]));
+    out.C=matmul(B6,Ap);
+    return out;
+  }
+
+  // ---------- batch tilt ----------
+  function setAngles(m, dx, dy, th){
+    const s=Math.sin(th*D2R), c=Math.cos(th*D2R);
+    m.tb=+(Math.asin(Math.max(-1,Math.min(1,s*dy)))/D2R).toFixed(2);
+    m.ta=+(Math.atan2(s*dx,c)/D2R).toFixed(2);
+  }
+  function applyTangential(th){
+    state.motors.forEach(m=>{
+      const r=toFRD(m), R=Math.hypot(r.x,r.y);
+      if(R<1e-9){m.ta=0;m.tb=0;return;}
+      // e = (−y, x)/R 使 FRD τz 为正；反扭矩 FRD τz 符号 = dir，因此取 dir·e 使两者同号
+      setAngles(m, m.dir*(-r.y)/R, m.dir*(r.x)/R, th);
+    });
+  }
+
+  // ---------- UI: inputs ----------
+  function renderInputs(){
+    const x=isX();
+    document.getElementById('input-title').textContent = state.acfly ? `${state.name} 电机位置、倾角与转向` : (x ? 'Plane Maker 电机臂、倾角与转向' : '电机位置、倾角与转向');
+    document.getElementById('thead').innerHTML = `<tr><th>M</th>${
+      x ? '<th>long_arm<small>Z / 后</small></th><th>lat_arm<small>X / 右</small></th><th>vert_arm<small>Y / 上</small></th>'
+        : '<th>x<small>+X 前</small></th><th>y<small>+Y 右</small></th><th>z<small>+Z 下</small></th>'
+    }<th>前倾 °<small>推力朝前 +</small></th><th>侧倾 °<small>推力朝右 +</small></th><th>转向</th></tr>`;
+    const keys = x ? ['long_arm','lat_arm','vert_arm'] : ['x','y','z'];
+    document.getElementById('tbody').innerHTML = state.motors.map((m,i)=>`<tr>
+      <td class="muted">${state.acfly?i:i+1}</td>
+      ${keys.map(k=>`<td><input data-i="${i}" data-k="${k}" type="number" step="0.01" value="${m[k]}"></td>`).join('')}
+      <td class="tilt-col"><input data-i="${i}" data-k="ta" type="number" step="0.5" value="${m.ta}"></td>
+      <td class="tilt-col"><input data-i="${i}" data-k="tb" type="number" step="0.5" value="${m.tb}"></td>
+      <td><select data-i="${i}" data-k="dir">
+        <option value="1"${m.dir===1?' selected':''}>CCW (+1)</option>
+        <option value="-1"${m.dir===-1?' selected':''}>CW (−1)</option></select></td></tr>`).join('');
+    document.querySelectorAll('#tbody input, #tbody select').forEach(el=>{
+      el.addEventListener('input',()=>{
+        const i=+el.dataset.i, k=el.dataset.k;
+        state.motors[i][k] = k==='dir' ? +el.value : (parseFloat(el.value)||0);
+        renderOutputs();
+      });
+    });
+    document.getElementById('inp-ct').value=state.Ct;
+    document.getElementById('inp-cm').value=state.Cm;
+    document.getElementById('chk-fx').checked=state.dofFx;
+    document.getElementById('chk-fy').checked=state.dofFy;
+    document.getElementById('chk-legacy').checked=state.legacyYaw;
+    document.getElementById('wrap-legacy').style.display = x ? '' : 'none';
+    const d=rowDefs();
+    document.getElementById('lbl-fx').textContent=d[4].label;
+    document.getElementById('lbl-fy').textContent=d[5].label;
+    document.getElementById('tilt-def').innerHTML = state.acfly
+      ? `ACFLY ${state.acfly.toUpperCase()}：FRD +X 前、+Y 右、+Z 下；0° 倾角按 ACFLY 基准矩阵标定，倾角改变后由 3D 力/力矩矩阵重新求伪逆。`
+      : (x
+        ? '坐标：X-Plane 机体系 +X 右、+Y 上、+Z 后（机头 = −Z），内部换算为 FRD 计算。倾角 0° 时推力沿 +Y。'
+        : '坐标：FRD 机体系 +X 前、+Y 右、+Z 下。倾角 0° 时推力沿 −Z。');
+    document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on', b.dataset.preset===state.key));
+  }
+
+  // ---------- UI: steps ----------
+  function matTable(M,rl,cl,cellCls,prec=3){
+    let h='<table class="mat">';
+    if(cl) h+='<tr><td class="lbl"></td>'+cl.map(c=>`<td class="lbl">${c}</td>`).join('')+'</tr>';
+    M.forEach((row,i)=>{
+      h+='<tr>'+(rl?`<td class="lbl">${rl[i]}</td>`:'');
+      row.forEach((v,j)=>{const c=cellCls?cellCls(i,j,v):'';h+=`<td class="${c}">${f(v,prec)}</td>`;});
+      h+='</tr>';
+    });
+    return h+'</table>';
+  }
+  const vec=(a,p=3)=>'['+a.map(v=>f(v,p)).join(', ')+']';
+
+  const escHtml=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function ccoef(v){
+    if(Math.abs(v)<5e-12) return '0.0';
+    let s=v.toFixed(9).replace(/0+$/,'').replace(/\.$/,'');
+    if(s==='-0') s='0';
+    return s;
+  }
+
+  function cterm(v,name,first=false){
+    if(Math.abs(v)<5e-12) return '';
+    const a=ccoef(Math.abs(v));
+    if(first) return (v<0?'-':'')+a+' * '+name;
+    return (v<0?' - ':' + ')+a+' * '+name;
+  }
+
+  function cexpr(terms){
+    let s='', first=true;
+    terms.forEach(([v,n])=>{
+      if(Math.abs(v)<5e-12) return;
+      s+=cterm(v,n,first); first=false;
+    });
+    return s || '0.0';
+  }
+
+  function acflyCode(r){
+    if(!state.acfly || !r.M) return '';
+    const idx={};
+    r.sel.forEach((d,j)=>idx[d.k]=j);
+    const rr=idx.roll, pp=idx.pitch, yy=idx.yaw, tt=idx.thrust;
+    if([rr,pp,yy,tt].some(v=>v===undefined)) return '';
+
+    const kind=state.acfly==='6h'?'6H':'6X';
+    const fn=`MultiRotor${kind}_TILT_MotorControl`;
+    const n=r.n;
+    let s=`static void ${fn}(double output_throttle, double outRoll, double outPitch, double outYaw, bool DbgSafe)\n{\n`;
+    s+=`    if (output_throttle < 0 || DbgSafe) {\n`;
+    s+=`        MainMotor_PullDownAll();\n`;
+    s+=`        update_output_throttle(0, 1.0 / CtrlRateHz);\n`;
+    s+=`        return;\n`;
+    s+=`    }\n\n`;
+    s+=`    double rp_out[${n}];\n`;
+    for(let i=0;i<n;i++){
+      s+=`    rp_out[${i}] = ${cexpr([[r.M[i][rr],'outRoll'],[r.M[i][pp],'outPitch']])};\n`;
+    }
+    s+=`\n    double yaw_out[${n}];\n`;
+    for(let i=0;i<n;i++){
+      s+=`    yaw_out[${i}] = ${cexpr([[r.M[i][yy],'outYaw']])};\n`;
+    }
+    s+=`\n    double throttle_out[${n}];\n`;
+    for(let i=0;i<n;i++){
+      s+=`    throttle_out[${i}] = ${cexpr([[r.M[i][tt],'output_throttle']])};\n`;
+    }
+    s+=`\n    double motor_out[${n}];\n`;
+    for(let i=0;i<n;i++){
+      s+=`    motor_out[${i}] = throttle_out[${i}] + rp_out[${i}] + yaw_out[${i}];\n`;
+    }
+    s+=`\n    // motor_out[0..${n-1}] 为当前倾角对应的最终 6 路混控输出。\n`;
+    s+=`    // 将 motor_out[] 接入工程现有的电机限幅、油门更新与 PWM/DSHOT 输出接口。\n`;
+    s+=`}\n`;
+    return s;
+  }
+
+  function renderSteps(){
+    const r=compute(state.motors);
+    const box=document.getElementById('steps');
+    const n=r.n, mL=Array.from({length:n},(_,i)=>'M'+(state.acfly?i:i+1));
+    const x=isX();
+    const anyTilt=state.motors.some(m=>Math.abs(m.ta)>1e-9||Math.abs(m.tb)>1e-9);
+    const tiltedCol=j=>Math.abs(state.motors[j].ta)>1e-9||Math.abs(state.motors[j].tb)>1e-9;
+
+    // step 1
+    let s1='<div class="eq">';
+    s1+=`<div class="muted" style="margin-bottom:6px;">单电机模型：F<sub>i</sub> = C<sub>t</sub>·t̂<sub>i</sub>·ω<sub>i</sub>²，τ<sub>i</sub> = r<sub>i</sub>×F<sub>i</sub> − d<sub>i</sub>·C<sub>m</sub>·t̂<sub>i</sub>·ω<sub>i</sub>²（d = +1 CCW / −1 CW）。反扭矩沿推力轴，倾斜后会分出滚转/俯仰分量；推力的水平分量乘以力臂会产生额外偏航力矩。以下向量均为 FRD 系、每单位 ω²。</div>`;
+    r.ws.forEach((w,i)=>{
+      const m=state.motors[i];
+      s1+=`<div><b>M${state.acfly?i:i+1}</b> <span class="muted">(${m.name}, ${m.dir===1?'CCW':'CW'}, 前倾 ${f(m.ta,1)}°, 侧倾 ${f(m.tb,1)}°)</span>
+        r=${vec([w.r.x,w.r.y,w.r.z],2)} &nbsp; t̂=${vec(w.t)} &nbsp; F=${vec(w.F)} &nbsp; r×F=${vec(w.rc)} &nbsp; 反扭矩=${vec(w.drag)}</div>`;
+    });
+    s1+='</div>';
+
+    const selLabels=r.sel.map(d=>d.label), selCols=r.sel.map(d=>d.col);
+    const k=r.sel.length;
+    const selKeys=new Set(r.sel.map(d=>d.k));
+
+    let html=`
+      <div class="step"><h3>① 单电机力与力矩</h3>${s1}</div>
+      <div class="step"><h3>② 完整 6 轴效率矩阵 B（6×${n}）</h3>
+        <div class="muted">[Roll, Pitch, Yaw, T, F_前, F_右]ᵀ = B·[ω₁², …, ω${n}²]ᵀ。橙色底为有倾角的电机列。</div>
+        <div class="scroll">${matTable(r.B6,r.defs.map(d=>d.label),mL,(i,j)=>tiltedCol(j)?'tilted':'')}</div>
+        ${anyTilt?'':'<div class="muted">当前全部 0° 倾角：水平力两行全为 0，与原版 4×n 矩阵一致。</div>'}
+      </div>
+      <div class="step"><h3>③ 混控器使用的效率矩阵 A（${k}×${n}）</h3>
+        <div class="muted">取 B 中被控自由度的行。未选的行（水平力）不参与分配，其影响见 ⑦。</div>
+        <div class="scroll">${matTable(r.A,selLabels,mL,(i,j)=>tiltedCol(j)?'tilted':'')}</div>
+      </div>`;
+
+    if(!r.Ap){
+      html+=`<div class="step warnbox"><h3>④ 无法求伪逆</h3>
+        <div>A·Aᵀ 奇异，A 不满行秩。${(state.dofFx||state.dofFy)?'勾选了水平力自由度，但当前倾角下对应行为零或线性相关，请先给电机设置倾角（例如“切向倾斜”；注意“全体前倾”相同角度时 F_前 与 T 成正比，“侧向外倾”左右对称时同理，都无法独立控制）。':'请调整电机位置或倾角。'}</div></div>`;
+      box.innerHTML=html; return;
+    }
+
+    // reference: zero tilt
+    const zero=compute(state.motors.map(m=>Object.assign({},m,{ta:0,tb:0})));
+    let cmp='';
+    if(anyTilt && zero.Ap && zero.sel.length===k){
+      cmp='<div style="margin-top:8px;">与 0° 倾角对比（列最大值越小 = 该轴控制效率越高）：<br>'+
+        r.sel.map((d,j)=>{
+          const a=r.maxes[j], b=zero.maxes[j], ch=(b/a-1)*100;
+          const cls=Math.abs(ch)<0.05?'':(ch>0?'up':'down');
+          return `<span class="chip ${cls}">${d.label}: ${f(b,4)} → ${f(a,4)} ${Math.abs(ch)<0.05?'':'（效率 '+(ch>0?'+':'')+ch.toFixed(1)+'%）'}</span>`;
+        }).join('')+'</div>';
+    } else if(anyTilt && !zero.Ap){
+      cmp='<div class="muted" style="margin-top:8px;">0° 倾角下该自由度组合不可控，无法对比。</div>';
+    }
+
+    const normStep = state.acfly
+      ? `<div class="step"><h3>⑤ ACFLY 0° 标定尺度 <span class="acfly-badge">${state.name}</span></h3>
+          <div class="muted">0° 倾角先按 ACFLY 基准系数标定 Roll / Pitch / Yaw / T 的输入尺度；改变倾角时保持这组输入尺度，A 与 A⁺ 随 3D 推力方向实时更新。</div>
+          <div style="margin-top:6px;">${r.sel.map((d,j)=>`<code>${d.col}: ${f(r.acflyGains[j],6)}</code>`).join('，')}</div>
+          ${cmp}
+        </div>`
+      : `<div class="step"><h3>⑤ 归一化系数</h3>
+          <div>各列最大绝对值：${r.sel.map((d,j)=>`<code>${d.col}: ${f(r.maxes[j],4)}</code>`).join('，')}</div>
+          <div style="margin-top:4px;"><code>k_rp = max(|r|, |p|) = ${f(r.rp,4)}</code>（由 <b>${r.maxes[1]>r.maxes[0]?'pitch':'roll'}</b> 决定），其余各列使用自身最大值。</div>
+          ${cmp}
+        </div>`;
+
+    html+=`
+      <div class="step"><h3>④ 伪逆 A⁺ = Aᵀ(A·Aᵀ)⁻¹（${n}×${k}）</h3>
+        <div class="muted">${n} 个电机、${k} 个自由度${n>k?'，过驱动，取最小范数解':(n===k?'，方阵，A⁺ 即 A⁻¹':'')}。</div>
+        <div class="scroll">${matTable(r.Ap,mL,selLabels)}</div>
+      </div>
+      ${normStep}
+      <div class="step final"><h3>⑥ 最终混控矩阵 M${state.acfly?' = A⁺·D_ACFLY':''}</h3>
+        <div class="muted">[ω₁², …, ω${n}²]ᵀ = M·[${selCols.join(', ')}]ᵀ，输入均在 [−1, 1]。</div>
+        <div class="scroll">${matTable(r.M,mL,selCols,()=> 'hl')}</div>
+        <div class="muted" style="margin-top:6px;">保留 2 位小数：</div>
+        <div class="scroll">${matTable(r.M,mL,selCols,null,2)}</div>
+      </div>`;
+
+    // step 7 coupling
+    let parasitic=false;
+    const C=r.C;
+    const cellC=(i,j,v)=>{
+      const dk=r.defs[i].k;
+      if(!selKeys.has(dk)){ if(Math.abs(v)>1e-6){parasitic=true;return 'warn';} return ''; }
+      if(r.sel[j].k===dk) return 'good';
+      return '';
+    };
+    const ctable=matTable(C,r.defs.map(d=>d.label),selLabels,cellC);
+    const tCol=r.sel.findIndex(d=>d.k==='thrust');
+    const hov=C.map(row=>row[tCol]);
+    let hovTxt='';
+    if(!selKeys.has('fx')||!selKeys.has('fy')){
+      const parts=[];
+      if(!selKeys.has('fx')) parts.push(`${r.defs[4].label} = ${f(hov[4],4)}·T`);
+      if(!selKeys.has('fy')) parts.push(`${r.defs[5].label} = ${f(hov[5],4)}·T`);
+      hovTxt=`<div style="margin-top:6px;">悬停时（只给 T 指令）的附带水平力：${parts.join('，')}。</div>`;
+    }
+    html+=`
+      <div class="step ${parasitic?'warnbox':''}"><h3>⑦ 耦合检查：B·A⁺（6×${k}）</h3>
+        <div class="muted">每列 = 期望输出一单位该指令时，实际产生的 6 轴力/力矩。被控行应为单位阵（绿色）；红色 = 混控器不管、但会跟着指令出现的寄生水平力，需要姿态倾斜或位置环来抵消。</div>
+        <div class="scroll">${ctable}</div>
+        ${hovTxt}
+        ${parasitic?'<div style="margin-top:4px;">可勾选对应的水平力自由度，让混控器同时分配它（6 电机刚好可做 6 自由度，前提是倾角配置使 B 满秩）。</div>':'<div class="muted" style="margin-top:4px;">无寄生水平力。</div>'}
+      </div>`;
+
+    if(state.acfly){
+      const code=acflyCode(r);
+      html+=`<div class="step"><h3>⑧ ${state.name} 倾角混控代码</h3>
+        <div class="muted">代码中的系数与上方当前 M 矩阵同步；修改电机位置、转向或倾角后会立即更新。</div>
+        <pre class="cpp">${escHtml(code)}</pre>
+      </div>`;
+    }
+
+    box.innerHTML=html;
+  }
+  // ---------- 3D ----------
+  const V3 = window.THREE;
+  let renderer, scene, camera, root, spinners=[], sph={r:3.4, th:2.3, ph:1.05};
+  const COL={ccw:0x378ADD, cw:0xE24B4A};
+  function frd3(x,y,z){ return new THREE.Vector3(y,-z,-x); }
+
+  function makeLabel(text,color,h){
+    const c=document.createElement('canvas'); c.width=512; c.height=96;
+    const g=c.getContext('2d'); g.font='600 52px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+    g.lineWidth=8; g.strokeStyle='rgba(0,0,0,0.35)'; g.strokeText(text,256,48);
+    g.fillStyle=color; g.fillText(text,256,48);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));
+    sp.scale.set(h*512/96,h,1); sp.renderOrder=10; return sp;
+  }
+  function cylBetween(a,b,rad,mat){
+    const len=a.distanceTo(b); if(len<1e-6) return null;
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,len,10),mat);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
+    return m;
+  }
+
+  function init3D(){
+    const el=document.getElementById('view3d');
+    if(!V3){ el.insertAdjacentHTML('afterbegin','<div style="padding:20px;">three.js 未加载，3D 视图不可用；下方计算不受影响。</div>'); return; }
+    renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+    renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+    el.prepend(renderer.domElement);
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(38,1,0.01,100);
+    scene.add(new THREE.HemisphereLight(0xffffff,0x445566,0.9));
+    const dl=new THREE.DirectionalLight(0xffffff,0.7); dl.position.set(2,4,3); scene.add(dl);
+    root=new THREE.Group(); scene.add(root);
+
+    let drag=null;
+    el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId);});
+    el.addEventListener('pointermove',e=>{
+      if(!drag) return;
+      sph.th-=(e.clientX-drag.x)*0.008;
+      sph.ph=Math.max(0.02,Math.min(Math.PI-0.02,sph.ph-(e.clientY-drag.y)*0.008));
+      drag={x:e.clientX,y:e.clientY};
+    });
+    el.addEventListener('pointerup',()=>drag=null);
+    el.addEventListener('pointercancel',()=>drag=null);
+    el.addEventListener('wheel',e=>{e.preventDefault();sph.r=Math.max(1.2,Math.min(12,sph.r*(e.deltaY>0?1.1:0.9)));},{passive:false});
+    const resize=()=>{const w=el.clientWidth,h=el.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();};
+    new ResizeObserver(resize).observe(el); resize();
+
+    const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce) document.getElementById('chk-spin').checked=false;
+    const loop=()=>{
+      if(document.getElementById('chk-spin').checked) spinners.forEach(s=>s.obj.rotation.y+=s.dir*0.12);
+      camera.position.set(sph.r*Math.sin(sph.ph)*Math.sin(sph.th), sph.r*Math.cos(sph.ph), sph.r*Math.sin(sph.ph)*Math.cos(sph.th));
+      camera.lookAt(0,0,0);
+      renderer.render(scene,camera);
+      requestAnimationFrame(loop);
+    };
+    loop();
+  }
+
+  function clearRoot(){
+    root.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ if(o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+    root.clear(); spinners=[];
+  }
+
+  function rebuild3D(){
+    if(!renderer) return;
+    clearRoot();
+    const x=isX();
+    document.getElementById('view-title').textContent = x ? '3D 视图（X-Plane 机体系）' : '3D 视图（FRD 机体系）';
+    const rs=state.motors.map(toFRD);
+    const L=Math.max(1e-6,...rs.map(r=>Math.hypot(r.x,r.y,r.z)));
+    const s=1/L;
+    const body=new THREE.MeshStandardMaterial({color:0x6b7785,metalness:0.2,roughness:0.6});
+    const armM=new THREE.MeshStandardMaterial({color:0x8d98a4,roughness:0.7});
+
+    // body + nose
+    const fus=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.07,0.42),body); root.add(fus);
+    const nose=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.12,16),new THREE.MeshStandardMaterial({color:0xc77d0a}));
+    nose.rotation.x=-Math.PI/2; nose.position.set(0,0,-0.27); root.add(nose);
+
+    // ground grid
+    const minY=Math.min(0,...rs.map(r=>-r.z*s));
+    const grid=new THREE.GridHelper(3,12,0x8a949e,0x8a949e);
+    grid.material.transparent=true; grid.material.opacity=0.25; grid.position.y=minY-0.35; root.add(grid);
+
+    // axes
+    const axes = x
+      ? [[frd3(1,0,0),'nose −Z',0xc77d0a],[frd3(0,1,0),'+X 右',0x2e9d5b],[frd3(0,0,-1),'+Y 上',0x3f7fd0],[frd3(-1,0,0),'+Z 后',0x8a949e]]
+      : [[frd3(1,0,0),'+X 前',0xc77d0a],[frd3(0,1,0),'+Y 右',0x2e9d5b],[frd3(0,0,1),'+Z 下',0x3f7fd0]];
+    axes.forEach(([d,t,c])=>{
+      const len=0.55;
+      root.add(new THREE.ArrowHelper(d,new THREE.Vector3(0,0,0),len,c,0.07,0.04));
+      const lb=makeLabel(t,'#'+c.toString(16).padStart(6,'0'),0.08);
+      lb.position.copy(d.clone().multiplyScalar(len+0.1)); root.add(lb);
+    });
+
+    state.motors.forEach((m,i)=>{
+      const r=rs[i], t=thrustDir(m);
+      const p=frd3(r.x*s,r.y*s,r.z*s);
+      const d=frd3(t[0],t[1],t[2]).normalize();
+      const col=m.dir===1?COL.ccw:COL.cw;
+      const arm=cylBetween(new THREE.Vector3(0,0,0),p,0.012,armM); if(arm) root.add(arm);
+
+      const g=new THREE.Group(); g.position.copy(p);
+      g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d);
+      const can=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.034,0.07,16),new THREE.MeshStandardMaterial({color:col,roughness:0.5}));
+      g.add(can);
+      const disc=new THREE.Mesh(new THREE.CircleGeometry(0.2,48),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.14,side:THREE.DoubleSide,depthWrite:false}));
+      disc.rotation.x=-Math.PI/2; disc.position.y=0.045; g.add(disc);
+      const ring=new THREE.Mesh(new THREE.RingGeometry(0.195,0.205,48),new THREE.MeshBasicMaterial({color:col,side:THREE.DoubleSide}));
+      ring.rotation.x=-Math.PI/2; ring.position.y=0.045; g.add(ring);
+      const spin=new THREE.Group(); spin.position.y=0.05;
+      const bladeM=new THREE.MeshStandardMaterial({color:0x2a3138,roughness:0.4});
+      const b1=new THREE.Mesh(new THREE.BoxGeometry(0.38,0.006,0.028),bladeM); spin.add(b1);
+      g.add(spin); spinners.push({obj:spin,dir:m.dir});
+      root.add(g);
+
+      root.add(new THREE.ArrowHelper(d,p.clone().add(d.clone().multiplyScalar(0.06)),0.42,col,0.08,0.05));
+
+      const tilted=Math.abs(m.ta)>1e-9||Math.abs(m.tb)>1e-9;
+      if(tilted){
+        const geo=new THREE.BufferGeometry().setFromPoints([p.clone(),p.clone().add(new THREE.Vector3(0,0.46,0))]);
+        const ln=new THREE.Line(geo,new THREE.LineDashedMaterial({color:0x8a949e,dashSize:0.03,gapSize:0.02}));
+        ln.computeLineDistances(); root.add(ln);
+      }
+      const lb=makeLabel(`M${state.acfly?i:i+1}${tilted?` (${(+m.ta).toFixed(1)}°, ${(+m.tb).toFixed(1)}°)`:''}`,'#ffffff',0.07);
+      lb.position.copy(p).add(new THREE.Vector3(0,-0.13,0)); root.add(lb);
+    });
+  }
+
+  function setView(v){
+    const V={iso:[2.3,1.05],top:[0,0.02],front:[Math.PI,Math.PI/2-0.05],side:[Math.PI/2,Math.PI/2-0.05]}[v];
+    sph.th=V[0]; sph.ph=V[1];
+  }
+
+  // ---------- wiring ----------
+  function renderOutputs(){ rebuild3D(); renderSteps(); }
+  function renderAll(){ renderInputs(); renderOutputs(); }
+
+  document.querySelectorAll('#presets button').forEach(b=>b.addEventListener('click',()=>{loadPreset(b.dataset.preset);renderAll();}));
+  document.querySelectorAll('button[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+  document.getElementById('inp-ct').addEventListener('input',e=>{state.Ct=parseFloat(e.target.value)||1;renderOutputs();});
+  document.getElementById('inp-cm').addEventListener('input',e=>{state.Cm=parseFloat(e.target.value)||0.05;renderOutputs();});
+  document.getElementById('chk-fx').addEventListener('change',e=>{state.dofFx=e.target.checked;renderOutputs();});
+  document.getElementById('chk-fy').addEventListener('change',e=>{state.dofFy=e.target.checked;renderOutputs();});
+  document.getElementById('chk-legacy').addEventListener('change',e=>{state.legacyYaw=e.target.checked;renderOutputs();});
+  const th=()=>parseFloat(document.getElementById('inp-batch').value)||0;
+  document.getElementById('b-fwd').addEventListener('click',()=>{state.motors.forEach(m=>m.ta=th());renderAll();});
+  document.getElementById('b-out').addEventListener('click',()=>{state.motors.forEach(m=>{const y=toFRD(m).y;m.tb=Math.abs(y)<1e-9?0:Math.sign(y)*th();});renderAll();});
+  document.getElementById('b-tan').addEventListener('click',()=>{applyTangential(th());renderAll();});
+  document.getElementById('b-zero').addEventListener('click',()=>{state.motors.forEach(m=>{m.ta=0;m.tb=0;});renderAll();});
+
+  loadPreset('h_frame_xplane');
+  init3D();
+  setView('iso');
+  renderAll();
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>

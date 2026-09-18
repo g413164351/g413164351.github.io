@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>六旋翼 6X / 6H 混控计算</title>
+<style>
+:root{
+  --blue:#1769e0;
+  --blue2:#0f55b8;
+  --text:#172033;
+  --muted:#667386;
+  --line:#dbe5f0;
+  --soft:#f7faff;
+  --soft2:#fbfdff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:#fff;
+  color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+  line-height:1.62;
+}
+.page{max-width:1080px;margin:auto;padding:46px 28px 80px}
+header{margin-bottom:34px}
+.kicker{color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+h1{font-size:32px;line-height:1.2;margin:8px 0 8px}
+.lead{font-size:14px;color:var(--muted);margin:0}
+nav{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+nav a{
+  color:var(--blue);text-decoration:none;border:1px solid #cfe0f5;background:#f9fbff;
+  border-radius:999px;padding:7px 12px;font-size:12px;font-weight:750
+}
+.chapter{margin-top:44px}
+.ch-head{display:flex;gap:13px;align-items:center;margin-bottom:16px}
+.ch-num{
+  width:38px;height:38px;border-radius:11px;background:var(--blue);color:#fff;
+  display:grid;place-items:center;font-weight:800;flex:0 0 auto
+}
+.ch-head h2{font-size:24px;margin:0}
+.card{
+  border:1px solid var(--line);border-radius:15px;background:#fff;padding:20px;margin:14px 0;
+  box-shadow:0 4px 16px rgba(27,61,102,.035)
+}
+.card.soft{background:var(--soft2)}
+.card h3{font-size:16px;margin:0 0 14px}
+.eq{
+  margin:8px 0;background:var(--soft);border-left:3px solid var(--blue);
+  border-radius:0 9px 9px 0;padding:10px 13px;overflow:auto;
+  font:13px/1.62 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:8px 10px;border-bottom:1px solid #e6edf4;text-align:center}
+th{background:#f7faff;color:#43566d;font-weight:750}
+td:first-child,th:first-child{text-align:left}
+.matrix{
+  display:grid;grid-template-columns:auto repeat(4,minmax(72px,1fr));
+  border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+.matrix div{padding:8px 10px;border-right:1px solid #edf1f5;border-bottom:1px solid #edf1f5;text-align:center}
+.matrix div:nth-child(5n+1){text-align:left;font-weight:700;background:#fafcff}
+.matrix .mh{background:#f4f8fd;font-weight:800;color:#43566d}
+.motor-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;
+  font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+.motor{
+  border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fcfdff
+}
+.const{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px
+}
+.const div{
+  border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;background:#fbfdff
+}
+.const b{display:block;color:var(--blue2);margin-bottom:4px}
+.small{font-size:12px;color:var(--muted)}
+
+.source-layout{
+  display:grid;grid-template-columns:1.08fr .92fr;gap:18px;align-items:start
+}
+pre.code{
+  margin:0;background:#f7f9fc;border:1px solid var(--line);border-radius:11px;
+  padding:14px 16px;overflow:auto;white-space:pre;
+  font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#29374c
+}
+.fig{
+  border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff
+}
+.fig svg{width:100%;height:auto;display:block}
+.fig-note{text-align:center;color:var(--muted);font-size:11px;margin-top:7px}
+
+@media(max-width:760px){
+  .page{padding:28px 15px 60px}
+  h1{font-size:27px}
+  .grid2,.motor-grid,.const,.source-layout{grid-template-columns:1fr}
+  .card{padding:16px}
+}
+@media print{
+  nav{display:none}
+  .page{max-width:none;padding:10mm}
+  .card{box-shadow:none;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="kicker">Hexacopter Control Allocation</div>
+  <h1>六旋翼 6X / 6H 混控计算</h1>
+  <p class="lead">控制效率矩阵 · Moore–Penrose 伪逆 · 通道尺度 · 电机分配</p>
+  <nav>
+    <a href="#x">6X</a>
+    <a href="#h">6H</a>
+    <a href="#c">常数</a>
+  </nav>
+</header>
+
+<section class="chapter" id="x">
+<div class="ch-head">
+  <div class="ch-num">1</div>
+  <h2>6X</h2>
+</div>
+
+<div class="card">
+<h3>1.1 源代码与构型</h3>
+<div class="source-layout">
+<pre class="code">static void MultiRotor6X_MotorControl(
+    double output_throttle,
+    double outRoll,
+    double outPitch,
+    double outYaw,
+    bool DbgSafe)
+{
+    if (output_throttle &lt; 0 || DbgSafe) {
+        MainMotor_PullDownAll();
+        update_output_throttle(0, 1.0 / CtrlRateHz);
+        return;
+    }
+
+    double rp_out[6];
+    double RollS =
+        outRoll * 1.154700538379251529...; // 2/sqrt(3)
+    double half_outRoll = 0.5 * RollS;
+
+    rp_out[0] = -outPitch + half_outRoll;
+    rp_out[1] = RollS;
+    rp_out[2] = +outPitch + half_outRoll;
+    rp_out[3] = +outPitch - half_outRoll;
+    rp_out[4] = -RollS;
+    rp_out[5] = -outPitch - half_outRoll;
+
+    double yaw_out[6];
+    yaw_out[0] = -outYaw;
+    yaw_out[1] = +outYaw;
+    yaw_out[2] = -outYaw;
+    yaw_out[3] = +outYaw;
+    yaw_out[4] = -outYaw;
+    yaw_out[5] = +outYaw;
+
+    MultiRotor_MotorControl(...);
+}</pre>
+<div class="fig">
+<svg viewBox="0 0 430 360" aria-label="6X configuration">
+<defs><marker id="xarr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#1769e0"/></marker></defs>
+<line x1="215" y1="184" x2="215" y2="40" stroke="#1769e0" stroke-width="2" marker-end="url(#xarr)"/>
+<line x1="215" y1="184" x2="362" y2="184" stroke="#1769e0" stroke-width="2" marker-end="url(#xarr)"/>
+<text x="224" y="50" fill="#1769e0" font-size="12" font-weight="700">+X Front</text>
+<text x="328" y="172" fill="#1769e0" font-size="12" font-weight="700">+Y Right</text>
+<g stroke="#acbacb" stroke-width="7" stroke-linecap="round">
+<line x1="215" y1="184" x2="120" y2="88"/><line x1="215" y1="184" x2="76" y2="184"/>
+<line x1="215" y1="184" x2="120" y2="280"/><line x1="215" y1="184" x2="310" y2="280"/>
+<line x1="215" y1="184" x2="354" y2="184"/><line x1="215" y1="184" x2="310" y2="88"/>
+</g>
+<rect x="192" y="161" width="46" height="46" rx="8" fill="#edf5ff" stroke="#1769e0" stroke-width="2"/>
+<g text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="700">
+<g><circle cx="120" cy="88" r="24" fill="#fff" stroke="#c84b4b" stroke-width="3"/><text x="120" y="85">M0</text><text x="120" y="101" fill="#c84b4b">逆转</text></g>
+<g><circle cx="76" cy="184" r="24" fill="#fff" stroke="#177a57" stroke-width="3"/><text x="76" y="181">M1</text><text x="76" y="197" fill="#177a57">正转</text></g>
+<g><circle cx="120" cy="280" r="24" fill="#fff" stroke="#c84b4b" stroke-width="3"/><text x="120" y="277">M2</text><text x="120" y="293" fill="#c84b4b">逆转</text></g>
+<g><circle cx="310" cy="280" r="24" fill="#fff" stroke="#177a57" stroke-width="3"/><text x="310" y="277">M3</text><text x="310" y="293" fill="#177a57">正转</text></g>
+<g><circle cx="354" cy="184" r="24" fill="#fff" stroke="#c84b4b" stroke-width="3"/><text x="354" y="181">M4</text><text x="354" y="197" fill="#c84b4b">逆转</text></g>
+<g><circle cx="310" cy="88" r="24" fill="#fff" stroke="#177a57" stroke-width="3"/><text x="310" y="85">M5</text><text x="310" y="101" fill="#177a57">正转</text></g>
+</g>
+</svg>
+<div class="fig-note">6X 构型</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<h3>1.2 坐标与符号</h3>
+<table>
+<thead><tr><th>Motor</th><th>x/R</th><th>y/R</th><th>sᵢ</th></tr></thead>
+<tbody>
+<tr><td>M0</td><td>+√3/2</td><td>−1/2</td><td>−1</td></tr>
+<tr><td>M1</td><td>0</td><td>−1</td><td>+1</td></tr>
+<tr><td>M2</td><td>−√3/2</td><td>−1/2</td><td>−1</td></tr>
+<tr><td>M3</td><td>−√3/2</td><td>+1/2</td><td>+1</td></tr>
+<tr><td>M4</td><td>0</td><td>+1</td><td>−1</td></tr>
+<tr><td>M5</td><td>+√3/2</td><td>+1/2</td><td>+1</td></tr>
+</tbody>
+</table>
+<div class="eq">aT = [ 1, 1, 1, 1, 1, 1 ]
+aR = -y/R
+aP = -x/R
+aY = s</div>
+</div>
+
+<div class="card">
+<h3>1.3 控制效率矩阵</h3>
+<div class="eq">A_X =
+[  1        1        1        1        1        1      ]
+[  1/2      1        1/2     -1/2     -1       -1/2   ]
+[ -√3/2     0       +√3/2    +√3/2     0       -√3/2  ]
+[ -1       +1       -1       +1       -1       +1      ]</div>
+</div>
+
+<div class="card">
+<h3>1.4 伪逆</h3>
+<div class="eq">A_X A_Xᵀ = diag(6, 3, 3, 6)
+
+(A_X A_Xᵀ)⁻¹ = diag(1/6, 1/3, 1/3, 1/6)
+
+A_X⁺ = A_Xᵀ (A_X A_Xᵀ)⁻¹</div>
+
+<div class="matrix">
+<div class="mh"></div><div class="mh">T</div><div class="mh">R</div><div class="mh">P</div><div class="mh">Y</div>
+<div>M0</div><div>1/6</div><div>1/6</div><div>−√3/6</div><div>−1/6</div>
+<div>M1</div><div>1/6</div><div>1/3</div><div>0</div><div>+1/6</div>
+<div>M2</div><div>1/6</div><div>1/6</div><div>+√3/6</div><div>−1/6</div>
+<div>M3</div><div>1/6</div><div>−1/6</div><div>+√3/6</div><div>+1/6</div>
+<div>M4</div><div>1/6</div><div>−1/3</div><div>0</div><div>−1/6</div>
+<div>M5</div><div>1/6</div><div>−1/6</div><div>−√3/6</div><div>+1/6</div>
+</div>
+</div>
+
+<div class="card">
+<h3>1.5 通道尺度与分配矩阵</h3>
+<div class="eq">D_X = diag(6, 2√3, 2√3, 6)
+
+B_X = A_X⁺ D_X</div>
+
+<div class="matrix">
+<div class="mh"></div><div class="mh">T</div><div class="mh">R</div><div class="mh">P</div><div class="mh">Y</div>
+<div>M0</div><div>1</div><div>1/√3</div><div>−1</div><div>−1</div>
+<div>M1</div><div>1</div><div>2/√3</div><div>0</div><div>+1</div>
+<div>M2</div><div>1</div><div>1/√3</div><div>+1</div><div>−1</div>
+<div>M3</div><div>1</div><div>−1/√3</div><div>+1</div><div>+1</div>
+<div>M4</div><div>1</div><div>−2/√3</div><div>0</div><div>−1</div>
+<div>M5</div><div>1</div><div>−1/√3</div><div>−1</div><div>+1</div>
+</div>
+</div>
+
+<div class="card soft">
+<h3>1.6 电机输出</h3>
+<div class="motor-grid">
+<div class="motor">u₀ = T + R/√3 − P − Y</div>
+<div class="motor">u₁ = T + 2R/√3 + Y</div>
+<div class="motor">u₂ = T + R/√3 + P − Y</div>
+<div class="motor">u₃ = T − R/√3 + P + Y</div>
+<div class="motor">u₄ = T − 2R/√3 − Y</div>
+<div class="motor">u₅ = T − R/√3 − P + Y</div>
+</div>
+</div>
+</section>
+
+<section class="chapter" id="h">
+<div class="ch-head">
+  <div class="ch-num">2</div>
+  <h2>6H</h2>
+</div>
+
+<div class="card">
+<h3>2.1 源代码与构型</h3>
+<div class="source-layout">
+<pre class="code">static void MultiRotor6H_MotorControl(
+    double output_throttle,
+    double outRoll,
+    double outPitch,
+    double outYaw,
+    bool DbgSafe)
+{
+    if (output_throttle &lt; 0 || DbgSafe) {
+        MainMotor_PullDownAll();
+        update_output_throttle(0, 1.0 / CtrlRateHz);
+        return;
+    }
+
+    double rp_out[6];
+    double RollS =
+        outRoll * 1.154700538379251529...; // 2/sqrt(3)
+    double half_outRoll = 0.5 * RollS;
+
+    rp_out[0] = -outPitch + half_outRoll;
+    rp_out[1] = RollS;
+    rp_out[2] = +outPitch + half_outRoll;
+    rp_out[3] = +outPitch - half_outRoll;
+    rp_out[4] = -RollS;
+    rp_out[5] = -outPitch - half_outRoll;
+
+    double yaw_out[6];
+    yaw_out[0] = -0.5 * outYaw;
+    yaw_out[1] = +outYaw;
+    yaw_out[2] = -0.5 * outYaw;
+    yaw_out[3] = +0.5 * outYaw;
+    yaw_out[4] = -outYaw;
+    yaw_out[5] = +0.5 * outYaw;
+
+    MultiRotor_MotorControl(...);
+}</pre>
+<div class="fig">
+<svg viewBox="0 0 430 360" aria-label="6H configuration">
+<defs><marker id="harr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#1769e0"/></marker></defs>
+<line x1="215" y1="184" x2="215" y2="40" stroke="#1769e0" stroke-width="2" marker-end="url(#harr)"/>
+<line x1="215" y1="184" x2="362" y2="184" stroke="#1769e0" stroke-width="2" marker-end="url(#harr)"/>
+<text x="224" y="50" fill="#1769e0" font-size="12" font-weight="700">+X Front</text>
+<text x="328" y="172" fill="#1769e0" font-size="12" font-weight="700">+Y Right</text>
+<g stroke="#acbacb" stroke-width="7" stroke-linecap="round">
+<line x1="215" y1="184" x2="100" y2="70"/><line x1="215" y1="184" x2="100" y2="184"/>
+<line x1="215" y1="184" x2="100" y2="298"/><line x1="215" y1="184" x2="330" y2="298"/>
+<line x1="215" y1="184" x2="330" y2="184"/><line x1="215" y1="184" x2="330" y2="70"/>
+</g>
+<rect x="192" y="157" width="46" height="54" rx="8" fill="#edf5ff" stroke="#1769e0" stroke-width="2"/>
+<g text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="700">
+<g><circle cx="100" cy="70" r="24" fill="#fff" stroke="#c84b4b" stroke-width="3"/><text x="100" y="67">M0</text><text x="100" y="83" fill="#c84b4b">逆转</text></g>
+<g><circle cx="100" cy="184" r="24" fill="#fff" stroke="#177a57" stroke-width="3"/><text x="100" y="181">M1</text><text x="100" y="197" fill="#177a57">正转</text></g>
+<g><circle cx="100" cy="298" r="24" fill="#fff" stroke="#c84b4b" stroke-width="3"/><text x="100" y="295">M2</text><text x="100" y="311" fill="#c84b4b">逆转</text></g>
+<g><circle cx="330" cy="298" r="24" fill="#fff" stroke="#177a57" stroke-width="3"/><text x="330" y="295">M3</text><text x="330" y="311" fill="#177a57">正转</text></g>
+<g><circle cx="330" cy="184" r="24" fill="#fff" stroke="#c84b4b" stroke-width="3"/><text x="330" y="181">M4</text><text x="330" y="197" fill="#c84b4b">逆转</text></g>
+<g><circle cx="330" cy="70" r="24" fill="#fff" stroke="#177a57" stroke-width="3"/><text x="330" y="67">M5</text><text x="330" y="83" fill="#177a57">正转</text></g>
+</g>
+<text x="57" y="145" fill="#667386" font-size="11">y = −W</text>
+<text x="339" y="145" fill="#667386" font-size="11">y = +W</text>
+</svg>
+<div class="fig-note">6H 构型</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<h3>2.2 坐标与符号</h3>
+<table>
+<thead><tr><th>Motor</th><th>x</th><th>y</th><th>sᵢ</th></tr></thead>
+<tbody>
+<tr><td>M0</td><td>+L</td><td>−W</td><td>−1</td></tr>
+<tr><td>M1</td><td>0</td><td>−W</td><td>+1</td></tr>
+<tr><td>M2</td><td>−L</td><td>−W</td><td>−1</td></tr>
+<tr><td>M3</td><td>−L</td><td>+W</td><td>+1</td></tr>
+<tr><td>M4</td><td>0</td><td>+W</td><td>−1</td></tr>
+<tr><td>M5</td><td>+L</td><td>+W</td><td>+1</td></tr>
+</tbody>
+</table>
+<div class="eq">aT = [ 1, 1, 1, 1, 1, 1 ]
+aR = -y/W
+aP = -x/L
+aY = s</div>
+</div>
+
+<div class="card">
+<h3>2.3 控制效率矩阵</h3>
+<div class="eq">A_H =
+[  1   1   1   1   1   1 ]
+[  1   1   1  -1  -1  -1 ]
+[ -1   0  +1  +1   0  -1 ]
+[ -1  +1  -1  +1  -1  +1 ]</div>
+</div>
+
+<div class="card">
+<h3>2.4 伪逆</h3>
+<div class="eq">A_H A_Hᵀ =
+[ 6   0   0   0 ]
+[ 0   6   0  -2 ]
+[ 0   0   4   0 ]
+[ 0  -2   0   6 ]
+
+(A_H A_Hᵀ)⁻¹ =
+[ 1/6    0     0     0   ]
+[  0    3/16   0    1/16 ]
+[  0     0    1/4    0   ]
+[  0    1/16   0    3/16 ]
+
+A_H⁺ = A_Hᵀ (A_H A_Hᵀ)⁻¹</div>
+
+<div class="matrix">
+<div class="mh"></div><div class="mh">T</div><div class="mh">R</div><div class="mh">P</div><div class="mh">Y</div>
+<div>M0</div><div>1/6</div><div>1/8</div><div>−1/4</div><div>−1/8</div>
+<div>M1</div><div>1/6</div><div>1/4</div><div>0</div><div>+1/4</div>
+<div>M2</div><div>1/6</div><div>1/8</div><div>+1/4</div><div>−1/8</div>
+<div>M3</div><div>1/6</div><div>−1/8</div><div>+1/4</div><div>+1/8</div>
+<div>M4</div><div>1/6</div><div>−1/4</div><div>0</div><div>−1/4</div>
+<div>M5</div><div>1/6</div><div>−1/8</div><div>−1/4</div><div>+1/8</div>
+</div>
+</div>
+
+<div class="card">
+<h3>2.5 通道尺度与分配矩阵</h3>
+<div class="eq">D_H = diag(6, 8/√3, 4, 4)
+
+B_H = A_H⁺ D_H</div>
+
+<div class="matrix">
+<div class="mh"></div><div class="mh">T</div><div class="mh">R</div><div class="mh">P</div><div class="mh">Y</div>
+<div>M0</div><div>1</div><div>1/√3</div><div>−1</div><div>−1/2</div>
+<div>M1</div><div>1</div><div>2/√3</div><div>0</div><div>+1</div>
+<div>M2</div><div>1</div><div>1/√3</div><div>+1</div><div>−1/2</div>
+<div>M3</div><div>1</div><div>−1/√3</div><div>+1</div><div>+1/2</div>
+<div>M4</div><div>1</div><div>−2/√3</div><div>0</div><div>−1</div>
+<div>M5</div><div>1</div><div>−1/√3</div><div>−1</div><div>+1/2</div>
+</div>
+</div>
+
+<div class="card soft">
+<h3>2.6 电机输出</h3>
+<div class="motor-grid">
+<div class="motor">u₀ = T + R/√3 − P − Y/2</div>
+<div class="motor">u₁ = T + 2R/√3 + Y</div>
+<div class="motor">u₂ = T + R/√3 + P − Y/2</div>
+<div class="motor">u₃ = T − R/√3 + P + Y/2</div>
+<div class="motor">u₄ = T − 2R/√3 − Y</div>
+<div class="motor">u₅ = T − R/√3 − P + Y/2</div>
+</div>
+</div>
+</section>
+
+<section class="chapter" id="c">
+<div class="ch-head">
+  <div class="ch-num">3</div>
+  <h2>常数</h2>
+</div>
+<div class="card">
+<div class="const">
+  <div><b>√3</b>1.7320508075688772</div>
+  <div><b>1/√3</b>0.5773502691896258</div>
+  <div><b>2/√3</b>1.1547005383792515</div>
+</div>
+</div>
+</section>
+
+</div>
+</body>
+</html>
