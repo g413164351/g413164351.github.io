@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#eaf2f4">
+<title>MAC · xCG · xAC | 三维飞行力学图解</title>
+<style>
+  :root{
+    --ink:#19374a; --muted:#6f8592; --soft:#91a3ae;
+    --bg:#edf4f5; --paper:#fff; --line:#dae6e9;
+    --mac:#008d93; --cg:#e56e58; --ac:#377fba; --le:#c99443;
+    --shadow:0 18px 48px rgba(29,67,84,.075);
+    font-synthesis:none;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:linear-gradient(145deg,#edf5f5 0%,#f7f9f8 56%,#edf1f1 100%);
+    color:var(--ink);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  button,input{font:inherit}
+  button:focus-visible,input:focus-visible{outline:3px solid #72bcbf;outline-offset:3px}
+  .wrap{max-width:1490px;padding:32px 34px 38px;margin:auto}
+  .brand{display:flex;align-items:center;gap:11px;color:#386778;
+    font-size:11px;font-weight:800;letter-spacing:.17em}
+  .brand-mark{display:grid;place-items:center;width:33px;height:33px;border-radius:10px;
+    background:#1f5767;color:white;font-size:20px;line-height:1}
+  .topline{display:flex;justify-content:space-between;gap:20px;align-items:center}
+  .edition{font-size:11px;color:#63808f;letter-spacing:.13em;border:1px solid #d0e1e5;
+    padding:10px 14px;border-radius:100px;background:#ffffff91}
+  header{padding:30px 0 25px}
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--mac);margin:0 0 13px}
+  h1{font-size:clamp(31px,4vw,53px);letter-spacing:-.055em;line-height:1.17;margin:0 0 15px;
+    font-weight:850}
+  .accent{color:var(--mac)}
+  .lead{color:#657f8c;line-height:1.85;font-size:14px;max-width:900px;margin:0}
+  .main{display:grid;grid-template-columns:minmax(0,1fr) 347px;gap:19px;align-items:stretch}
+  .scene-card,.panel,.explain-card{background:var(--paper);border:1px solid #e0e9ec;
+    border-radius:22px;box-shadow:var(--shadow)}
+  .scene-card{min-width:0;overflow:hidden;display:flex;flex-direction:column}
+  .scene-header{padding:22px 25px 17px;display:flex;justify-content:space-between;align-items:flex-start;
+    gap:16px}
+  .section-label{font-size:10px;font-weight:850;color:#8299a3;letter-spacing:.17em;margin-bottom:7px}
+  h2{font-size:18px;line-height:1.3;margin:0;letter-spacing:-.035em}
+  .legend{display:flex;align-items:center;flex-wrap:wrap;gap:13px;margin-top:7px}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:750;
+    color:#688190;white-space:nowrap}
+  .dot{width:8px;height:8px;display:inline-block;border-radius:50%}
+  .scene{height:570px;min-height:570px;flex:1;position:relative;isolation:isolate;overflow:hidden;touch-action:none;
+    background:radial-gradient(ellipse at 46% 32%,#ffffff 0%,#eff8f8 48%,#dfedef 100%);
+    border-top:1px solid #eaf0f0;border-bottom:1px solid #e8f0f1}
+  .scene::before{content:"";position:absolute;inset:0;
+    background:linear-gradient(115deg,#e5f6f666,transparent 39%),
+      repeating-linear-gradient(90deg,transparent,transparent 89px,#edf5f57d 90px);
+    pointer-events:none}
+  canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
+  canvas:active{cursor:grabbing}
+  .scene-watermark{position:absolute;left:23px;top:19px;pointer-events:none}
+  .wm-top{font-size:10px;letter-spacing:.17em;font-weight:850;color:#8ca8ae}
+  .wm-large{font-size:23px;letter-spacing:-.04em;font-weight:850;color:#c4dadd;line-height:1.5}
+  .hint{position:absolute;right:20px;top:21px;font-size:11px;font-weight:600;
+    color:#7a969f;background:#ffffffba;border:1px solid #e2ecec;border-radius:30px;
+    padding:8px 11px;pointer-events:none}
+  .view-actions{position:absolute;left:18px;bottom:18px;display:flex;flex-wrap:wrap;
+    gap:6px;padding:6px;background:#ffffffdf;border:1px solid #dae8e9;
+    border-radius:15px;box-shadow:0 7px 20px #38617614}
+  .view-actions button{color:#637e8c;font-size:11px;font-weight:800;border:0;
+    padding:10px 11px;border-radius:10px;background:transparent;cursor:pointer;
+    transition:background .2s,color .2s}
+  .view-actions button:hover{background:#e9f3f4;color:#1d6270}
+  .view-actions button.active{color:white;background:#246576}
+  .axis-hint{position:absolute;right:17px;bottom:23px;font-size:11px;color:#7c98a2;
+    font-weight:700;background:#ffffffbd;padding:8px 10px;border-radius:9px;
+    pointer-events:none}
+  .pin{position:absolute;pointer-events:none;min-width:88px;transform:translate(0,0);
+    filter:drop-shadow(0 5px 9px #1e4b5620)}
+  .pin-inner{background:#fffffff0;border:1px solid #dfe8eb;border-left:3px solid var(--color);
+    padding:8px 10px;border-radius:9px;white-space:nowrap}
+  .pin-main{font-size:11px;font-weight:850;color:var(--ink)}
+  .pin-main b{color:var(--color);font-weight:900}
+  .pin-sub{font-size:10px;color:#7f929d;margin-top:3px;font-weight:600}
+  .pin-le{--color:var(--le)}
+  .pin-cg{--color:var(--cg)}
+  .pin-ac{--color:var(--ac)}
+  .pin-te{--color:var(--mac)}
+  .scene-bottom{padding:14px 22px;display:flex;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;color:#7a929d;font-size:11px;line-height:1.6}
+  .scene-bottom strong{color:#427480}
+  .panel{padding:23px 21px 20px;display:flex;flex-direction:column;gap:0}
+  .panel-title{font-size:19px;font-weight:850;letter-spacing:-.04em;margin:0 0 7px}
+  .panel-sub{margin:0 0 17px;line-height:1.75;font-size:12px;color:#82949c}
+  .origin{border:1px solid #e8e7d8;background:#fffcf3;border-radius:13px;
+    padding:13px 14px;display:flex;gap:10px;margin-bottom:21px;align-items:flex-start}
+  .origin-dot{background:var(--le);border-radius:50%;width:9px;height:9px;flex:0 0 9px;margin-top:4px}
+  .origin b{font-size:12px;display:block;margin-bottom:4px;color:#806338}
+  .origin span{font-size:11px;color:#927f5f;line-height:1.65;display:block}
+  .control{padding:0 0 21px}
+  .control+.control{border-top:1px solid #edf1f2;padding-top:19px}
+  .control-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .control-name{font-size:13px;font-weight:850;display:flex;align-items:center;gap:8px}
+  .control-name i{display:block;width:9px;height:9px;border-radius:50%}
+  .control-value{font-size:24px;font-weight:880;letter-spacing:-.06em;line-height:1;
+    font-variant-numeric:tabular-nums}
+  .control-value small{font-size:11px;margin-left:3px;font-weight:800;letter-spacing:0}
+  .control-desc{font-size:11px;color:#8699a3;margin-top:7px}
+  input[type=range]{width:100%;margin:18px 0 6px;appearance:none;-webkit-appearance:none;
+    height:5px;border-radius:10px;background:linear-gradient(to right,var(--slider-color) 0%,
+    var(--slider-color) var(--fill),#e9f0f1 var(--fill),#e9f0f1 100%);cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;
+    width:17px;height:17px;border-radius:50%;border:3px solid white;background:var(--slider-color);
+    box-shadow:0 1px 6px #213f4b35}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;
+    border:3px solid white;background:var(--slider-color);box-shadow:0 1px 6px #213f4b35}
+  .control-extremes{display:flex;justify-content:space-between;font-size:10px;color:#a3b2b7}
+  .ruler{margin-top:3px;padding-top:19px;border-top:1px solid #ecf1f2}
+  .ruler-title{font-size:12px;font-weight:850;margin-bottom:15px}
+  .ruler-track{height:34px;position:relative;margin:0 5px}
+  .ruler-base{position:absolute;top:12px;left:0;right:0;height:9px;border-radius:7px;
+    background:linear-gradient(to right,#e4f1f1 0%,#d0e6e8 100%)}
+  .ruler-base::before,.ruler-base::after{position:absolute;content:"";width:1px;
+    height:21px;top:-6px;background:#9cbdc2}
+  .ruler-base::before{left:0}.ruler-base::after{right:0}
+  .tick{position:absolute;top:-3px;width:3px;height:35px;transform:translateX(-50%);
+    background:var(--tick);border-radius:3px;transition:left .17s}
+  .tick::before{content:"";position:absolute;left:-4px;top:6px;width:11px;height:11px;
+    border:2px solid white;background:var(--tick);border-radius:50%;box-shadow:0 1px 7px #43667540}
+  .ruler-labels{display:flex;justify-content:space-between;font-size:10px;color:#94a8b0;
+    margin:0 4px}
+  .result{border:1px solid #dfecee;border-radius:14px;padding:14px 14px 13px;
+    margin-top:18px;background:#f7fbfb}
+  .result-head{font-size:10px;color:#77919b;letter-spacing:.12em;font-weight:850}
+  .result-value{margin-top:7px;font-size:15px;font-weight:850;line-height:1.4}
+  .result-sub{font-size:11px;color:#8195a0;line-height:1.65;margin-top:5px}
+  .formula{margin-top:15px;padding:12px 10px;border:1px dashed #dce8e9;border-radius:11px}
+  .formula-row{display:flex;justify-content:space-between;gap:6px;padding:5px 0;
+    font-size:12px;font-weight:800}
+  .formula-row strong{font-variant-numeric:tabular-nums}
+  .formula-row .symbol{color:#627d8c;font-weight:650}
+  .footnote{font-size:10.5px;line-height:1.8;color:#899ca5;margin:15px 2px 0}
+  .explain{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}
+  .explain-card{padding:22px 24px 21px;min-height:166px}
+  .explain-num{font-size:11px;color:#84a1aa;font-weight:850;letter-spacing:.12em}
+  .explain-card h3{margin:8px 0 7px;font-size:15px;letter-spacing:-.025em}
+  .explain-card p{margin:0;font-size:12px;line-height:1.87;color:#748b96}
+  .explain-card strong{color:#36586a}
+  footer{display:flex;justify-content:space-between;gap:20px;padding:23px 2px 0;
+    color:#90a3a8;font-size:11px;flex-wrap:wrap;line-height:1.8}
+  footer a{color:#5d909d;text-decoration:none;border-bottom:1px solid #aecbd1}
+  @media(max-width:1120px){
+    .main{grid-template-columns:minmax(0,1fr) 310px}
+    .scene{min-height:535px}.panel{padding:21px 18px}
+    .legend{gap:8px}.scene-header{padding:20px}
+  }
+  @media(max-width:850px){
+    .wrap{padding:21px 16px}
+    header{padding:26px 0 24px}
+    .main{grid-template-columns:1fr}
+    .scene{height:520px;min-height:520px;flex:none}
+    .panel{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+    .panel-title,.panel-sub,.origin,.ruler,.result,.formula,.footnote{grid-column:1/-1}
+    .control+.control{border-top:0;padding-top:0}
+    .explain{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:570px){
+    .wrap{padding:16px 11px 29px}
+    .edition{font-size:9px;padding:8px 9px}
+    .brand{font-size:9px}
+    h1{font-size:32px}
+    .lead{font-size:12px}
+    .scene-header{padding:17px}
+    .legend{gap:10px}.legend-item{font-size:10px}
+    .scene{height:410px;min-height:410px;flex:none}
+    .hint,.wm-large,.axis-hint{display:none}
+    .scene-watermark{left:15px;top:14px}
+    .view-actions{left:9px;bottom:10px;padding:4px}
+    .view-actions button{padding:8px 7px;font-size:10px}
+    .pin{transform:scale(.83);transform-origin:top left}
+    .pin-te{display:none}
+    .scene-bottom{padding:12px 14px}
+    .panel{padding:20px 16px;display:block}
+    .control+.control{border-top:1px solid #edf1f2;padding-top:18px}
+    .explain{grid-template-columns:1fr}
+    .explain-card{min-height:0}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{scroll-behavior:auto!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topline">
+    <div class="brand"><span class="brand-mark">✦</span> AERO LAB / 飞行力学图鉴</div>
+    <div class="edition">INTERACTIVE 3D · VOL. 01</div>
+  </div>
+
+  <header>
+    <p class="eyebrow">GEOMETRY OF FLIGHT / 飞机纵向坐标</p>
+    <h1>从平均气动弦长前缘，读懂 <span class="accent">x<sub>CG</sub></span> 与 <span class="accent">x<sub>AC</sub></span></h1>
+    <p class="lead">沿 MAC 弦线、朝机尾方向量距离。旋转飞机，查看机翼上的参考弦，以及重心 CG 与气动焦点 AC 的纵向投影。</p>
+  </header>
+
+  <main class="main">
+    <section class="scene-card" aria-label="可交互三维飞机与平均气动弦长示意">
+      <div class="scene-header">
+        <div>
+          <div class="section-label">01 / SPATIAL EXPLANATION</div>
+          <h2>把看不见的纵向距离，放进 3D 空间</h2>
+        </div>
+        <div class="legend" aria-label="标注颜色">
+          <span class="legend-item"><i class="dot" style="background:var(--le)"></i>LEMAC</span>
+          <span class="legend-item"><i class="dot" style="background:var(--cg)"></i>xCG</span>
+          <span class="legend-item"><i class="dot" style="background:var(--ac)"></i>xAC</span>
+          <span class="legend-item"><i class="dot" style="background:var(--mac)"></i>MAC</span>
+        </div>
+      </div>
+
+      <div id="scene" class="scene">
+        <canvas id="aircraft" aria-label="三维飞机示意：可拖动旋转或滚轮缩放"></canvas>
+        <div class="scene-watermark" aria-hidden="true">
+          <div class="wm-top">REFERENCE MODEL / 01</div>
+          <div class="wm-large">MEAN AERODYNAMIC CHORD</div>
+        </div>
+        <div class="hint">↔ 拖动旋转 · 滚轮缩放</div>
+
+        <div class="pin pin-le" id="pinLE">
+          <div class="pin-inner">
+            <div class="pin-main"><b>●</b> LEMAC</div>
+            <div class="pin-sub">MAC 前缘 · 0%</div>
+          </div>
+        </div>
+        <div class="pin pin-cg" id="pinCG">
+          <div class="pin-inner">
+            <div class="pin-main"><b>●</b> CG · 飞机重心</div>
+            <div class="pin-sub" id="pinCGText">18% MAC</div>
+          </div>
+        </div>
+        <div class="pin pin-ac" id="pinAC">
+          <div class="pin-inner">
+            <div class="pin-main"><b>●</b> AC · 机翼焦点</div>
+            <div class="pin-sub" id="pinACText">25% MAC（示意）</div>
+          </div>
+        </div>
+        <div class="pin pin-te" id="pinTE">
+          <div class="pin-inner">
+            <div class="pin-main"><b>●</b> TEMAC</div>
+            <div class="pin-sub">MAC 后缘 · 100%</div>
+          </div>
+        </div>
+
+        <div class="view-actions" role="group" aria-label="三维视角控制">
+          <button type="button" class="active" data-view="overview">◈ 全机斜视</button>
+          <button type="button" data-view="top">▦ 俯视</button>
+          <button type="button" data-view="focus">◎ 聚焦 MAC</button>
+          <button type="button" id="spinBtn" aria-pressed="false">↻ 自动旋转</button>
+        </div>
+        <div class="axis-hint">飞机纵向 x 正方向 → 朝机尾</div>
+      </div>
+
+      <div class="scene-bottom">
+        <span>彩色虚线是<strong>纵向站位投影</strong>，不是空间直线距离。</span>
+        <span>机翼为教学用梯形翼；纵向几何随滑块实时更新。</span>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="距离与位置参数">
+      <div class="section-label">02 / CHANGE THE POSITION</div>
+      <div class="panel-title">调整坐标，观察变化</div>
+      <p class="panel-sub">以下比例都是从同一个零点 LEMAC 起，沿弦长向后计算。</p>
+      <div class="origin">
+        <div class="origin-dot"></div>
+        <div>
+          <b>统一起点 = LEMAC（0% MAC）</b>
+          <span>LEMAC 是平均气动弦长的前缘，不是机头、翼根前缘，也不是飞机几何中心。</span>
+        </div>
+      </div>
+
+      <div class="control">
+        <div class="control-top">
+          <div class="control-name"><i style="background:var(--cg)"></i>重心位置 CG</div>
+          <div class="control-value" style="color:var(--cg)"><span id="cgPercent">18</span><small>% MAC</small></div>
+        </div>
+        <div class="control-desc">xCG = LEMAC → 飞机重心的纵向投影</div>
+        <input type="range" id="cgSlider" min="5" max="55" step="1" value="18"
+          aria-label="调整重心 CG 在 MAC 上的百分比" style="--slider-color:var(--cg)">
+        <div class="control-extremes"><span>靠前 · 5%</span><span>靠后 · 55%</span></div>
+      </div>
+
+      <div class="control">
+        <div class="control-top">
+          <div class="control-name"><i style="background:var(--ac)"></i>焦点位置 AC</div>
+          <div class="control-value" style="color:var(--ac)"><span id="acPercent">25</span><small>% MAC</small></div>
+        </div>
+        <div class="control-desc">xAC = LEMAC → 机翼气动焦点的纵向站位</div>
+        <input type="range" id="acSlider" min="15" max="50" step="1" value="25"
+          aria-label="调整机翼气动焦点 AC 在 MAC 上的百分比" style="--slider-color:var(--ac)">
+        <div class="control-extremes"><span>15%</span><span>50%</span></div>
+      </div>
+
+      <div class="ruler">
+        <div class="ruler-title">MAC 弦长比例尺 <span style="font-weight:600;color:#9aadb4">(0–100%)</span></div>
+        <div class="ruler-track" aria-label="CG 与 AC 在 MAC 上的位置对比">
+          <div class="ruler-base"></div>
+          <div class="tick" id="cgTick" style="--tick:var(--cg);left:18%;z-index:3"></div>
+          <div class="tick" id="acTick" style="--tick:var(--ac);left:25%;z-index:2"></div>
+        </div>
+        <div class="ruler-labels"><span>0</span><span>25</span><span>50</span><span>75</span><span>100%</span></div>
+      </div>
+
+      <div class="result" aria-live="polite">
+        <div class="result-head">RELATIVE POSITION / 位置对比</div>
+        <div class="result-value" id="relationship">CG 位于 AC 前方 7% MAC</div>
+        <div class="result-sub" id="relationshipDetail">两者纵向间距为 0.30 m（仅位置关系）</div>
+      </div>
+
+      <div class="formula" aria-label="距离计算结果">
+        <div class="formula-row"><span class="symbol">平均气动弦长 c̄</span><strong id="macLength">4.23 m</strong></div>
+        <div class="formula-row"><span class="symbol">x<sub>CG</sub> = c̄ · CG%</span><strong id="xcgMeters" style="color:var(--cg)">0.76 m</strong></div>
+        <div class="formula-row"><span class="symbol">x<sub>AC</sub> = c̄ · AC%</span><strong id="xacMeters" style="color:var(--ac)">1.06 m</strong></div>
+      </div>
+
+      <p class="footnote">注：AC 在 25% MAC 是常见低速翼型的近似教学值；这里展示的是<strong>机翼焦点</strong>。整机纵向静稳定性应结合整机<strong>中性点 NP</strong>，不能仅凭图中的 CG 和机翼 AC 下结论。</p>
+    </aside>
+  </main>
+
+  <section class="explain" aria-label="概念解释">
+    <article class="explain-card">
+      <div class="explain-num">01 / THE REFERENCE</div>
+      <h3>什么是 MAC？</h3>
+      <p>平均气动弦长是代表整片机翼气动特性的<strong>等效参考弦</strong>。对梯形翼，图中 MAC 的长度和展向位置都由翼根、翼尖的弦长计算得出。</p>
+    </article>
+    <article class="explain-card">
+      <div class="explain-num">02 / CENTER OF GRAVITY</div>
+      <h3>x<sub>CG</sub>：到重心的距离</h3>
+      <p>从 <strong>LEMAC</strong> 向机尾量到飞机重心 CG 所在的纵向站位。重心即飞机的<strong>质量中心</strong>，并非几何中心；不计算横向和高度差。</p>
+    </article>
+    <article class="explain-card">
+      <div class="explain-num">03 / AERODYNAMIC CENTER</div>
+      <h3>x<sub>AC</sub>：到焦点的距离</h3>
+      <p>从同一 LEMAC 测量到机翼<strong>气动焦点 AC</strong> 的纵向站位。气动焦点是气动力矩随迎角变化较小的参考位置，不等同于压力中心。</p>
+    </article>
+  </section>
+
+  <footer>
+    <span>FLIGHT NOTES · 交互式工程教学图 / 所有长度以示意机翼尺寸计算</span>
+    <span>资料参考：
+      <a href="https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/aerodynamic-center/" target="_blank" rel="noopener noreferrer">NASA Glenn · Aerodynamic Center</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.faasafety.gov/gslac/alc/libview_chapter.aspx?chapter=Weight+and+Balance+Terms&amp;id=6861" target="_blank" rel="noopener noreferrer">FAA · MAC and CG</a>
+    </span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // 教学场景：无外部依赖的透视 3D 投影。x 朝机尾、y 沿翼展、z 向上。
+  // 梯形机翼的真实 MAC 由翼根与翼尖几何推导，而非任意摆放。
+  const ROOT_Y = 1.02, TIP_Y = 8.7;
+  const ROOT_LE = -2.2, ROOT_TE = 3.55;
+  const TIP_LE = 1.65, TIP_TE = 3.8;
+  const rootChord = ROOT_TE - ROOT_LE;
+  const tipChord = TIP_TE - TIP_LE;
+  const taper = tipChord / rootChord;
+  const spanFraction = (1 + 2 * taper) / (3 * (1 + taper));
+  const macY = ROOT_Y + (TIP_Y - ROOT_Y) * spanFraction;
+  const macLE = ROOT_LE + (TIP_LE - ROOT_LE) * spanFraction;
+  const mac = (2 / 3) * rootChord * (1 + taper + taper * taper) / (1 + taper);
+  const macTE = macLE + mac;
+
+  const COL = { mac:"#008d93", cg:"#e56e58", ac:"#377fba", le:"#c99443" };
+  const canvas = document.getElementById("aircraft");
+  const scene = document.getElementById("scene");
+  const ctx = canvas.getContext("2d");
+  const $ = id => document.getElementById(id);
+  const cgSlider = $("cgSlider"), acSlider = $("acSlider");
+  const tagInfo = [
+    { el:$("pinLE"), point:()=>[macLE,-macY,0.86], dx:-116,dy:-61 },
+    { el:$("pinCG"), point:()=>[macLE + mac * state.cg / 100,0,1.25], dx:-116,dy:-87 },
+    { el:$("pinAC"), point:()=>[macLE + mac * state.ac / 100,-macY,0.86],dx:20,dy:30 },
+    { el:$("pinTE"), point:()=>[macTE,-macY,0.86],dx:12,dy:-45 }
+  ];
+
+  const state = {cg:18, ac:25};
+  const rad = a => a * Math.PI / 180;
+  const clamp = (a,lo,hi) => Math.min(hi,Math.max(lo,a));
+  const lerp = (a,b,t) => a + (b-a)*t;
+  const add = (a,b) => [a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+  const sub = (a,b) => [a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+  const mul = (a,s) => [a[0]*s,a[1]*s,a[2]*s];
+  const dot = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const cross = (a,b) => [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const norm = a => mul(a,1/(Math.hypot(...a)||1));
+  const wingZ = s => 0.13 + 0.44 * s;
+  function wingPoint(side,s,c,up=1){
+    const le=lerp(ROOT_LE,TIP_LE,s), te=lerp(ROOT_TE,TIP_TE,s);
+    const thickness=(0.02+0.115*Math.sin(Math.PI*c))*(1-0.44*s);
+    return [lerp(le,te,c), side*lerp(ROOT_Y,TIP_Y,s), wingZ(s)+up*thickness];
+  }
+
+  let W=1,H=1,dpr=1;
+  const camera={az:rad(-144),el:rad(47),dist:28,target:[0,0,0.2]};
+  const goal={az:camera.az,el:camera.el,dist:camera.dist,target:[...camera.target]};
+  const presets={
+    overview:{az:rad(-144),el:rad(47),dist:28,target:[0,0,0.2]},
+    top:{az:rad(-118),el:rad(82),dist:27,target:[0,0,0.1]},
+    focus:{az:rad(-144),el:rad(53),dist:10.2,target:[macLE+mac*.44,-macY,0.35]}
+  };
+  let autoSpin=false,lastFrame=performance.now(),camCache=null;
+
+  function resize(){
+    const box=scene.getBoundingClientRect();
+    W=Math.max(1,box.width); H=Math.max(1,box.height);
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+    canvas.style.width=W+"px";canvas.style.height=H+"px";
+  }
+  function buildCamera(){
+    const ce=Math.cos(camera.el), se=Math.sin(camera.el);
+    const eye=add(camera.target,[
+      camera.dist*ce*Math.cos(camera.az),
+      camera.dist*ce*Math.sin(camera.az),
+      camera.dist*se
+    ]);
+    const forward=norm(sub(camera.target,eye));
+    const right=norm(cross(forward,[0,0,1]));
+    const up=norm(cross(right,forward));
+    return {eye,forward,right,up,f:Math.min(W,H)*1.62};
+  }
+  function project(p){
+    const v=sub(p,camCache.eye),depth=dot(v,camCache.forward);
+    const z=Math.max(depth,0.2);
+    return {
+      x:W*.5+dot(v,camCache.right)*camCache.f/z,
+      y:H*.49-dot(v,camCache.up)*camCache.f/z,
+      depth,valid:depth>.2
+    };
+  }
+
+  function face(list,pts,color,alpha=1,stroke=null){
+    const avg=pts.reduce((sum,p)=>add(sum,p),[0,0,0]).map(x=>x/pts.length);
+    list.push({pts,color,alpha,stroke,avg});
+  }
+  const faces=[];
+  // 翼面：两个侧翼，含厚度、后缘襟翼、翼尖封口。
+  for(const side of [-1,1]){
+    const ns=14,nc=8;
+    for(let i=0;i<ns;i++) for(let j=0;j<nc;j++){
+      const s0=i/ns,s1=(i+1)/ns,c0=j/nc,c1=(j+1)/nc;
+      const top=[
+        wingPoint(side,s0,c0),wingPoint(side,s1,c0),
+        wingPoint(side,s1,c1),wingPoint(side,s0,c1)
+      ];
+      const bot=[
+        wingPoint(side,s0,c0,-1),wingPoint(side,s0,c1,-1),
+        wingPoint(side,s1,c1,-1),wingPoint(side,s1,c0,-1)
+      ];
+      let fill="#aac9d2";
+      if(j===0) fill="#c0dce2";
+      else if(j===1) fill="#b5d3dc";
+      if(j>=6 && i>2) fill="#83b1c2";
+      if(j===2 && i>1 && i<12) fill="#a5cfd0";
+      face(faces,top,fill,1,"rgba(52,99,118,.055)");
+      face(faces,bot,"#719ead",1);
+    }
+    // 翼尖侧面和翼根厚度
+    face(faces,[wingPoint(side,1,0),wingPoint(side,1,1),
+      wingPoint(side,1,1,-1),wingPoint(side,1,0,-1)],"#7195a6");
+    face(faces,[wingPoint(side,0,0),wingPoint(side,0,1),
+      wingPoint(side,0,1,-1),wingPoint(side,0,0,-1)],"#6f99a8");
+  }
+
+  // 水平尾翼
+  for(const side of [-1,1]){
+    const tail=(s,c,zshift=0)=>[
+      lerp(lerp(5.35,6.46,s),lerp(8.04,7.9,s),c),
+      side*lerp(.52,3.25,s),
+      .60+.14*s+zshift
+    ];
+    for(let k=0;k<5;k++){
+      const a=k/5,b=(k+1)/5;
+      face(faces,[tail(a,0),tail(b,0),tail(b,1),tail(a,1)],
+        k===4?"#8cb4c0":"#a8c9d1",1,"rgba(57,96,114,.09)");
+      face(faces,[tail(a,0,-.11),tail(a,1,-.11),
+        tail(b,1,-.11),tail(b,0,-.11)],"#7fa5b3");
+    }
+  }
+  // 垂直尾翼（双面）
+  const fin=[[4.92,-.08,.45],[6.47,-.08,3.35],[7.22,-.08,3.29],[8.04,-.08,.50]];
+  face(faces,fin,"#8eafbf",1,"rgba(56,95,113,.15)");
+  face(faces,fin.map(p=>[p[0],.08,p[2]]).reverse(),"#bad3d9");
+  face(faces,[[6.31,-.11,3.06],[6.47,-.11,3.35],
+    [7.22,-.11,3.29],[7.35,-.11,2.94]],"#d5b077");
+
+  // 双侧发动机吊舱（环状网格）
+  for(const side of [-1,1]){
+    const engineY=side*3.0, engineZ=-.49;
+    const rings=[[-.75,.29],[-.56,.43],[.15,.47],[1.16,.39],[1.68,.26]];
+    const n=12;
+    for(let i=0;i<rings.length-1;i++) for(let j=0;j<n;j++){
+      const t0=2*Math.PI*j/n,t1=2*Math.PI*(j+1)/n;
+      const v=(r,angle)=>[r[0],engineY+r[1]*Math.cos(angle),engineZ+r[1]*Math.sin(angle)];
+      face(faces,[v(rings[i],t0),v(rings[i+1],t0),v(rings[i+1],t1),v(rings[i],t1)],
+        i===0?"#91aeb9":"#c0d0d4",1,"rgba(50,79,95,.07)");
+    }
+    const intake=[];
+    for(let j=0;j<n;j++){
+      const theta=2*Math.PI*j/n;
+      intake.push([rings[0][0]-.018,engineY+.225*Math.cos(theta),engineZ+.225*Math.sin(theta)]);
+    }
+    face(faces,intake,"#344f62");
+  }
+
+  // 机身椭圆切片，机头细、机舱宽、机尾收束。
+  const bodyRings=[
+    [-8.43,.055],[-8.03,.26],[-7.38,.48],[-6.6,.70],
+    [-5.35,.87],[-3.6,1.00],[-1.7,1.07],[.4,1.06],
+    [2.45,1.01],[3.92,.86],[5.12,.64],[6.42,.42],
+    [7.65,.22],[8.54,.045]
+  ];
+  const sides=20;
+  const fus=(r,angle)=>[
+    r[0],r[1]*Math.cos(angle),.16+r[1]*.77*Math.sin(angle)
+  ];
+  for(let i=0;i<bodyRings.length-1;i++){
+    for(let j=0;j<sides;j++){
+      const t0=2*Math.PI*j/sides,t1=2*Math.PI*(j+1)/sides;
+      face(faces,[fus(bodyRings[i],t0),fus(bodyRings[i+1],t0),
+        fus(bodyRings[i+1],t1),fus(bodyRings[i],t1)],
+        "#d5e2e7",1,"rgba(45,84,100,.022)");
+    }
+  }
+  // 驾驶舱玻璃：只覆盖机身表面顶部，便于识别机头朝向。
+  face(faces,[[-7.13,-.36,.69],[-6.23,-.49,.86],
+    [-5.55,-.44,.86],[-5.85,-.14,.96]],"#3e7289");
+  face(faces,[[-7.13,.36,.69],[-5.85,.14,.96],
+    [-5.55,.44,.86],[-6.23,.49,.86]],"#477f95");
+
+  function hexShade(hex,mult){
+    const raw=hex.slice(1);
+    let r=parseInt(raw.slice(0,2),16),g=parseInt(raw.slice(2,4),16),b=parseInt(raw.slice(4,6),16);
+    r=clamp(Math.round(r*mult),0,255);
+    g=clamp(Math.round(g*mult),0,255);
+    b=clamp(Math.round(b*mult),0,255);
+    return `rgb(${r},${g},${b})`;
+  }
+  function poly2(points,fill,stroke,width=1){
+    if(points.some(p=>!p.valid)) return;
+    ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+    for(let i=1;i<points.length;i++) ctx.lineTo(points[i].x,points[i].y);
+    ctx.closePath();
+    if(fill){ctx.fillStyle=fill;ctx.fill()}
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()}
+  }
+  function line3(a,b,color,width=1.5,dashes=[]){
+    const p=project(a),q=project(b);
+    if(!p.valid||!q.valid)return;
+    ctx.beginPath();ctx.setLineDash(dashes);ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.stroke();ctx.setLineDash([]);
+  }
+  function glowLine3(a,b,color,width=3){
+    ctx.save();ctx.shadowColor=color;ctx.shadowBlur=12;
+    line3(a,b,color,width);ctx.restore();
+  }
+  function point3(p,color,rad=5){
+    const q=project(p);if(!q.valid)return;
+    ctx.save();
+    ctx.shadowColor=color;ctx.shadowBlur=13;
+    ctx.beginPath();ctx.arc(q.x,q.y,rad+2,0,Math.PI*2);
+    ctx.fillStyle="#ffffff";ctx.fill();
+    ctx.shadowBlur=0;ctx.strokeStyle=color;ctx.lineWidth=2.6;ctx.stroke();
+    ctx.beginPath();ctx.arc(q.x,q.y,rad*.48,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+    ctx.restore();
+  }
+  function arrow2(p,q,color){
+    if(!p.valid||!q.valid)return;
+    const dx=q.x-p.x,dy=q.y-p.y,dist=Math.hypot(dx,dy);
+    if(dist<25)return;
+    const nx=dx/dist,ny=dy/dist;
+    ctx.fillStyle=color;
+    for(const [t,d] of [[p,1],[q,-1]]){
+      const tip=[t.x,t.y],back=[t.x+nx*d*9,t.y+ny*d*9];
+      ctx.beginPath();ctx.moveTo(...tip);
+      ctx.lineTo(back[0]-ny*3.5,back[1]+nx*3.5);
+      ctx.lineTo(back[0]+ny*3.5,back[1]-nx*3.5);
+      ctx.closePath();ctx.fill();
+    }
+  }
+  function drawDimension(frac,color,offset){
+    const xEnd=macLE+mac*frac/100;
+    const base=[macLE,-macY,.86], end=[xEnd,-macY,.86];
+    const a=[macLE,-macY-offset,.86],b=[xEnd,-macY-offset,.86];
+    line3(base,a,color,1.0,[2,4]);line3(end,b,color,1.0,[2,4]);
+    glowLine3(a,b,color,2.3);arrow2(project(a),project(b),color);
+  }
+  function drawGrid(){
+    ctx.save();ctx.lineWidth=.85;
+    const z=-1.46;
+    for(let k=-16;k<=16;k+=2){
+      let alpha=.11*(1-Math.abs(k)/24);
+      ctx.strokeStyle=`rgba(73,133,148,${alpha})`;
+      line3([-11,k,z],[12,k,z],ctx.strokeStyle,.85);
+    }
+    for(let k=-10;k<=12;k+=2){
+      let alpha=.11*(1-Math.abs(k)/19);
+      ctx.strokeStyle=`rgba(73,133,148,${alpha})`;
+      line3([k,-17,z],[k,17,z],ctx.strokeStyle,.85);
+    }
+    // 柔和的机身、机翼投影
+    ctx.globalAlpha=.085;
+    ctx.filter="blur(13px)";
+    for(const side of [-1,1]){
+      poly2([
+        project([ROOT_LE,side*ROOT_Y,z]),
+        project([TIP_LE,side*TIP_Y,z]),
+        project([TIP_TE,side*TIP_Y,z]),
+        project([ROOT_TE,side*ROOT_Y,z])
+      ],"#386c79",null);
+    }
+    poly2([project([-8.5,-.6,z]),project([-8.5,.6,z]),
+      project([8.5,.4,z]),project([8.5,-.4,z])],"#386c79",null);
+    ctx.restore();
+  }
+  function drawAircraft(){
+    const light=norm([-.5,-.55,1.2]);
+    const sorted=faces.map(item=>({
+      ...item, depth:dot(sub(item.avg,camCache.eye),camCache.forward)
+    })).sort((a,b)=>b.depth-a.depth);
+    for(const item of sorted){
+      const p=item.pts.map(project);
+      if(p.some(v=>!v.valid))continue;
+      let shade=1.0;
+      if(item.pts.length>=3){
+        const n=norm(cross(sub(item.pts[1],item.pts[0]),sub(item.pts[2],item.pts[0])));
+        shade=.85+.20*Math.abs(dot(n,light));
+      }
+      ctx.globalAlpha=item.alpha;
+      poly2(p,hexShade(item.color,shade),item.stroke,.55);
+    }
+    ctx.globalAlpha=1;
+    // 机翼轮廓线、分离式襟翼线
+    for(const side of [-1,1]){
+      line3(wingPoint(side,0,0),wingPoint(side,1,0),"rgba(244,255,255,.75)",1.5);
+      line3(wingPoint(side,.12,.79),wingPoint(side,.91,.79),"rgba(48,105,126,.42)",1.0);
+      line3(wingPoint(side,0,1),wingPoint(side,1,1),"rgba(51,102,122,.32)",1.3);
+    }
+    // 舱窗与客机机头观察特征
+    // 只在朝向观察者的机身侧面绘制舷窗，避免透视下出现“悬空窗户”。
+    const nearSide=camCache.eye[1]<camera.target[1]?-1:1;
+    for(let x=-4.75;x<=2.60;x+=.76){
+      let bodyRadius=bodyRings[bodyRings.length-1][1];
+      for(let k=0;k<bodyRings.length-1;k++){
+        if(x>=bodyRings[k][0]&&x<=bodyRings[k+1][0]){
+          const t=(x-bodyRings[k][0])/(bodyRings[k+1][0]-bodyRings[k][0]);
+          bodyRadius=lerp(bodyRings[k][1],bodyRings[k+1][1],t);break;
+        }
+      }
+      const q=project([x,nearSide*.90*bodyRadius,.16+.33*bodyRadius]);
+      if(q.valid){
+        const r=clamp(3.6*camCache.f/(q.depth*32),1.7,4.2);
+        ctx.beginPath();ctx.ellipse(q.x,q.y,r*1.13,r*.79,-.12,0,Math.PI*2);
+        ctx.fillStyle="rgba(47,104,128,.65)";ctx.fill();
+      }
+    }
+  }
+  function drawMarks(){
+    const cgX=macLE+mac*state.cg/100,acX=macLE+mac*state.ac/100;
+    const le=[macLE,-macY,.86],te=[macTE,-macY,.86];
+    const cgWing=[cgX,-macY,.86],acWing=[acX,-macY,.86];
+    const cgFuse=[cgX,0,1.25];
+    // MAC 主轴：浅色粗底线 + 清晰的青绿色边线。
+    line3(le,te,"rgba(255,255,255,.94)",12);
+    glowLine3(le,te,COL.mac,4.4);
+    // 从 MAC 所在翼段连接到机身中心：相同纵向站位、不同展向坐标。
+    line3(cgWing,cgFuse,"rgba(229,110,88,.70)",1.65,[5,5]);
+    line3(acWing,[acX,-1.15,1.18],"rgba(55,127,186,.62)",1.45,[5,5]);
+    drawDimension(state.cg,COL.cg,.68);
+    drawDimension(state.ac,COL.ac,1.36);
+    // 可视化焦点、重心与两端，分层描绘以避免飞机模型遮盖标记。
+    point3(te,COL.mac,4.3);point3(le,COL.le,5.2);
+    point3(cgWing,COL.cg,5.4);point3(acWing,COL.ac,5.1);
+    point3(cgFuse,COL.cg,7.2);
+    // 重心竖向标线，强调 CG 的高度只是绘图辅助。
+    line3([cgX,0,.28],cgFuse,"rgba(229,110,88,.53)",1.25,[3,4]);
+  }
+  function placeTags(){
+    for(const tag of tagInfo){
+      const p=project(tag.point());
+      const visible=p.valid&&p.x>-85&&p.x<W+80&&p.y>-80&&p.y<H+70&&!(W<570&&tag.el.id==="pinTE");
+      tag.el.style.display=visible?"block":"none";
+      if(visible){
+        const isMobile=W<570;
+        const dx=isMobile?tag.dx*.70:tag.dx;
+        const dy=isMobile?tag.dy*.75:tag.dy;
+        tag.el.style.left=clamp(p.x+dx,4,W-(isMobile?112:139))+"px";
+        tag.el.style.top=clamp(p.y+dy,3,H-73)+"px";
+      }
+    }
+  }
+  function render(){
+    if(W<=1||H<=1)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    camCache=buildCamera();
+    drawGrid();
+    drawAircraft();
+    drawMarks();
+    placeTags();
+  }
+  function animate(now){
+    const dt=Math.min(50,Math.max(0,now-lastFrame));lastFrame=now;
+    if(autoSpin)goal.az+=dt*.00021;
+    const smooth=window.matchMedia("(prefers-reduced-motion: reduce)").matches?1:1-Math.pow(.83,dt/16.67);
+    camera.az=lerp(camera.az,goal.az,smooth);
+    camera.el=lerp(camera.el,goal.el,smooth);
+    camera.dist=lerp(camera.dist,goal.dist,smooth);
+    camera.target=camera.target.map((n,i)=>lerp(n,goal.target[i],smooth));
+    render();
+    requestAnimationFrame(animate);
+  }
+  function refreshUI(){
+    $("cgPercent").textContent=state.cg;
+    $("acPercent").textContent=state.ac;
+    $("pinCGText").textContent=`${state.cg}% MAC · 纵向站位`;
+    $("pinACText").textContent=`${state.ac}% MAC · 机翼参考`;
+    $("macLength").textContent=mac.toFixed(2)+" m";
+    $("xcgMeters").textContent=(state.cg/100*mac).toFixed(2)+" m";
+    $("xacMeters").textContent=(state.ac/100*mac).toFixed(2)+" m";
+    $("cgTick").style.left=state.cg+"%";
+    $("acTick").style.left=state.ac+"%";
+    const diff=state.ac-state.cg;
+    if(diff>0)$("relationship").textContent=`CG 位于 AC 前方 ${diff}% MAC`;
+    else if(diff<0)$("relationship").textContent=`CG 位于 AC 后方 ${-diff}% MAC`;
+    else $("relationship").textContent="CG 与 AC 处于相同纵向站位";
+    $("relationshipDetail").textContent=
+      `两者纵向间距为 ${(Math.abs(diff)/100*mac).toFixed(2)} m（仅位置关系）`;
+    for(const slider of [cgSlider,acSlider]){
+      const pct=(Number(slider.value)-Number(slider.min))/
+        (Number(slider.max)-Number(slider.min))*100;
+      slider.style.setProperty("--fill",pct+"%");
+    }
+  }
+  cgSlider.addEventListener("input",e=>{
+    state.cg=clamp(Number(e.target.value),5,55);refreshUI();
+  });
+  acSlider.addEventListener("input",e=>{
+    state.ac=clamp(Number(e.target.value),15,50);refreshUI();
+  });
+
+  function chooseView(which){
+    const p=presets[which];if(!p)return;
+    Object.assign(goal,{az:p.az,el:p.el,dist:p.dist,target:[...p.target]});
+    document.querySelectorAll("[data-view]").forEach(btn=>
+      btn.classList.toggle("active",btn.dataset.view===which));
+  }
+  document.querySelectorAll("[data-view]").forEach(btn=>
+    btn.addEventListener("click",()=>{autoSpin=false;syncSpin();chooseView(btn.dataset.view)}));
+  function syncSpin(){
+    $("spinBtn").textContent=autoSpin?"Ⅱ 暂停旋转":"↻ 自动旋转";
+    $("spinBtn").setAttribute("aria-pressed",String(autoSpin));
+    $("spinBtn").classList.toggle("active",autoSpin);
+  }
+  $("spinBtn").addEventListener("click",()=>{autoSpin=!autoSpin;syncSpin()});
+
+  let pointer=null;
+  canvas.addEventListener("pointerdown",e=>{
+    if(e.button!==0)return;
+    pointer={id:e.pointerId,x:e.clientX,y:e.clientY};
+    canvas.setPointerCapture(e.pointerId);
+    autoSpin=false;syncSpin();
+    document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.remove("active"));
+  });
+  canvas.addEventListener("pointermove",e=>{
+    if(!pointer||pointer.id!==e.pointerId)return;
+    const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
+    goal.az-=dx*.0072;
+    goal.el=clamp(goal.el+dy*.0058,rad(13),rad(88));
+    pointer.x=e.clientX;pointer.y=e.clientY;
+  });
+  const release=e=>{if(pointer&&pointer.id===e.pointerId)pointer=null};
+  canvas.addEventListener("pointerup",release);
+  canvas.addEventListener("pointercancel",release);
+  canvas.addEventListener("wheel",e=>{
+    e.preventDefault();goal.dist=clamp(goal.dist*Math.exp(e.deltaY*.001),7,48);
+  },{passive:false});
+  window.addEventListener("resize",resize);
+  if(typeof ResizeObserver!=="undefined")new ResizeObserver(resize).observe(scene);
+
+  // 方便自动化验证几何、滑块边界和当前视角；不影响页面显示。
+  window.__macDebug=()=>({
+    mac,macLE,macTE,macY,taper,spanFraction,
+    rootChord,tipChord,cgPercent:state.cg,acPercent:state.ac,
+    xcg:mac*state.cg/100,xac:mac*state.ac/100,
+    longitudinalGap:Math.abs(state.ac-state.cg)*mac/100,
+    viewDist:camera.dist,spinning:autoSpin,canvasSize:[canvas.width,canvas.height]
+  });
+
+  resize();refreshUI();
+  // 使用者要求减少动态效果时，镜头立即定位，不执行插值过渡；
+  // 如主动开启旋转按钮，仍允许手动选择该动画功能。
+  requestAnimationFrame(animate);
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
