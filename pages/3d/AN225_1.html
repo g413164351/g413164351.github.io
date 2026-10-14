@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f4ee">
+<meta name="description" content="An-225 Mriya · 自包含的交互式三维数字航空展厅。六台发动机、双垂尾与传奇的巨翼。">
+<title>AN—225 MRIYA · 梦想的形状 | AERO ATLAS</title>
+<!--
+CREATIVE FLIGHT PLAN — AERO ATLAS Nº01
+Place: an imagined Kyiv aviation museum's sunlit open-air studio, early golden afternoon.
+Story: the AN-225 Mriya is held in flight, as if a treasured aircraft is being examined in the light.
+Palette: warm ivory #F6F4EE, ink navy #122D40, cobalt #235A9A, Ukrainian blue #2874B2,
+         marigold #E8B341, pearl #EAF2F4, sky #DCECF0, muted stone #A2ACAE.
+Layers: printed paper frame → bright warm atmospheric sky → subtle surveying arcs → WebGL aircraft
+        (fuselage, swept wings, six nacelles/fans, pylons, twin fins, cargo seam, landing gear)
+        → interaction labels → glasslike control deck → museum catalogue footer.
+Hero: 84 m long / 88.4 m span, shoulder wings, 3 D-18T nacelles per side, twin-fin tail,
+      curved glazed cockpit and correctly grounded wheel/strut attachment points.
+Lighting: warm upper-left directional sun, cooler sky fill, enamel highlights.
+Interaction: orbit drag/touch, pinch/wheel zoom, keyboard, orthographic-like view presets,
+             landing gear, animation, speed, assembly/technical view. No third-party assets.
+-->
+<style>
+:root{--ink:#193446;--muted:#6f7e85;--pale:#f6f4ee;--warm:#fcfaf5;--line:#d5dcd9;--blue:#235b9b;--gold:#e5ae45;--radius:24px;--shadow:0 25px 90px rgba(29,57,69,.09)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--pale);color:var(--ink);font-family:Inter,"SF Pro Display","PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid rgba(41,112,176,.55);outline-offset:3px}button:disabled{cursor:not-allowed;opacity:.38}
+::selection{background:#d1e3ee;color:#194266}a{color:inherit;text-decoration:none}
+.page{width:min(1600px,calc(100% - 86px));margin:auto}.mast{min-height:82px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);gap:20px}
+.brand{display:flex;gap:12px;align-items:center;white-space:nowrap}.brand-icon{width:35px;height:35px;display:grid;place-items:center;position:relative}.brand-icon:before,.brand-icon:after{content:"";position:absolute;border:1.4px solid var(--blue);border-radius:100%;width:32px;height:12px;transform:rotate(-28deg)}.brand-icon:after{transform:rotate(28deg)}.brand-icon b{font-size:20px;color:var(--blue);transform:rotate(-45deg);font-weight:500}
+.brand-name{font-family:Georgia,"Times New Roman",serif;font-weight:700;letter-spacing:.17em;font-size:17px}.brand-sub{font-size:9px;letter-spacing:.24em;color:var(--muted);display:block;margin-top:3px;font-family:Inter,sans-serif;font-weight:600}
+.nav-meta{display:flex;align-items:center;gap:36px}.nav-link{font-size:11px;letter-spacing:.2em;font-weight:700;color:var(--muted)}.nav-link.active{color:var(--blue)}.edition{border:1px solid #bdcbc9;border-radius:100px;padding:10px 16px;font-size:10px;letter-spacing:.14em;color:var(--blue);font-weight:700;white-space:nowrap}
+.intro{padding:45px 4px 29px;display:flex;align-items:end;justify-content:space-between;gap:35px}.intro-main{min-width:0}.kicker{color:var(--blue);font-size:11px;font-weight:760;letter-spacing:.27em;display:flex;align-items:center;gap:11px;margin-bottom:14px}.kicker:before{content:"";width:26px;height:1px;background:var(--gold)}
+h1{font-size:clamp(44px,6.4vw,101px);line-height:.96;margin:0;letter-spacing:-.065em;font-weight:580;font-family:Georgia,"Times New Roman","Songti SC",serif;white-space:nowrap}h1 i{font-weight:400;color:var(--blue);font-style:italic;letter-spacing:-.07em}
+.intro-copy{flex:0 0 305px;margin-bottom:4px;padding-left:24px;border-left:1px solid #cbd5d4}.intro-copy strong{display:block;font-size:11px;letter-spacing:.22em;color:var(--blue);margin-bottom:9px;font-weight:780}.intro-copy p{font-size:12px;line-height:1.88;color:var(--muted);margin:0}.intro-copy .number{font-weight:700;font-variant-numeric:tabular-nums;color:#3c708b}
+.stage{position:relative;height:min(64vw,700px);min-height:520px;overflow:hidden;border-radius:var(--radius);isolation:isolate;background:radial-gradient(ellipse at 23% 7%,rgba(255,251,231,.96) 0%,rgba(255,251,231,0) 44%),radial-gradient(ellipse at 73% 23%,#dcebed 0%,transparent 53%),linear-gradient(145deg,#faf5e9 2%,#c9dfe3 51%,#b4d2dc 100%);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.68);transition:background .5s}
+.stage:after{content:"";position:absolute;inset:auto 0 0;height:36%;pointer-events:none;background:linear-gradient(transparent,rgba(250,247,235,.38));z-index:1}.stage:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;opacity:.30;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.84' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.13'/%3E%3C/svg%3E")}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;z-index:2}.stage canvas.dragging{cursor:grabbing}.stage canvas:focus-visible{outline:2px dashed #5a8fbb;outline-offset:-7px}
+.ambient-ring{position:absolute;width:min(80vw,940px);height:min(80vw,940px);left:50%;top:53%;transform:translate(-50%,-50%) rotateX(69deg) rotate(-19deg);border:1px solid rgba(63,118,145,.19);border-radius:50%;z-index:0;pointer-events:none}.ambient-ring:before,.ambient-ring:after{content:"";position:absolute;inset:12%;border:1px solid rgba(72,135,162,.12);border-radius:50%}.ambient-ring:after{inset:27%;border-style:dashed;opacity:.85}
+.sun-disc{position:absolute;width:470px;height:470px;border-radius:50%;background:radial-gradient(circle,rgba(255,251,220,.72),rgba(255,250,217,.18) 60%,transparent 70%);left:-110px;top:-150px;pointer-events:none;z-index:0}
+.horizon-line{position:absolute;top:66%;width:100%;height:1px;background:linear-gradient(90deg,transparent,rgba(89,133,150,.13),transparent);z-index:0}
+.stage-corner{position:absolute;z-index:4;pointer-events:none}.top-left{top:30px;left:34px}.top-right{top:30px;right:31px;text-align:right}.label-top{font-size:10px;letter-spacing:.24em;color:#3f6e83;font-weight:760;display:block}.stage-corner .mini{margin-top:8px;font-size:10px;letter-spacing:.13em;color:#78949e}.tick{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--gold);margin-right:7px;vertical-align:middle;box-shadow:0 0 0 4px rgba(239,184,77,.15)}
+.top-right .coords{font-family:"SFMono-Regular",Consolas,monospace;font-size:11px;color:#487a8c;letter-spacing:.08em;margin-top:8px;font-variant-numeric:tabular-nums}
+.corner-line{position:absolute;width:30px;height:30px;border-top:1px solid rgba(34,105,138,.34);border-left:1px solid rgba(34,105,138,.34);top:18px;left:18px;z-index:3;pointer-events:none}.corner-line.other{top:auto;left:auto;bottom:18px;right:18px;transform:rotate(180deg)}
+.stage-aside{position:absolute;left:36px;top:50%;transform:translateY(-32%);z-index:4;pointer-events:none;width:181px}.stage-aside .aside-index{font-family:Georgia,serif;font-size:14px;color:#4a8196;font-style:italic}.stage-aside h2{font-family:Georgia,serif;font-size:clamp(29px,3.2vw,51px);font-weight:400;letter-spacing:-.035em;margin:11px 0 8px;line-height:1.08}.stage-aside p{font-size:11px;line-height:1.95;color:#668491;margin:0;max-width:180px}.stage-aside .aside-rule{width:34px;height:2px;background:var(--gold);margin-top:18px}
+.stage-badge{position:absolute;z-index:4;pointer-events:none;right:34px;top:46%;transform:translateY(-50%);display:flex;gap:12px;align-items:center;text-align:right}.stage-badge .big{font:italic 39px/.9 Georgia,serif;color:#2d7295;letter-spacing:-.04em}.stage-badge .small{font-size:9px;letter-spacing:.18em;color:#66899b;margin-top:5px;font-weight:700}.stage-badge .vertical{height:45px;width:1px;background:linear-gradient(transparent,#95b4bf,transparent)}
+.hud-bottom{position:absolute;z-index:4;bottom:24px;left:31px;display:flex;align-items:center;gap:9px;pointer-events:none}.hud-bottom .dot{height:6px;width:6px;border-radius:50%;background:#447d9b;box-shadow:0 0 0 4px rgba(68,125,155,.09)}.hud-bottom span{font-size:10px;letter-spacing:.13em;color:#66869a;font-weight:650}
+.legend-scale{position:absolute;right:32px;bottom:29px;z-index:4;pointer-events:none;display:flex;align-items:center;gap:8px;color:#698796;font-size:9px;letter-spacing:.14em}.legend-scale .rule{width:65px;height:6px;border:1px solid rgba(62,123,150,.44);border-top:0;position:relative}.legend-scale .rule:after{content:"";position:absolute;width:1px;height:6px;left:50%;background:rgba(62,123,150,.5)}
+.control-deck{position:relative;z-index:8;display:flex;align-items:center;gap:7px;width:max-content;max-width:calc(100% - 30px);margin:-34px auto 0;padding:11px 12px;background:rgba(255,255,254,.94);box-shadow:0 16px 50px rgba(25,62,77,.15),inset 0 1px 0 white;border:1px solid rgba(193,211,215,.85);border-radius:18px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.deck-group{display:flex;gap:3px;align-items:center}.divider{height:29px;width:1px;margin:0 6px;background:#dce4e5}.deck-btn{display:flex;align-items:center;justify-content:center;gap:7px;background:transparent;border:0;color:#68808b;border-radius:10px;height:39px;padding:0 13px;white-space:nowrap;transition:background .18s,color .18s,transform .18s;min-width:40px}.deck-btn:hover{background:#edf5f5;color:var(--blue)}.deck-btn:active{transform:translateY(1px)}.deck-btn.active{background:#e8f0f5;color:#235c93}.deck-btn svg{height:16px;width:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}.deck-btn .btn-label{font-size:11px;font-weight:720;letter-spacing:.03em}.deck-btn.icon-only{padding:0;min-width:38px}.deck-btn.primary{background:var(--blue);color:#fff;box-shadow:0 5px 12px #24598927}.deck-btn.primary:hover{background:#174777;color:#fff}.btn-sup{font-size:9px;margin-left:1px;color:#94a6ad;letter-spacing:.04em}
+.speed-control{display:flex;align-items:center;gap:8px;padding:0 8px 0 7px}.speed-control label{font-size:10px;color:#69838e;letter-spacing:.09em;font-weight:750}.speed-control output{font:11px "SFMono-Regular",Consolas,monospace;color:var(--blue);min-width:28px}.speed-control input{accent-color:#2b69a5;width:68px;height:3px;cursor:pointer}
+.under-deck{display:flex;justify-content:center;align-items:center;gap:12px;padding-top:21px;color:#87979b;font-size:10px;letter-spacing:.12em}.under-deck kbd{background:#e7ece9;border:1px solid #d2dcd8;border-radius:4px;padding:3px 6px;color:#5f7b89;font-family:inherit;font-size:10px}.under-deck .sep{opacity:.45}
+.spec-area{display:grid;grid-template-columns:1.25fr repeat(3,1fr);gap:0;padding:53px 1px 40px;margin-top:13px;border-bottom:1px solid var(--line)}.spec-intro{padding:13px 48px 8px 0;min-width:0}.spec-intro .caps{font-size:10px;letter-spacing:.23em;font-weight:750;color:var(--blue)}.spec-intro h3{font:400 26px/1.3 Georgia,"Songti SC",serif;letter-spacing:-.035em;margin:14px 0 10px}.spec-intro p{font-size:11px;line-height:1.9;color:var(--muted);margin:0}.spec-card{border-left:1px solid var(--line);padding:14px 24px 10px 32px}.spec-number{font:400 clamp(45px,4vw,71px)/1 Georgia,serif;letter-spacing:-.07em;color:var(--ink);font-variant-numeric:lining-nums}.spec-number span{font:12px Inter,sans-serif;letter-spacing:0;color:#83949b;margin-left:6px}.spec-name{font-weight:750;letter-spacing:.14em;font-size:10px;color:var(--blue);margin-top:14px}.spec-caption{font-size:10px;line-height:1.65;color:#8b9b9e;margin-top:7px}
+.footer{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:29px 0 46px}.footer .f-left{font:italic 20px Georgia,"Songti SC",serif;color:#587487}.footer .f-right{font-size:10px;line-height:1.9;letter-spacing:.1em;color:#8b9a9d;text-align:right}.footer .f-right a{color:#497c9f;text-decoration:underline;text-underline-offset:3px}
+.toast{position:absolute;z-index:11;left:50%;bottom:84px;transform:translate(-50%,8px);background:rgba(21,55,78,.88);color:white;padding:11px 17px;border-radius:100px;font-size:11px;letter-spacing:.09em;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;box-shadow:0 8px 25px rgba(15,48,69,.16)}.toast.show{opacity:1;transform:translate(-50%,0)}
+.stage.technical{background:radial-gradient(circle at 28% 8%,rgba(41,105,132,.42),transparent 47%),linear-gradient(145deg,#112e46,#071d35 75%,#0c3550)}.stage.technical:after{background:linear-gradient(transparent,rgba(2,25,43,.3))}.stage.technical .label-top,.stage.technical .stage-corner .mini,.stage.technical .stage-aside .aside-index,.stage.technical .stage-aside p,.stage.technical .stage-aside h2,.stage.technical .stage-badge .big,.stage.technical .stage-badge .small,.stage.technical .coords,.stage.technical .hud-bottom span,.stage.technical .legend-scale{color:#b1dae6}.stage.technical .ambient-ring{border-color:rgba(123,198,230,.29)}.stage.technical .ambient-ring:before,.stage.technical .ambient-ring:after{border-color:rgba(123,198,230,.18)}.stage.technical .horizon-line{background:linear-gradient(90deg,transparent,rgba(153,218,235,.18),transparent)}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:7;pointer-events:none;background:linear-gradient(120deg,#f7f5ed,#dcebed);transition:opacity .7s}.loading.done{opacity:0}.loading-content{text-align:center;transform:translateY(-12px)}.loading-wheel{width:55px;height:55px;border-radius:50%;border:1px solid #a3bbc7;border-top:2px solid #235b9b;animation:spin 1.3s linear infinite;margin:0 auto 16px}.loading-content span{font-size:11px;color:#48718a;letter-spacing:.3em;font-weight:700}@keyframes spin{to{transform:rotate(360deg)}}
+.canvas-fallback{position:absolute;z-index:10;inset:0;display:none;align-items:center;justify-content:center;background:#e8f0ed;padding:35px;text-align:center;line-height:1.8;color:#31576d;font-size:14px}.no-webgl .canvas-fallback{display:flex}.no-webgl .loading{display:none}.no-webgl .control-deck{opacity:.5;pointer-events:none}
+@media(max-width:1100px){.page{width:calc(100% - 40px)}.intro{padding-top:32px}.stage-aside{width:155px;left:26px}.stage-aside h2{font-size:31px}.stage-badge{right:25px}.spec-area{grid-template-columns:repeat(3,1fr)}.spec-intro{grid-column:1/-1;padding:0 0 24px}.spec-intro h3{margin:7px 0}.spec-card:first-of-type{border-left:none;padding-left:0}.spec-card{padding-left:27px}}
+@media(max-width:720px){.nav-meta .edition{display:none}.page{width:calc(100% - 22px)}.mast{min-height:68px}.brand-name{font-size:14px}.brand-icon{transform:scale(.8);margin-right:-5px}.nav-link{display:none}.edition{font-size:9px;padding:8px 10px}.intro{display:block;padding:29px 3px 20px}.kicker{font-size:9px;margin-bottom:14px}h1{font-size:clamp(43px,12.3vw,72px);white-space:normal}.intro-copy{margin:16px 0 0;padding:0;border:0;max-width:380px}.intro-copy strong{margin-bottom:3px}.intro-copy p{line-height:1.7}.stage{min-height:440px;height:58vh;border-radius:18px}.legend-scale{display:none}.top-left{top:23px;left:20px}.top-right{top:24px;right:21px}.stage-aside{top:35%;left:20px;transform:translateY(-35%);width:128px}.stage-aside h2{font-size:27px}.stage-aside p{font-size:9px}.stage-aside .aside-rule{margin-top:10px}.stage-badge{top:auto;bottom:70px;right:21px;transform:none}.stage-badge .big{font-size:30px}.hud-bottom{bottom:20px;left:20px}.legend-scale{bottom:21px;right:17px}.control-deck{gap:3px;padding:8px 7px;border-radius:15px;margin-top:-21px}.deck-btn{height:35px;padding:0 7px;min-width:34px}.deck-group [data-view] .btn-label{display:none}.deck-btn .btn-label{font-size:10px}.deck-btn svg{height:14px;width:14px}.deck-btn.icon-only{min-width:31px}.control-deck .divider{margin:0 2px;height:24px}.speed-control{display:none}.under-deck{gap:6px;letter-spacing:0;font-size:9px;padding-top:17px}.under-deck .desktop-help{display:none}.spec-area{padding-top:33px;grid-template-columns:repeat(3,1fr);margin-top:3px}.spec-intro{padding-bottom:15px}.spec-intro h3{font-size:21px}.spec-card{padding:10px 7px 0 13px}.spec-card:first-of-type{padding-left:0}.spec-number{font-size:clamp(34px,8vw,52px)}.spec-number span{font-size:10px;margin-left:1px}.spec-name{font-size:9px;margin-top:9px}.spec-caption{font-size:9px}.footer{align-items:start;padding-bottom:32px}.footer .f-left{font-size:17px}.footer .f-right{font-size:9px}}
+@media(max-width:390px){.stage-aside{top:30%}.stage-badge{bottom:63px}.control-deck .deck-btn{padding:0 5px}.control-deck .view-side{display:none}.control-deck [data-view="front"]{display:none}.control-deck .deck-btn.primary .btn-label{display:none}.spec-number{font-size:34px}.spec-card{padding-left:10px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="mast" aria-label="网站导航">
+  <div class="brand"><div class="brand-icon" aria-hidden="true"><b>✦</b></div><div><span class="brand-name">AERO ATLAS</span><span class="brand-sub">AN ATLAS OF REMARKABLE AIRCRAFT</span></div></div>
+  <nav class="nav-meta" aria-label="展品导航"><span class="nav-link active">THE AIRCRAFT</span><span class="nav-link">THE LEGACY</span><span class="edition">DIGITAL EXHIBIT&nbsp; / &nbsp;№ 001</span></nav>
+</header>
+<section class="intro" aria-label="展品介绍"><div class="intro-main"><div class="kicker">航空传奇数字典藏 <span style="color:#91a6ab">/</span> <span lang="en">1988 — ∞</span></div><h1>AN—225 <i>Mriya.</i></h1></div><div class="intro-copy"><strong>THE SHAPE OF A DREAM</strong><p>以天际为尺，写下关于飞行的奇迹。<br>一架飞机，一段史诗，<span class="number">88.4</span> 米的自由想象。</p></div></section>
+<main>
+<section class="stage" id="stage" aria-label="安东诺夫安225可交互三维模型">
+  <div class="ambient-ring" aria-hidden="true"></div><div class="sun-disc" aria-hidden="true"></div><div class="horizon-line" aria-hidden="true"></div><div class="corner-line" aria-hidden="true"></div><div class="corner-line other" aria-hidden="true"></div>
+  <canvas id="aircraft" tabindex="0" aria-label="飞机三维模型：拖动旋转，滚轮缩放，方向键改变视角"></canvas>
+  <div class="loading" id="loading"><div class="loading-content"><div class="loading-wheel"></div><span>ASSEMBLING THE DREAM</span></div></div>
+  <div class="canvas-fallback" role="status"><span>当前浏览器未能启用 WebGL。请使用最新版 Chrome、Edge、Firefox 或 Safari 查看可旋转三维模型。</span></div>
+  <div class="stage-corner top-left"><span class="label-top">AIRCRAFT / 001</span><div class="mini"><i class="tick"></i>INTERACTIVE 3D MODEL</div></div>
+  <div class="stage-corner top-right"><span class="label-top">ANTONOV DESIGN BUREAU</span><div class="coords" id="coord-readout">AZ 315° &nbsp; EL 24°</div></div>
+  <div class="stage-aside"><div class="aside-index">The one &amp; only.</div><h2>巨翼<br>之梦<span style="color:#d8ae5b">.</span></h2><p>它曾经让不可能的重量，<br>拥有了飞翔的形状。</p><div class="aside-rule"></div></div>
+  <div class="stage-badge"><div><div class="big">225</div><div class="small">МРІЯ / DREAM</div></div><div class="vertical"></div></div>
+  <div class="hud-bottom"><span class="dot"></span><span id="model-status">HISTORIC LIVERY · IN FLIGHT</span></div>
+  <div class="legend-scale"><span>EST. 1988</span><span class="rule"></span><span>KYIV, UKRAINE</span></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</section>
+<div class="control-deck" aria-label="三维模型操作栏">
+  <div class="deck-group" role="group" aria-label="观察角度">
+    <button class="deck-btn active" data-view="iso" title="自由观察 · 斜上视角"><svg viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 7 9 5v10L3 17V7Zm18 0-9 5v10l9-5V7Z"/></svg><span class="btn-label">立体</span></button>
+    <button class="deck-btn view-side" data-view="side" title="侧面视图"><svg viewBox="0 0 24 24"><path d="m3 14 6-2 7-8h2l-3 8 6 2v2l-7 2-5-1-6 2v-5Z"/></svg><span class="btn-label">侧面</span></button>
+    <button class="deck-btn" data-view="top" title="俯视视图"><svg viewBox="0 0 24 24"><path d="m12 2 2.5 9 7 4v3l-7-2-1.5 5H11l-1.5-5-7 2v-3l7-4L12 2Z"/></svg><span class="btn-label">俯视</span></button>
+    <button class="deck-btn" data-view="front" title="机头正视"><svg viewBox="0 0 24 24"><path d="M12 3c2 0 2 3 2 6v3l8 4v3l-8-2-1 4h-2l-1-4-8 2v-3l8-4V9c0-3 0-6 2-6Z"/></svg><span class="btn-label">机头</span></button>
+  </div>
+  <span class="divider" aria-hidden="true"></span>
+  <div class="deck-group" role="group" aria-label="模型选项">
+    <button class="deck-btn icon-only" id="gear" aria-pressed="false" title="展开／收起 32 个起落架机轮"><svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M4 7h16M7 7l2 6h6l2-6M4 13h16"/></svg></button>
+    <button class="deck-btn icon-only" id="technical" aria-pressed="false" title="切换结构蓝图模式"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3Zm4 9h10M12 7v10M7 7l10 10M17 7 7 17"/></svg></button>
+    <button class="deck-btn icon-only" id="reset" title="重置角度和缩放"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.5 6.5M3 5v6h6"/><path d="M12 7v5l3 2"/></svg></button>
+  </div>
+  <span class="divider" aria-hidden="true"></span>
+  <div class="deck-group"><button class="deck-btn primary" id="play" aria-pressed="true" title="开启或暂停自动旋转"><svg id="play-symbol" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg><span class="btn-label" id="play-label">暂停旋转</span></button></div>
+  <div class="speed-control"><label for="speed">速度</label><input type="range" id="speed" min="0.2" max="2.0" step="0.1" value="0.7" aria-label="旋转速度"><output id="speed-value">0.7×</output></div>
+</div>
+<div class="under-deck"><span>↔ 拖动旋转</span><span class="sep">/</span><span>滚轮 / 双指缩放</span><span class="desktop-help"><span class="sep"> / </span> 方向键 <kbd>←</kbd><kbd>→</kbd></span><span class="desktop-help"> 空格暂停</span></div>
+<section class="spec-area" id="specifications" aria-label="飞机技术参数"><div class="spec-intro"><div class="caps">BEYOND THE POSSIBLE · 01 / 04</div><h3>不止于庞大，更是一场工程奇迹。</h3><p>以原机特征为蓝本的程序化三维重建。<br>在这座数字机库里，重新触摸「梦想」的轮廓。</p></div><div class="spec-card"><div class="spec-number">88.4<span>m</span></div><div class="spec-name">翼展 / WINGSPAN</div><div class="spec-caption">宽阔得足以承载一种时代的雄心</div></div><div class="spec-card"><div class="spec-number">84<span>m</span></div><div class="spec-name">机长 / LENGTH</div><div class="spec-caption">从圆润机鼻到优雅的双垂尾</div></div><div class="spec-card"><div class="spec-number">06<span>×</span></div><div class="spec-name">发动机 / ENGINES</div><div class="spec-caption">六台 Progress D-18T 涡扇发动机</div></div></section>
+</main>
+<footer class="footer"><div class="f-left">Мрія — 梦想永不降落。</div><div class="f-right">AERO ATLAS © DIGITAL STUDY · NOT AN OFFICIAL ANTONOV PRODUCT<br>模型为艺术化重建 · 参数依据 <a href="https://www.antonov.com/en/history/an-225-mriya" target="_blank" rel="noopener">ANTONOV 官方资料</a></div></footer>
+</div>
+<script>
+'use strict';
+/* ──────────────────────────────────────────────────────────────
+   THE ATLAS ENGINE · compact custom WebGL 3D (no network, no SDK)
+   All geometry is generated procedurally at runtime, not a flat image.
+   Dimensions are in approximate metres, x = nose-to-tail,
+   y = up, z = left/right wings.  84 m fuselage, 88.4 m wing span.
+   ────────────────────────────────────────────────────────────── */
+(() => {
+const $ = id => document.getElementById(id);
+const canvas=$('aircraft'), stage=$('stage'), toastEl=$('toast');
+const realGL=canvas.getContext('webgl',{alpha:true,antialias:true,depth:true,preserveDrawingBuffer:true,powerPreference:'high-performance',premultipliedAlpha:false}) || canvas.getContext('experimental-webgl',{alpha:true,antialias:true});
+const software=!realGL;
+let fallbackCtx=null;
+// 2D software renderer reuses the exact same procedural meshes if WebGL is unavailable.
+const gl=realGL||{
+ createTexture(){return {image:null}},bindTexture(t,tex){this.currentTexture=tex},
+ pixelStorei(){},texImage2D(){this.currentTexture.image=arguments[arguments.length-1]},texParameteri(){},generateMipmap(){},
+ createBuffer(){return {data:null}},bindBuffer(t,buf){this.boundBuffer=buf},bufferData(t,bytes){this.boundBuffer.data=bytes},
+ getError(){return 0}
+};
+if(software){fallbackCtx=canvas.getContext('2d',{alpha:true});stage.classList.add('canvas-mode')}
+const TAU=Math.PI*2, PI=Math.PI, DEG=180/PI;
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v)), mix=(a,b,t)=>a+(b-a)*t;
+const sm=(a,b,x)=>{let t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const mul=(a,s)=>[a[0]*s,a[1]*s,a[2]*s], dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const length=v=>Math.hypot(...v),unit=v=>{const d=length(v)||1;return [v[0]/d,v[1]/d,v[2]/d]};
+const v3=(x=0,y=0,z=0)=>[x,y,z];
+const H=h=>{const q=h.replace('#','');return [0,2,4].map(i=>parseInt(q.slice(i,i+2),16)/255)};
+const P={
+  pearl:H('#eaf0ee'), top:H('#f2f5f0'), side:H('#dee9e9'), bone:H('#dae3e1'), underside:H('#b8cbd0'),
+  blue:H('#2465a3'), deep:H('#16447b'), ink:H('#18384c'), navy:H('#172c3f'), yellow:H('#e8b343'),
+  gold:H('#e6a93f'), metal:H('#899da6'), chrome:H('#dbe5e3'), paleMetal:H('#cad6d6'), seam:H('#9db3b9'),
+  rudder:H('#d4e0de'), glass:H('#203b51'), glassHi:H('#6babb9'), intake:H('#243543'),
+  fan:H('#617883'), hub:H('#bcc8c9'), tyre:H('#242f38'), tread:H('#35444b'), shadow:H('#839ca3'),
+  red:H('#d96b59'), orange:H('#e7a85b'), white:H('#f5f6ed'), lightBlue:H('#9ec3d0')
+};
+const tint=(c,f)=>c.map(n=>clamp(n*f,0,1));
+const blend=(a,b,t)=>a.map((v,i)=>mix(v,b[i],t));
+const xs=(data,x)=>{let i=0;for(;i<data.length-2&&data[i+1][0]<x;i++);let a=data[i],b=data[i+1];let t=clamp((x-a[0])/(b[0]-a[0]),0,1);return [i,t,a,b]};
+const hermite=(p0,p1,m0,m1,t,h)=>{let t2=t*t,t3=t2*t;return (2*t3-3*t2+1)*p0+(t3-2*t2+t)*m0*h+(-2*t3+3*t2)*p1+(t3-t2)*m1*h};
+const station=(rows,x,index)=>{
+ let [i,t,a,b]=xs(rows,x), prev=rows[Math.max(0,i-1)],next=rows[Math.min(rows.length-1,i+2)],h=b[0]-a[0];
+ let m0=(b[index]-prev[index])/(b[0]-prev[0]),m1=(next[index]-a[index])/(next[0]-a[0]);
+ return hermite(a[index],b[index],m0,m1,t,h)
+};
+const M4={
+ identity(){return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])},
+ translation(x,y,z){let m=this.identity();m[12]=x;m[13]=y;m[14]=z;return m},
+ rotationX(a){let m=this.identity(),c=Math.cos(a),s=Math.sin(a);m[5]=c;m[6]=s;m[9]=-s;m[10]=c;return m},
+ multiply(a,b){let o=new Float32Array(16);for(let j=0;j<4;j++)for(let i=0;i<4;i++)o[i+j*4]=a[i]*b[j*4]+a[i+4]*b[j*4+1]+a[i+8]*b[j*4+2]+a[i+12]*b[j*4+3];return o},
+ perspective(fov,aspect,near,far){let f=1/Math.tan(fov/2),nf=1/(near-far);return new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*nf,-1,0,0,2*far*near*nf,0])},
+ lookAt(eye,at,up){let z=unit(sub(eye,at)),x=unit(cross(up,z)),y=cross(z,x);return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,eye),-dot(y,eye),-dot(z,eye),1])}
+};
+// Vertex packing: position 3 + smooth normal 3 + linear paint colour 3 + gloss 1.
+class Mesh{
+ constructor(name){this.name=name;this.data=[];this.count=0;this.buffer=null}
+ vertex(p,n,c,g){this.data.push(p[0],p[1],p[2],n[0],n[1],n[2],c[0],c[1],c[2],g);this.count++}
+ tri(a,b,c,color=P.pearl,na=null,nb=null,nc=null,gloss=.55){
+  let normal=unit(cross(sub(b,a),sub(c,a)));this.vertex(a,na||normal,color,gloss);this.vertex(b,nb||normal,color,gloss);this.vertex(c,nc||normal,color,gloss)
+ }
+ quad(a,b,c,d,color=P.pearl,normals=null,gloss=.55){
+  this.tri(a,b,c,color,normals?.[0],normals?.[1],normals?.[2],gloss);
+  this.tri(a,c,d,color,normals?.[0],normals?.[2],normals?.[3],gloss)
+ }
+ upload(){this.buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(this.data),gl.STATIC_DRAW);this.data=null}
+}
+const airplane=new Mesh('aircraft'),wheels=new Mesh('undercarriage'),fan=new Mesh('turbine blades'),wires=new Mesh('engraved outlines');
+// Tessellated parametric patches have smoothly interpolated normals, with a per-panel material.
+function surface(mesh,nu,nv,fn,material=P.pearl,gloss=.55,hint=null){
+ const verts=[],norms=[];
+ for(let i=0;i<=nu;i++){
+  verts[i]=[];norms[i]=[];
+  for(let j=0;j<=nv;j++)verts[i][j]=fn(i/nu,j/nv)
+ }
+ for(let i=0;i<=nu;i++)for(let j=0;j<=nv;j++){
+  let du=sub(verts[Math.min(nu,i+1)][j],verts[Math.max(0,i-1)][j]);
+  let dv=sub(verts[i][Math.min(nv,j+1)],verts[i][Math.max(0,j-1)]);
+  let n=unit(cross(du,dv));if(hint){let expected=typeof hint==='function'?hint(i/nu,j/nv):hint;if(dot(n,expected)<0)n=mul(n,-1)}
+  norms[i][j]=n
+ }
+ for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){
+  let a=verts[i][j],b=verts[i+1][j],c=verts[i+1][j+1],d=verts[i][j+1];
+  let col=typeof material==='function'?material((i+.5)/nu,(j+.5)/nv):material;
+  let g=typeof gloss==='function'?gloss((i+.5)/nu,(j+.5)/nv):gloss;
+  mesh.quad(a,b,c,d,col,[norms[i][j],norms[i+1][j],norms[i+1][j+1],norms[i][j+1]],g)
+ }
+}
+function tube(mesh,a,b,r,color=P.metal,segments=9,gloss=.6,rEnd=r){
+ if(software)segments=Math.max(5,Math.round(segments*.65));
+ let axis=unit(sub(b,a)),seed=Math.abs(axis[1])<.94?[0,1,0]:[1,0,0],u=unit(cross(axis,seed)),v=unit(cross(axis,u));
+ for(let k=0;k<segments;k++){
+  let t=k/segments*TAU,q=(k+1)/segments*TAU;
+  let n1=add(mul(u,Math.cos(t)),mul(v,Math.sin(t))),n2=add(mul(u,Math.cos(q)),mul(v,Math.sin(q)));
+  let a1=add(a,mul(n1,r)),a2=add(a,mul(n2,r)),b1=add(b,mul(n1,rEnd)),b2=add(b,mul(n2,rEnd));
+  mesh.quad(a1,b1,b2,a2,color,[n1,n1,n2,n2],gloss)
+ }
+}
+function pathTube(mesh,points,r,col=P.seam,segments=5){for(let i=0;i<points.length-1;i++)tube(mesh,points[i],points[i+1],r,col,segments,.52)}
+function orb(mesh,center,radii,col,nu=12,nv=10,gloss=.65){
+ if(software){nu=Math.max(7,Math.round(nu*.58));nv=Math.max(5,Math.round(nv*.60))}
+ surface(mesh,nu,nv,(u,v)=>{let phi=2*PI*u,theta=PI*v;return [center[0]+radii[0]*Math.cos(phi)*Math.sin(theta),center[1]+radii[1]*Math.cos(theta),center[2]+radii[2]*Math.sin(phi)*Math.sin(theta)]},col,gloss,(u,v)=>[Math.cos(2*PI*u)*Math.sin(PI*v)/radii[0],Math.cos(PI*v)/radii[1],Math.sin(2*PI*u)*Math.sin(PI*v)/radii[2]])
+}
+function diskX(mesh,x,y,z,r,col=P.intake,steps=30){let center=[x,y,z];for(let i=0;i<steps;i++){
+ let a=i/steps*TAU,b=(i+1)/steps*TAU;
+ mesh.tri(center,[x,y+Math.cos(a)*r,z+Math.sin(a)*r],[x,y+Math.cos(b)*r,z+Math.sin(b)*r],col,[-1,0,0],[-1,0,0],[-1,0,0],.2)
+}}
+function ringX(mesh,x,y,z,inner,outer,col=P.chrome,seg=48,gloss=.75){for(let i=0;i<seg;i++){
+ let a=i/seg*TAU,b=(i+1)/seg*TAU;
+ let p=(r,t)=>[x,y+Math.cos(t)*r,z+Math.sin(t)*r];
+ mesh.quad(p(inner,a),p(outer,a),p(outer,b),p(inner,b),col,Array(4).fill([-1,0,0]),gloss)
+}}
+function latheX(mesh,origin,rings,col=P.pearl,segments=36,gloss=.65,override=null){
+ for(let i=0;i<rings.length-1;i++){
+  let [x0,r0]=rings[i],[x1,r1]=rings[i+1];let normalX=-(r1-r0)/(x1-x0||.001);
+  for(let k=0;k<segments;k++){
+   let a=k/segments*TAU,b=(k+1)/segments*TAU;
+   let p=(x,r,t)=>[origin[0]+x,origin[1]+Math.cos(t)*r,origin[2]+Math.sin(t)*r];
+   let n=t=>unit([normalX,Math.cos(t),Math.sin(t)]),color=override?override(i,(a+b)/2,x0):col;
+   mesh.quad(p(x0,r0,a),p(x1,r1,a),p(x1,r1,b),p(x0,r0,b),color,[n(a),n(a),n(b),n(b)],gloss)
+  }
+ }
+}
+function prism(mesh,points,z0,z1,col=P.side){
+ for(let i=1;i<points.length-1;i++){
+  mesh.tri([points[0][0],points[0][1],z0],[points[i][0],points[i][1],z0],[points[i+1][0],points[i+1][1],z0],col);
+  mesh.tri([points[0][0],points[0][1],z1],[points[i+1][0],points[i+1][1],z1],[points[i][0],points[i][1],z1],col)
+ }
+ for(let i=0;i<points.length;i++){
+  let j=(i+1)%points.length,a=points[i],b=points[j];mesh.quad([a[0],a[1],z0],[b[0],b[1],z0],[b[0],b[1],z1],[a[0],a[1],z1],col)
+ }
+}
+/* ────────── FUSELAGE: axial spline, elliptic ribs, painted longitude ────────── */
+const bodyStations=[
+ [-42.0,.06,.07,-.06],[-41.3,.68,.76,-.04],[-39.8,1.56,1.62,-.02],[-37.5,2.42,2.58,-.04],
+ [-34,3.08,3.31,-.03],[-30,3.41,3.67,.02],[-25,3.59,3.94,.07],[-18,3.68,4.02,.08],
+ [-7,3.7,4.04,.08],[12,3.7,4.00,.04],[22,3.62,3.94,.06],[28,3.39,3.72,.12],
+ [33,2.88,3.15,.27],[37.3,2.18,2.55,.46],[40.5,1.26,1.55,.58],[42.3,.42,.55,.64],[43,.06,.09,.7]
+];
+function bodyAt(x){return {rz:station(bodyStations,clamp(x,-42,43),1),ry:station(bodyStations,clamp(x,-42,43),2),cy:station(bodyStations,clamp(x,-42,43),3)}}
+function bodyPt(x,a,offset=0){let s=bodyAt(x),v=[x,s.cy+s.ry*Math.cos(a),s.rz*Math.sin(a)];if(offset){let n=bodyNormal(x,a);return add(v,mul(n,offset))}return v}
+function bodyNormal(x,a){let s=bodyAt(x),sp=bodyAt(Math.min(43,x+.13)),sm1=bodyAt(Math.max(-42,x-.13));let dy=(sp.ry-sm1.ry)/.26,dz=(sp.rz-sm1.rz)/.26;return unit([-(dy*Math.cos(a)**2/(s.ry+.1)+dz*Math.sin(a)**2/(s.rz+.1)),Math.cos(a)/(s.ry+.1),Math.sin(a)/(s.rz+.1)])}
+const stripBreaks=[0,1.64,1.76,2.06,2.31,PI,TAU-2.31,TAU-2.06,TAU-1.76,TAU-1.64,TAU];
+const angles=[];for(let q=0;q<stripBreaks.length-1;q++){let a=stripBreaks[q],b=stripBreaks[q+1],n=Math.max(2,Math.ceil((b-a)/.065));for(let i=0;i<n;i++)angles.push(a+(b-a)*i/n)}angles.push(TAU);
+function bodyPaint(a,x){let t=Math.min(a,TAU-a);if(x>41.5||x<-41.7)return P.pearl;
+ if(t>=1.64&&t<1.76)return P.yellow;
+ if(t>=1.76&&t<2.06)return P.blue;
+ if(t>=2.06&&t<2.31)return P.deep;
+ if(t>2.31)return P.underside;
+ return t<.65?P.top:P.pearl
+}
+for(let xi=0;xi<(software?63:133);xi++){
+ let sections=software?63:133;let xa=mix(-42,43,xi/sections),xb=mix(-42,43,(xi+1)/sections);
+ for(let j=0;j<angles.length-1;j++){
+  let a=angles[j],b=angles[j+1],mid=(a+b)/2,xm=(xa+xb)/2;
+  let c=bodyPaint(mid,xm),p0=bodyPt(xa,a),p1=bodyPt(xb,a),p2=bodyPt(xb,b),p3=bodyPt(xa,b);
+  airplane.quad(p0,p1,p2,p3,c,[bodyNormal(xa,a),bodyNormal(xb,a),bodyNormal(xb,b),bodyNormal(xa,b)],.57)
+ }
+}
+// Cargo door perimeter, upper join seams, access panel details and subtle fuselage joints.
+for(let x of [-32.6,-17.9,17.0,30.1]){
+ let pts=[];for(let j=0;j<=80;j++){let a=j/80*TAU;pts.push(bodyPt(x,a,.032))}
+ pathTube(airplane,pts,x===-32.6?.035:.015,x===-32.6?P.seam:P.bone,5)
+}
+for(let side of [-1,1]){
+ for(let a of [1.10,1.43,1.62]){
+  let pts=[];for(let x=-40;x<=-32.6;x+=.35)pts.push(bodyPt(x,side>0?a:TAU-a,.036));
+  pathTube(airplane,pts,a===1.62?.018:.012,P.seam,4)
+ }
+ // Recessed side doors: outlines follow fuselage curvature.
+ for(let [x0,x1,a0,a1] of [[-24.4,-22.1,1.08,1.48],[22.6,24.9,1.06,1.50]]){
+  let outline=[];for(let j=0;j<=14;j++)outline.push(bodyPt(mix(x0,x1,j/14),side>0?a0:TAU-a0,.055));
+  for(let j=0;j<=9;j++)outline.push(bodyPt(x1,side>0?mix(a0,a1,j/9):TAU-mix(a0,a1,j/9),.055));
+  for(let j=0;j<=14;j++)outline.push(bodyPt(mix(x1,x0,j/14),side>0?a1:TAU-a1,.055));
+  for(let j=0;j<=9;j++)outline.push(bodyPt(x0,side>0?mix(a1,a0,j/9):TAU-mix(a1,a0,j/9),.055));
+  pathTube(airplane,outline,.025,P.seam,5)
+ }
+ // Tiny portholes for the forward upper deck.
+ for(let x of [-31.1,-29.7]){
+  let a=side>0?1.07:TAU-1.07,center=bodyPt(x,a,.085);
+  orb(airplane,center,[.21,.20,.085],P.glass,12,9,.91);
+ }
+}
+// Cockpit glazing, curved over nose upper corners, with distinct frames and reflections.
+function windshield(x0,x1,t0,t1,side,index){
+ const ang=t=>side>0?t:TAU-t;
+ // Each pane follows the genuine taper of the nose: trailing upper edges sweep aft.
+ const pane=(u,v,off)=>{
+   let x=mix(x0,x1,u)+v*.23*(index===0?-1:1);
+   let t=mix(t0,t1,v)+Math.sin(u*PI)*.025;
+   return bodyPt(x,ang(t),off)
+ };
+ surface(airplane,4,5,(u,v)=>pane(u,v,.09),(u,v)=>blend(P.glass,P.glassHi,.10+.13*u),.95,(u,v)=>bodyNormal(mix(x0,x1,u),ang(mix(t0,t1,v))));
+ for(let v of [0,1]){let pts=[];for(let k=0;k<=7;k++)pts.push(pane(k/7,v,.112));pathTube(airplane,pts,.035,P.paleMetal,6)}
+ for(let u of [0,1]){let pts=[];for(let k=0;k<=7;k++)pts.push(pane(u,k/7,.112));pathTube(airplane,pts,.042,P.chrome,6)}
+ // A narrow reflection streak brings warmth to the dark windshield.
+ let pts=[];for(let k=0;k<=7;k++)pts.push(pane(.14+.64*k/7,.22,.13));pathTube(airplane,pts,.018,P.glassHi,5)
+}
+for(let side of [-1,1]){
+ let panes=[[-38.55,-37.45,.65,.99],[-37.40,-36.20,.63,1.06],[-36.14,-34.95,.66,1.11],[-34.91,-33.89,.72,1.17]];
+ for(let i=0;i<panes.length;i++){let [x0,x1,t0,t1]=panes[i];windshield(x0,x1,t0,t1,side,i)}
+ // Cockpit roof central mini skylights.
+ for(let i=0;i<2;i++){
+  let x0=-36.9+i*1.35;
+  surface(airplane,3,3,(u,v)=>bodyPt(x0+u*.95,(side>0?1:-1)*0+(.22+v*.19)*(side>0?1:-1)+ (side<0?TAU:0),.077),P.glass,.86,(u,v)=>bodyNormal(x0+u*.95,side>0?.3:TAU-.3))
+ }
+}
+// Spine fairing where the giant shoulder wing merges into the fuselage.
+for(let side of [-1,1]){
+ surface(airplane,25,10,(u,v)=>{
+   let x=mix(-17.7,20.2,u),a=mix(.66,1.36,v),pt=bodyPt(x,side>0?a:TAU-a);
+   let envelope=Math.sin(PI*u)**.85*Math.sin(PI*v)**.75;
+   return [pt[0],pt[1]+.34*envelope,pt[2]+side*.15*envelope]
+ },P.pearl,.53,(u,v)=>bodyNormal(mix(-17.7,20.2,u),side>0?mix(.66,1.36,v):TAU-mix(.66,1.36,v)))
+}
+/* ────────── MAIN WINGS · true 3D aerofoil + spanwise shaping ────────── */
+const wingRows=[
+ [0,-13.1,7.1,3.38,2.35],[4,-12.5,7.35,3.55,2.27],[10,-9.6,7.8,3.93,2.02],
+ [16,-6.65,8.5,4.29,1.75],[22,-3.2,9.7,4.72,1.51],[29,1.0,11.55,5.23,1.06],
+ [36,5.75,13.25,5.80,.64],[42,10.0,14.9,6.35,.38],[44.2,12.2,15.82,6.52,.22]
+];
+function wingPlan(s){let z=clamp(s,0,44.2);return {leading:station(wingRows,z,1),trailing:station(wingRows,z,2),y:station(wingRows,z,3),thick:station(wingRows,z,4)}}
+function airfoil(u){return Math.pow(Math.max(0,Math.sin(PI*clamp(u,0,1))),.69)*(1-.15*u)}
+function wingPoint(s,u,sign=1,top=true,extra=0){let q=wingPlan(s);return [mix(q.leading,q.trailing,u),q.y+(top?.50:-.50)*q.thick*airfoil(u)+(top?extra:-extra),sign*s]}
+function wingColor(s,u,top){
+ if(s>43.6)return P.red;
+ if(s>42.6&&u>.02)return P.white;
+ if(u>.76)return top?P.rudder:P.underside;
+ if(u<.085)return top?P.white:P.paleMetal;
+ if(!top)return P.underside;
+ return s>38?P.white:P.top
+}
+for(let side of [-1,1]){
+ surface(airplane,42,22,(a,b)=>wingPoint(a*44.2,b,side,true),
+   (a,b)=>wingColor(a*44.2,b,true),.53,[0,1,0]);
+ surface(airplane,42,22,(a,b)=>wingPoint(a*44.2,b,side,false),
+   (a,b)=>wingColor(a*44.2,b,false),.43,[0,-1,0]);
+ // Continuous leading edge highlight, aileron separation and three large flap panels.
+ for(let u of [.077,.746,.91]){
+  let pts=[];for(let j=0;j<=85;j++)pts.push(wingPoint(3+j/85*41,u,side,true,.043));
+  pathTube(airplane,pts,u===.077?.026:.023,u===.077?P.paleMetal:P.seam,5)
+ }
+ for(let z of [6.0,12.0,18.0,24.0,30.0,36.0,41.0]){
+  let pts=[];for(let k=0;k<=14;k++){let u=mix(z>32?.77:.72,.984,k/14);pts.push(wingPoint(z,u,side,true,.047))}
+  pathTube(airplane,pts,.029,P.seam,5)
+ }
+ // Service panels, faint structural ribs, upper wing walkway stripes.
+ for(let z of [8.5,14.2,19.4,25.0,31.3,38.0]){
+  let pts=[];for(let k=0;k<=9;k++)pts.push(wingPoint(z,mix(.24,.67,k/9),side,true,.051));
+  pathTube(airplane,pts,.009,P.bone,4)
+ }
+ for(let u of [.39,.56]){
+  let pts=[];for(let j=0;j<=48;j++)pts.push(wingPoint(4+j/48*32,u,side,true,.053));
+  pathTube(airplane,pts,.009,P.bone,4)
+ }
+ // Wing tip end caps and tiny red navigation lamps.
+ orb(airplane,wingPoint(44.08,.62,side,true,.10),[.28,.19,.22],side===1?P.gold:P.red,10,9,.9);
+ // Trailing-edge aerodynamic hinges below the flaps.
+ for(let z of [8,15.8,23.0,31.0]){
+  let w=wingPoint(z,.84,side,false,.12);
+  tube(airplane,add(w,[-.24,-.05,0]),add(w,[.4,-.32,0]),.17,P.paleMetal,8,.62)
+ }
+}
+// Center wing / fuselage blend, molded shoulder root and fillet radii.
+for(let side of [-1,1]){
+ surface(airplane,28,14,(u,v)=>{
+   let z=side*mix(2.1,7.4,v),q=wingPlan(Math.abs(z)),x=mix(q.leading-1.4,q.trailing+.3,u);
+   let y=q.y+.35*airfoil(u)*(1-v*v)+.15;
+   return [x,y,z]
+ },P.pearl,.58,[0,1,0])
+}
+/* ────────── TAILPLANE · stretched horizontal stabilizer ────────── */
+const tailRows=[[0,28.5,42.0,2.15,1.25],[6,30.6,42.3,2.18,1.05],[12,32.2,43.0,2.19,.74],[17,34.6,43.1,2.25,.42],[20.5,36.6,42.6,2.35,.20]];
+function tailPlan(s){s=clamp(s,0,20.5);return {leading:station(tailRows,s,1),trailing:station(tailRows,s,2),y:station(tailRows,s,3),thick:station(tailRows,s,4)}}
+function tailPt(z,u,side,top=true,offset=0){let q=tailPlan(z);return [mix(q.leading,q.trailing,u),q.y+(top?.5:-.5)*q.thick*airfoil(u)+(top?offset:-offset),side*z]}
+for(let side of [-1,1]){
+ surface(airplane,30,15,(s,u)=>tailPt(s*20.5,u,side,true),
+  (s,u)=>u>.80?P.rudder:P.pearl,.54,[0,1,0]);
+ surface(airplane,30,15,(s,u)=>tailPt(s*20.5,u,side,false),P.underside,.46,[0,-1,0]);
+ for(let u of [.79,.94]){let pts=[];for(let k=0;k<=45;k++)pts.push(tailPt(1+k/45*19,u,side,true,.031));pathTube(airplane,pts,.018,P.seam,5)}
+ for(let z of [6,12,17]){let pts=[];for(let k=0;k<=10;k++)pts.push(tailPt(z,.78+k/10*.19,side,true,.035));pathTube(airplane,pts,.020,P.seam,4)}
+}
+/* ────────── TWIN FINS · the AN-225's unmistakable tail silhouette ────────── */
+const finLocations=[];
+function finPoint(sgn,u,v,outer=true,extra=0){
+ let lead=mix(30.1,37.85,v),trail=mix(42.55,42.10,v);
+ let y=2.08+v*8.27,thick=mix(.65,.17,v),z=sgn*(16.35+(outer?1:-1)*thick*Math.sin(PI*u)+extra);
+ return [mix(lead,trail,u),y,z]
+}
+for(let sgn of [-1,1]){
+ finLocations.push(sgn*16.35);
+ for(let outer of [true,false]){
+  surface(airplane,15,22,(u,v)=>finPoint(sgn,u,v,outer),
+   (u,v)=>v<.025?P.side:u>.79?P.rudder:P.pearl,.60,[0,0,sgn*(outer?1:-1)]);
+ }
+ // Top cap (squared but chamfered), leading edge seam, and rudder hinge.
+ for(let v of [.05,.82,.96]){
+  let pts=[];for(let k=0;k<=15;k++)pts.push(finPoint(sgn,k/15,v,true,.044));
+  pathTube(airplane,pts,v>.9?.025:.015,P.seam,4)
+ }
+ for(let u of [.035,.795]){
+  let pts=[];for(let k=0;k<=24;k++)pts.push(finPoint(sgn,u,k/24,true,.057));
+  pathTube(airplane,pts,u>.5?.028:.019,P.seam,5)
+ }
+ // Blue diagonal paint cut, echoing the actual airline fin graphics.
+ surface(airplane,18,5,(u,v)=>{
+  let h=.24+u*.18+v*.085;
+  return finPoint(sgn,mix(.08,.87,u),h,true,.084)
+ },P.blue,.66,[0,0,sgn]);
+ surface(airplane,18,3,(u,v)=>{
+  let h=.205+u*.18+v*.022;
+  return finPoint(sgn,mix(.08,.87,u),h,true,.092)
+ },P.yellow,.56,[0,0,sgn]);
+ // Tailplane-to-fin mechanical fairing.
+ orb(airplane,[35.9,2.22,sgn*16.35],[3.0,.39,.80],P.pearl,22,11,.54)
+}
+/* ────────── ENGINE NACELLES · three Progress D-18T per wing ────────── */
+const engineLocations=[];
+for(let side of [-1,1])for(let z of [9.6,19.1,28.1]){
+ const q=wingPlan(z),x=q.leading-3.70,cy=q.y-2.71,cz=side*z;
+ engineLocations.push({x,y:cy,z:cz,side,span:z});
+ // Pylon straddles the nacelle and actually meets the underside of its wing.
+ const py=[
+ [x+1.15,cy+1.02],[x+1.72,q.y-.83],[x+5.00,q.y-.79],
+ [x+6.1,cy+1.08],[x+4.8,cy+1.43],[x+1.7,cy+1.51]
+ ];
+ prism(airplane,py,cz-.34,cz+.34,P.paleMetal);
+ tube(airplane,[x+2.0,q.y-.68,cz],[x+3.0,cy+1.40,cz],.28,P.chrome,10,.7);
+ // Lip, nacelle and tapered rear. Carefully segmented axial profile.
+ const rings=[[0,1.46],[.13,1.70],[.27,1.80],[.49,1.83],
+ [1.01,1.76],[2.12,1.71],[3.90,1.60],[5.3,1.46],[6.32,1.28],[7.05,1.12]];
+ function nacellePaint(i,theta,localX){
+  let t=Math.min(theta,TAU-theta);
+  if(localX<.49)return P.chrome;
+  if(localX>6.35)return P.metal;
+  if(t>1.58&&t<1.67)return P.yellow;
+  if(t>=1.67&&t<1.97)return P.blue;
+  if(t>=1.97&&t<2.07)return P.deep;
+  if(t>2.07)return P.bone;
+  return P.pearl
+ }
+ latheX(airplane,[x,cy,cz],rings,P.pearl,46,.66,nacellePaint);
+ // Engine intake has a hollow dark throat, thick chrome lip and buried fan blades.
+ ringX(airplane,x+.08,cy,cz,1.34,1.72,P.chrome,52,.86);
+ ringX(airplane,x+.21,cy,cz,1.31,1.48,P.navy,48,.37);
+ latheX(airplane,[x,cy,cz],[[.12,1.30],[.38,1.33],[.9,1.27],[1.4,1.20]],P.intake,40,.26);
+ diskX(airplane,x+1.39,cy,cz,1.19,P.navy,44);
+ // Deep exhaust: titanium rim, dark concentric core and nozzle petals.
+ ringX(airplane,x+7.055,cy,cz,.84,1.12,P.chrome,40,.84);
+ diskX(airplane,x+7.07,cy,cz,.83,P.intake,40);
+ ringX(airplane,x+7.08,cy,cz,.48,.72,P.metal,30,.40);
+ for(let i=0;i<16;i++){
+  let a=i/16*TAU;
+  tube(airplane,[x+6.18,cy+1.275*Math.cos(a),cz+1.275*Math.sin(a)],
+    [x+7.04,cy+.98*Math.cos(a),cz+.98*Math.sin(a)],.025,P.seam,5,.62)
+ }
+ // Intake fasteners and nacelle panel rings.
+ for(let dx of [1.83,5.05]){
+  let r=dx===1.83?1.72:1.48,pts=[];
+  for(let k=0;k<=48;k++){let a=k/48*TAU;pts.push([x+dx,cy+r*Math.cos(a),cz+r*Math.sin(a)])}
+  pathTube(airplane,pts,.017,P.seam,5)
+ }
+ // Nacelle side inspection panels and vents.
+ for(let k=0;k<6;k++){
+  let a=(k-2.5)*.12+1.23,dx=3.6+k*.24;
+  tube(airplane,[x+dx,cy+1.64*Math.cos(a),cz+1.64*Math.sin(a)],
+   [x+dx+.35,cy+1.64*Math.cos(a),cz+1.64*Math.sin(a)],.015,P.seam,5,.5)
+ }
+ // Small aft pylon mounting bolts.
+ for(let dx of [2.1,3.8,5.0])orb(airplane,[x+dx,cy+1.45,cz+.34],[.09,.06,.065],P.metal,8,6,.7)
+}
+// One canonical axial rotor, re-used six times with independent matrices.
+for(let k=0;k<19;k++){
+ let a=k/19*TAU,b=a+.19,c=a+.33,r0=.30,r1=1.205;
+ const pp=(x,r,t)=>[x,r*Math.cos(t),r*Math.sin(t)];
+ let root0=pp(-.08,r0,a),root1=pp(-.06,r0,a+.27),tip0=pp(.09,r1,b),tip1=pp(-.02,r1,c);
+ fan.quad(root0,tip0,tip1,root1,k%3===0?P.metal:P.fan,null,.83);
+ fan.tri(root0,tip1,root1,P.lightBlue,null,null,null,.7);
+}
+latheX(fan,[0,0,0],[[-.47,.03],[-.39,.13],[-.23,.28],[.12,.28],[.27,.20]],P.chrome,28,.81);
+orb(fan,[-.38,0,0],[.16,.14,.14],P.white,16,9,.86);
+/* ────────── 32-WHEEL LANDING GEAR · fourteen main bogies + nose ────────── */
+function wheelAt(mesh,x,y,z,r,width=.43){
+ // Tyre carcass: rolled sidewalls and wide tread with a curved shoulder.
+ let ring=[[-width*.53,r*.72],[-width*.47,r*.92],[-width*.33,r],
+   [width*.33,r],[width*.47,r*.92],[width*.53,r*.72]];
+ for(let i=0;i<ring.length-1;i++){
+  for(let k=0;k<(software?12:20);k++){
+   let cnt=software?12:20,a=k/cnt*TAU,b=(k+1)/cnt*TAU,[za,ra]=ring[i],[zb,rb]=ring[i+1];
+   const point=(t,rr,zz)=>[x+Math.cos(t)*rr,y+Math.sin(t)*rr,z+zz];
+   let na=unit([Math.cos(a),Math.sin(a),0]),nb=unit([Math.cos(b),Math.sin(b),0]);
+   mesh.quad(point(a,ra,za),point(a,rb,zb),point(b,rb,zb),point(b,ra,za),i>1&&i<4?P.tyre:P.tread,[na,na,nb,nb],.18)
+  }
+ }
+ // Wheel hubs on both sides, silver faces and a ring of lug nuts.
+ for(let s of [-1,1]){
+  let zz=z+s*width*.535;
+  for(let k=0;k<(software?12:20);k++){
+   let cnt=software?12:20,a=k/cnt*TAU,b=(k+1)/cnt*TAU;
+   let p=(rr,t)=>[x+rr*Math.cos(t),y+rr*Math.sin(t),zz];
+   mesh.quad(p(.31*r,a),p(.60*r,a),p(.60*r,b),p(.31*r,b),P.chrome,
+    [[0,0,s],[0,0,s],[0,0,s],[0,0,s]],.78)
+  }
+  orb(mesh,[x,y,zz+s*.05],[r*.28,r*.28,.055],P.metal,14,8,.8);
+  for(let j=0;j<(software?3:6);j++){
+   let a=j/(software?3:6)*TAU;orb(mesh,[x+.46*r*Math.cos(a),y+.46*r*Math.sin(a),zz+s*.035],[.052,.052,.05],P.shadow,7,5,.78)
+  }
+ }
+ // Fine circumferential tread grooves; enough to read at close zoom.
+ for(let t of [-.25,.25]){
+  let pts=[];for(let k=0;k<=28;k++){let a=k/28*TAU;pts.push([x+r*1.009*Math.cos(a),y+r*1.009*Math.sin(a),z+t*width])}
+  pathTube(mesh,pts,.014,P.tread,4)
+ }
+}
+// Belly gear bay doors and hinge detail remain visible when gear is retracted.
+for(let side of [-1,1]){
+ for(let x of [.3,7.0,13.8,20.4]){
+  let pts=[];for(let k=0;k<=9;k++){let a=side>0?mix(2.48,2.90,k/9):TAU-mix(2.48,2.90,k/9);pts.push(bodyPt(x,a,.067))}
+  pathTube(airplane,pts,.025,P.seam,5)
+ }
+}
+for(let s of [-1,1]){
+ for(let i=0;i<7;i++){
+  let x=.7+i*3.15,z=s*3.50,cy=-6.92;
+  // Hydraulic supporting oleo, torque links and articulated trailing bogie beam.
+  tube(wheels,[x-.2,-3.28,s*3.03],[x,-5.92,s*3.48],.24,P.chrome,12,.86,.18);
+  tube(wheels,[x,-5.90,z],[x,cy+.24,z],.32,P.metal,12,.72,.25);
+  tube(wheels,[x-1.15,-3.65,s*3.10],[x-.13,-6.02,s*3.36],.095,P.chrome,8,.83);
+  tube(wheels,[x+1.05,-3.78,s*3.08],[x+.07,-6.01,s*3.39],.080,P.paleMetal,8,.76);
+  tube(wheels,[x,cy+.15,s*2.85],[x,cy+.15,s*4.28],.19,P.chrome,10,.83);
+  // 14 lateral bogies x 2 wheels = 28 wheels.
+  for(let sideOfAxle of [2.9,4.18])wheelAt(wheels,x,cy,s*sideOfAxle,.75,.52);
+  orb(wheels,[x,-5.88,z],[.39,.30,.32],P.metal,12,10,.77)
+ }
+}
+// Four-wheel nose bogie under the articulating cargo-loading nose.
+for(let ax=0;ax<2;ax++){
+ let x=-35.1+2.30*ax,cy=-6.91;
+ tube(wheels,[x,-3.15,0],[x,cy+.45,0],.24,P.chrome,12,.83,.20);
+ tube(wheels,[x,cy+.22,-1.25],[x,cy+.22,1.25],.17,P.metal,10,.8);
+ for(let s of [-1,1])wheelAt(wheels,x,cy,s*.92,.70,.43);
+ tube(wheels,[x+.65,-3.35,.22],[x+.20,-5.92,.49],.09,P.chrome,8,.8);
+ orb(wheels,[x,cy+.26,0],[.39,.27,.30],P.paleMetal,12,9,.7)
+}
+tube(wheels,[-35.1,-5.4,0],[-32.8,-5.4,0],.11,P.chrome,9,.75);
+/* ────────── ARCHIVAL DECALS · browser-generated texture, not external files ────────── */
+const decals=[];
+const makeText=(text,opts={})=>{
+ let w=opts.width||1024,h=opts.height||256;
+ let cvs=document.createElement('canvas');cvs.width=w;cvs.height=h;
+ let ctx=cvs.getContext('2d');ctx.clearRect(0,0,w,h);
+ let size=opts.size||70,style=opts.italic?'italic ':'',weight=opts.bold?'800 ':'600 ';
+ ctx.fillStyle=opts.color||'#225c92';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.font=`${style}${weight}${size}px Arial, "Microsoft YaHei", sans-serif`;
+ if(opts.letterSpacing){let total=ctx.measureText(text).width+(text.length-1)*opts.letterSpacing;
+  let xx=(w-total)/2;ctx.textAlign='left';for(let ch of text){ctx.fillText(ch,xx,h/2);xx+=ctx.measureText(ch).width+opts.letterSpacing}
+ }else ctx.fillText(text,w/2,h/2,w*.94);
+ let tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+ gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cvs);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ gl.generateMipmap(gl.TEXTURE_2D);return tex
+};
+const emblemTex=()=>{
+ const w=512,h=512,cvs=document.createElement('canvas');cvs.width=w;cvs.height=h;
+ const c=cvs.getContext('2d');const blue='#22629c';c.strokeStyle=blue;c.fillStyle=blue;c.lineWidth=13;
+ c.beginPath();c.arc(256,234,145,0,TAU);c.stroke();c.lineWidth=6;
+ for(let r of [75,112]){c.beginPath();c.arc(256,234,r,0,TAU);c.stroke()}
+ for(let xx of [-65,0,65]){c.beginPath();c.ellipse(256,234,Math.abs(xx)+34,145,0,0,TAU);c.stroke()}
+ for(let yy of [-67,0,67]){c.beginPath();c.moveTo(116,234+yy);c.lineTo(396,234+yy);c.stroke()}
+ c.fillStyle='#f2f4ed';c.fillRect(110,225,291,34);c.fillStyle=blue;c.font='bold 36px Arial';c.textAlign='center';c.fillText('ANTONOV',256,251);
+ c.font='bold 32px Arial';c.fillText('A N — 2 2 5',256,455);
+ let tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cvs);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ gl.generateMipmap(gl.TEXTURE_2D);return tex
+};
+function decalMesh(fn,nu=16,nv=3,mirror=false){
+ if(software){nu=Math.max(3,Math.ceil(nu/5));nv=Math.max(1,Math.ceil(nv/3))}
+ let d=[];
+ const put=(p,u,v)=>d.push(p[0],p[1],p[2],mirror?1-u:u,v);
+ for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){
+  let u0=i/nu,u1=(i+1)/nu,v0=j/nv,v1=(j+1)/nv;
+  let a=fn(u0,v0),b=fn(u1,v0),c=fn(u1,v1),e=fn(u0,v1);
+  put(a,u0,v0);put(b,u1,v0);put(c,u1,v1);
+  put(a,u0,v0);put(c,u1,v1);put(e,u0,v1)
+ }
+ let buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(d),gl.STATIC_DRAW);
+ return {buffer:buf,count:d.length/5}
+}
+function sideDecal(tex,x0,x1,top,bottom,side){
+ let fn=(u,v)=>{let x=mix(x0,x1,u),a=mix(bottom,top,v);return bodyPt(x,side>0?a:TAU-a,.17)};
+ decals.push({tex,...decalMesh(fn,30,5,side<0)})
+}
+const txCarrier=makeText('INTERNATIONAL CARGO TRANSPORTER',{size:58,bold:true,letterSpacing:1.1});
+const txDream=makeText('МРІЯ  ·  ANTONOV 225',{size:103,bold:true,italic:true});
+const txReg=makeText('UR-82060',{size:96,bold:true,letterSpacing:3});
+const txMriya=makeText('МРІЯ',{size:124,bold:true,italic:true});
+const txEmblem=emblemTex();
+for(let side of [-1,1]){
+ sideDecal(txCarrier,-30.8,-18.0,1.23,1.11,side);
+ sideDecal(txDream,-30.6,-18.4,1.49,1.28,side);
+ sideDecal(txReg,22.2,32.7,1.33,1.19,side);
+ // Each fin receives the blue Antonov emblem as a curved decal.
+ decals.push({tex:txEmblem,...decalMesh((u,v)=>finPoint(side,mix(.43,.79,u),mix(.47,.88,v),true,.20),12,12,side<0)});
+}
+// Extra registration on an outer wing upper surface.
+decals.push({tex:txReg,...decalMesh((u,v)=>wingPoint(mix(27.2,35.8,u),mix(.32,.61,v),-1,true,.075),15,5,false)});
+decals.push({tex:txMriya,...decalMesh((u,v)=>wingPoint(mix(28.0,36.7,u),mix(.34,.59,v),1,true,.075),15,5,true)});
+/* ────────── TECHNICAL BLUEPRINT OVERPRINT ────────── */
+for(let x=-36;x<=39;x+=(software?9.4:5.3)){
+ let pts=[];for(let i=0;i<=72;i++)pts.push(bodyPt(x,i/72*TAU,.135));
+ pathTube(wires,pts,.026,P.lightBlue,4)
+}
+for(let a=0;a<TAU-.01;a+=(software?PI/4:PI/7)){
+ let pts=[];for(let x=-40;x<=41;x+=1.05)pts.push(bodyPt(x,a,.14));
+ pathTube(wires,pts,.023,P.lightBlue,4)
+}
+for(let side of [-1,1]){
+ for(let z of (software?[5,15,25,35,44]:[5,10,15,20,25,30,35,40,44])){
+  let pts=[];for(let j=0;j<=20;j++)pts.push(wingPoint(z,j/20,side,true,.14));
+  pathTube(wires,pts,.030,P.lightBlue,4)
+ }
+ for(let u of (software?[.03,.50,.98]:[.03,.24,.50,.74,.98])){
+  let pts=[];for(let i=0;i<=60;i++)pts.push(wingPoint(i/60*44.2,u,side,true,.15));
+  pathTube(wires,pts,.026,P.lightBlue,4)
+ }
+ for(let z of [0,5,10,15,20]){
+  let pts=[];for(let j=0;j<=16;j++)pts.push(tailPt(z,j/16,side,true,.09));pathTube(wires,pts,.022,P.lightBlue,4)
+ }
+ for(let v of [0.05,.3,.55,.8,.99]){
+  let pts=[];for(let j=0;j<=15;j++)pts.push(finPoint(side,j/15,v,true,.18));pathTube(wires,pts,.027,P.lightBlue,4)
+ }
+}
+for(let loc of engineLocations)for(let dx of (software?[.45,3.3,6.9]:[.45,1.7,3.3,5.2,6.9])){
+ let rr=dx<1?1.85:dx<3.4?1.72:dx<6?1.50:1.14,pts=[];
+ for(let j=0;j<=36;j++){let a=j/36*TAU;pts.push([loc.x+dx,loc.y+rr*Math.cos(a),loc.z+rr*Math.sin(a)])}
+ pathTube(wires,pts,.028,P.lightBlue,4)
+}
+/* ────────── CUSTOM SUNLIGHT SHADER: ceramic paint, metal, glazing ────────── */
+const vertexSource=`
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+attribute vec3 aColor;
+attribute float aGloss;
+uniform mat4 uVP;
+uniform mat4 uModel;
+varying highp vec3 vPosition;
+varying highp vec3 vNormal;
+varying vec3 vColor;
+varying float vGloss;
+void main(){
+  vec4 world=uModel*vec4(aPosition,1.0);
+  vPosition=world.xyz;
+  vNormal=normalize(mat3(uModel)*aNormal);
+  vColor=aColor;
+  vGloss=aGloss;
+  gl_Position=uVP*world;
+}`;
+const fragmentSource=`
+precision highp float;
+varying highp vec3 vPosition;
+varying highp vec3 vNormal;
+varying vec3 vColor;
+varying float vGloss;
+uniform vec3 uEye;
+uniform float uTechnical;
+uniform float uOpacity;
+uniform float uIsLine;
+void main(){
+  vec3 n=normalize(vNormal);
+  vec3 eye=normalize(uEye-vPosition);
+  vec3 warm=normalize(vec3(-0.39,0.88,0.58));
+  vec3 sky=normalize(vec3(0.22,0.47,-0.88));
+  float sun=max(dot(n,warm),0.0);
+  float fill=max(dot(n,sky),0.0);
+  float up=clamp(n.y*0.5+0.5,0.0,1.0);
+  float rim=pow(1.0-max(dot(eye,n),0.0),3.6);
+  vec3 reflection=reflect(-warm,n);
+  float gloss=pow(max(dot(reflection,eye),0.0),mix(13.0,125.0,vGloss));
+  float skyGloss=pow(max(dot(reflect(-sky,n),eye),0.0),29.0);
+  vec3 light=vec3(0.52)+sun*vec3(0.43,0.42,0.38)+fill*vec3(0.09,0.14,0.17)+up*vec3(0.08,0.09,0.10);
+  vec3 color=vColor*light+vec3(1.0,0.96,0.84)*gloss*(0.10+0.35*vGloss)
+    +vec3(0.55,0.80,0.95)*skyGloss*0.085+rim*vec3(.05,.11,.12);
+  if(uTechnical>0.5){
+    float f=clamp(.33+.55*sun+.17*fill+.2*rim,0.0,1.0);
+    vec3 blueprint=mix(vec3(.025,.13,.23),vec3(.17,.55,.72),f);
+    color=mix(blueprint,vec3(.31,.82,.93),gloss*.35+rim*.13);
+    if(uIsLine>0.5)color=vec3(.49,.90,.98)*(.68+sun*.3);
+  }
+  color=clamp(color,0.0,1.0);
+  gl_FragColor=vec4(color,uOpacity);
+}`;
+const decalVertex=`
+attribute vec3 aPosition;
+attribute vec2 aUV;
+uniform mat4 uVP;
+uniform mat4 uModel;
+varying vec2 vUV;
+void main(){vUV=aUV;gl_Position=uVP*uModel*vec4(aPosition,1.0);}`;
+const decalFragment=`
+precision mediump float;
+uniform sampler2D uTexture;
+varying vec2 vUV;
+void main(){vec4 c=texture2D(uTexture,vUV);if(c.a<0.08)discard;
+gl_FragColor=vec4(c.rgb,c.a*.93);}`;
+function shader(type,source){let s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);
+ if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader compile: '+gl.getShaderInfoLog(s));return s
+}
+function program(vs,fs){let p=gl.createProgram(),v=shader(gl.VERTEX_SHADER,vs),f=shader(gl.FRAGMENT_SHADER,fs);
+ gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);
+ if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error('Shader link: '+gl.getProgramInfoLog(p));gl.deleteShader(v);gl.deleteShader(f);return p
+}
+let mainProgram,decalProgram,mainLoc,decalLoc;
+if(!software)try{
+ mainProgram=program(vertexSource,fragmentSource);
+ decalProgram=program(decalVertex,decalFragment);
+ mainLoc={p:gl.getAttribLocation(mainProgram,'aPosition'),n:gl.getAttribLocation(mainProgram,'aNormal'),
+  c:gl.getAttribLocation(mainProgram,'aColor'),g:gl.getAttribLocation(mainProgram,'aGloss'),
+  vp:gl.getUniformLocation(mainProgram,'uVP'),model:gl.getUniformLocation(mainProgram,'uModel'),
+  eye:gl.getUniformLocation(mainProgram,'uEye'),technical:gl.getUniformLocation(mainProgram,'uTechnical'),
+  opacity:gl.getUniformLocation(mainProgram,'uOpacity'),line:gl.getUniformLocation(mainProgram,'uIsLine')};
+ decalLoc={p:gl.getAttribLocation(decalProgram,'aPosition'),uv:gl.getAttribLocation(decalProgram,'aUV'),
+  vp:gl.getUniformLocation(decalProgram,'uVP'),model:gl.getUniformLocation(decalProgram,'uModel'),
+  tex:gl.getUniformLocation(decalProgram,'uTexture')};
+ [airplane,wheels,fan,wires].forEach(m=>m.upload());
+}catch(error){console.error(error);document.body.classList.add('no-webgl');return}
+else [airplane,wheels,fan,wires].forEach(m=>m.upload());
+const renderMesh=(mesh,matrix,alpha=1,technical=false,line=false)=>{
+ if(alpha<.005||!mesh.count)return;
+ gl.useProgram(mainProgram);gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);
+ gl.enableVertexAttribArray(mainLoc.p);gl.vertexAttribPointer(mainLoc.p,3,gl.FLOAT,false,40,0);
+ gl.enableVertexAttribArray(mainLoc.n);gl.vertexAttribPointer(mainLoc.n,3,gl.FLOAT,false,40,12);
+ gl.enableVertexAttribArray(mainLoc.c);gl.vertexAttribPointer(mainLoc.c,3,gl.FLOAT,false,40,24);
+ gl.enableVertexAttribArray(mainLoc.g);gl.vertexAttribPointer(mainLoc.g,1,gl.FLOAT,false,40,36);
+ gl.uniformMatrix4fv(mainLoc.model,false,matrix);
+ gl.uniform1f(mainLoc.opacity,alpha);
+ gl.uniform1f(mainLoc.technical,technical?1:0);
+ gl.uniform1f(mainLoc.line,line?1:0);
+ gl.drawArrays(gl.TRIANGLES,0,mesh.count)
+};
+function drawDecals(vp,model){
+ gl.useProgram(decalProgram);gl.uniformMatrix4fv(decalLoc.vp,false,vp);
+ gl.uniformMatrix4fv(decalLoc.model,false,model);gl.uniform1i(decalLoc.tex,0);
+ gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+ for(let d of decals){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,d.tex);
+  gl.bindBuffer(gl.ARRAY_BUFFER,d.buffer);gl.enableVertexAttribArray(decalLoc.p);
+  gl.vertexAttribPointer(decalLoc.p,3,gl.FLOAT,false,20,0);
+  gl.enableVertexAttribArray(decalLoc.uv);gl.vertexAttribPointer(decalLoc.uv,2,gl.FLOAT,false,20,12);
+  gl.drawArrays(gl.TRIANGLES,0,d.count)
+ }
+ gl.depthMask(true);gl.disable(gl.BLEND)
+}
+/* ────────── CAMERA, GESTURES AND OBSERVATION INSTRUMENTS ────────── */
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const state={yaw:-.81,pitch:.45,dist:107,tyaw:-.81,tpitch:.45,tdist:107,
+ playing:!reduceMotion&&!software,speed:.7,tech:false,gear:0,targetGear:0,
+ flightTime:0,turbineTime:0,dragging:false,view:'iso',last:0,renderCount:0};
+const presets={iso:[-.81,.45,107],side:[0,.16,128],top:[0,1.568,183],front:[-PI/2,.12,130]};
+const readout=$('coord-readout'),status=$('model-status'),speed=$('speed'),playButton=$('play');
+let toastTimer=0;
+function toast(message){toastEl.textContent=message;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2100)}
+function statusText(){status.textContent=(state.tech?'ENGINEERING BLUEPRINT':'HISTORIC LIVERY')+' · '+(state.targetGear?'GEAR EXTENDED':'IN FLIGHT')}
+function updatePlay(){
+ playButton.setAttribute('aria-pressed',String(state.playing));$('play-label').textContent=state.playing?'暂停旋转':'开始旋转';
+ $('play-symbol').innerHTML=state.playing?'<path d="M8 5v14M16 5v14"/>':'<path d="m8 5 11 7-11 7V5Z"/>';
+ playButton.classList.toggle('primary',state.playing)
+}
+function pause(){if(state.playing){state.playing=false;updatePlay()}}
+function selectedView(id){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));state.view=id}
+function setView(view,announce=true){let v=presets[view];if(!v)return;
+ state.tyaw=v[0];state.tpitch=v[1];state.tdist=v[2];selectedView(view);pause();
+ if(announce)toast({iso:'自由立体观察',side:'侧面视图',top:'翼展俯视',front:'机头正面'}[view])
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+$('gear').addEventListener('click',()=>{
+ state.targetGear=state.targetGear?0:1;
+ $('gear').classList.toggle('active',!!state.targetGear);$('gear').setAttribute('aria-pressed',String(!!state.targetGear));
+ statusText();toast(state.targetGear?'起落架展开 · 32 轮':'起落架收起')
+});
+$('technical').addEventListener('click',()=>{
+ state.tech=!state.tech;stage.classList.toggle('technical',state.tech);
+ $('technical').classList.toggle('active',state.tech);$('technical').setAttribute('aria-pressed',String(state.tech));
+ statusText();toast(state.tech?'结构蓝图 · DESIGN STUDY':'经典涂装 · HISTORIC LIVERY')
+});
+$('reset').addEventListener('click',()=>{
+ state.tyaw=presets.iso[0];state.tpitch=presets.iso[1];state.tdist=presets.iso[2];
+ selectedView('iso');toast('已重置视角与缩放')
+});
+playButton.addEventListener('click',()=>{state.playing=!state.playing;updatePlay();toast(state.playing?'自动旋转已开启':'自动旋转已暂停')});
+speed.addEventListener('input',()=>{state.speed=Number(speed.value);$('speed-value').textContent=state.speed.toFixed(1)+'×'});
+const pointers=new Map();let lastPinch=0,dragMoved=false;
+canvas.addEventListener('pointerdown',e=>{
+ if(e.pointerType==='mouse'&&e.button!==0)return;
+ canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);
+ dragMoved=false;state.dragging=true;canvas.classList.add('dragging');
+ if(pointers.size===2){let a=[...pointers.values()];lastPinch=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])}
+});
+canvas.addEventListener('pointermove',e=>{
+ if(!pointers.has(e.pointerId))return;
+ let prev=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);
+ if(pointers.size===1){let dx=e.clientX-prev[0],dy=e.clientY-prev[1];
+  if(Math.abs(dx)+Math.abs(dy)>0){dragMoved=true;pause();selectedView('');state.tyaw-=dx*.0063;state.tpitch=clamp(state.tpitch+dy*.0052,.025,1.565)}
+ }else if(pointers.size>=2){let a=[...pointers.values()],dist=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);
+  if(lastPinch>10){state.tdist=clamp(state.tdist*lastPinch/Math.max(10,dist),76,235);pause()}
+  lastPinch=dist
+ }
+});
+function pointerUp(e){pointers.delete(e.pointerId);if(pointers.size<2)lastPinch=0;
+ if(!pointers.size){state.dragging=false;canvas.classList.remove('dragging')}
+}
+for(let ev of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(ev,pointerUp);
+canvas.addEventListener('wheel',e=>{e.preventDefault();pause();state.tdist=clamp(state.tdist*Math.exp(e.deltaY*.001),76,210)},{passive:false});
+canvas.addEventListener('dblclick',()=>{$('reset').click()});
+window.addEventListener('keydown',e=>{
+ const el=document.activeElement;if(el?.tagName==='INPUT'||el?.tagName==='TEXTAREA')return;
+ let handled=true;
+ if(e.key==='ArrowLeft')state.tyaw+=.13;
+ else if(e.key==='ArrowRight')state.tyaw-=.13;
+ else if(e.key==='ArrowUp')state.tpitch=clamp(state.tpitch+.10,.025,1.565);
+ else if(e.key==='ArrowDown')state.tpitch=clamp(state.tpitch-.10,.025,1.565);
+ else if(e.key==='+'||e.key==='=')state.tdist=clamp(state.tdist*.89,76,235);
+ else if(e.key==='-')state.tdist=clamp(state.tdist*1.11,76,235);
+ else if(e.key===' '){state.playing=!state.playing;updatePlay()}
+ else if(e.key.toLowerCase()==='r')$('reset').click();
+ else handled=false;
+ if(handled){e.preventDefault();if(e.key!==' ')pause()}
+});
+let resizeFlag=true;
+const observer=new ResizeObserver(()=>resizeFlag=true);observer.observe(stage);
+function resize(){
+ let rect=canvas.getBoundingClientRect();let dpr=Math.min(window.devicePixelRatio||1,2);
+ let maxDimension=2400;if(Math.max(rect.width,rect.height)*dpr>maxDimension)dpr=maxDimension/Math.max(rect.width,rect.height);
+ let w=Math.max(2,Math.floor(rect.width*dpr)),h=Math.max(2,Math.floor(rect.height*dpr));
+ if(software){w=Math.min(w,Math.floor(rect.width));h=Math.min(h,Math.floor(rect.height))}
+ if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}if(!software)gl.viewport(0,0,w,h);
+ resizeFlag=false
+}
+if(!software){gl.clearColor(0,0,0,0);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE)}
+updatePlay();statusText();
+window.__AN225_DIAGNOSTICS={
+ get geometry(){return {aircraftTriangles:airplane.count/3,gearTriangles:wheels.count/3,
+  fanTriangles:fan.count/3,wireTriangles:wires.count/3,engineCount:engineLocations.length,
+  wheelCount:32,decals:decals.length}},
+ get state(){return {yaw:state.yaw,pitch:state.pitch,dist:state.dist,gear:state.gear,
+  technical:state.tech,playing:state.playing,renderCount:state.renderCount}},
+ setView, getError:()=>gl.getError()
+};
+/* ────────── SOFTWARE RASTERIZER · identical 3D meshes, no WebGL required ──────────
+   A painter-ordered shaded triangle renderer keeps the exhibit usable on
+   restrictive browsers and print-preview/headless environments. It is a real
+   projected 3D view, with the same orbit camera, nacelles and landing gear.
+*/
+const softColorCache=new Map();
+function projectCPU(mat,x,y,z){
+ let w=mat[3]*x+mat[7]*y+mat[11]*z+mat[15];if(w<.1)return null;
+ let px=mat[0]*x+mat[4]*y+mat[8]*z+mat[12];
+ let py=mat[1]*x+mat[5]*y+mat[9]*z+mat[13];
+ let pz=mat[2]*x+mat[6]*y+mat[10]*z+mat[14];
+ return [(px/w*.5+.5)*canvas.width,(-py/w*.5+.5)*canvas.height,pz/w]
+}
+function cpuColor(c,n,eye,center,technical,line){
+ let facing=dot(n,sub(eye,center));if(facing<0)n=mul(n,-1);
+ const sun=Math.max(0,dot(n,[-.34,.86,.52]));
+ const fill=Math.max(0,dot(n,[.34,.34,-.87]));
+ const up=clamp(n[1]*.5+.5,0,1);
+ let f=.52+.43*sun+.10*fill+.09*up;
+ let r,g,b;
+ if(technical){r=line?.46:.045+.14*f;g=line?.88:.19+.43*f;b=line?.98:.27+.45*f}
+ else{r=c[0]*f+.055*sun*sun;g=c[1]*f+.047*sun*sun;b=c[2]*f+.028*sun*sun}
+ let ri=clamp(Math.round(r*255/5)*5,0,255),gi=clamp(Math.round(g*255/5)*5,0,255),bi=clamp(Math.round(b*255/5)*5,0,255);
+ let key=(ri<<16)|(gi<<8)|bi;if(!softColorCache.has(key))softColorCache.set(key,`rgb(${ri},${gi},${bi})`);
+ return softColorCache.get(key)
+}
+function softwareDecals(vp,ctx,eye,bob){
+ if(state.tech)return;
+ ctx.globalAlpha=.90;
+ for(const d of decals){
+  let pixels=d.tex.image,data=d.buffer.data;if(!pixels||!data)continue;
+  // The curved opposite-side stencil is occluded by the fuselage or the fin.
+  let cz=0,cy=0;
+  for(let j=0;j<data.length;j+=5){cz+=data[j+2];cy+=data[j+1]}
+  cz/=data.length/5;cy/=data.length/5;
+  if(Math.abs(cz)<19&&Math.abs(cz)>2&&Math.sign(cz)!==Math.sign(eye[2]))continue;
+  if(Math.abs(cz)>20&&eye[1]<0)continue;
+  for(let i=0;i<data.length;i+=15){
+   let tris=[];
+   for(let j=0;j<3;j++){
+    const k=i+j*5,p=projectCPU(vp,data[k],data[k+1]+bob,data[k+2]);
+    if(!p)break;
+    tris.push([p[0],p[1],data[k+3]*pixels.width,(1-data[k+4])*pixels.height])
+   }
+   if(tris.length<3)continue;
+   let [a,b,c]=tris;
+   let ds1=b[2]-a[2],dt1=b[3]-a[3],ds2=c[2]-a[2],dt2=c[3]-a[3];
+   let det=ds1*dt2-ds2*dt1;if(Math.abs(det)<.000001)continue;
+   let dx1=b[0]-a[0],dy1=b[1]-a[1],dx2=c[0]-a[0],dy2=c[1]-a[1];
+   let A=(dx1*dt2-dx2*dt1)/det,B=(dy1*dt2-dy2*dt1)/det;
+   let C=(dx2*ds1-dx1*ds2)/det,D=(dy2*ds1-dy1*ds2)/det;
+   let E=a[0]-A*a[2]-C*a[3],F=a[1]-B*a[2]-D*a[3];
+   ctx.save();ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(c[0],c[1]);ctx.closePath();ctx.clip();
+   ctx.setTransform(A,B,C,D,E,F);ctx.drawImage(pixels,0,0);ctx.restore()
+  }
+ }
+ ctx.globalAlpha=1
+}
+function drawSoftware(vp,eye,bob){
+ const hash=[state.yaw.toFixed(4),state.pitch.toFixed(4),state.dist.toFixed(3),state.gear.toFixed(3),state.tech?1:0,state.turbineTime.toFixed(2)].join(':');
+ if(state.lastSoftwareHash===hash&&state.renderCount>2)return;
+ state.lastSoftwareHash=hash;
+ const ctx=fallbackCtx,W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
+ const collection=[];
+ const appendMesh=(mesh,translation=[0,0,0],rotate=0,technical=state.tech,line=false)=>{
+  const d=mesh.buffer.data;
+  if(!d)return;
+  const cx=Math.cos(rotate),sx=Math.sin(rotate);
+  for(let i=0;i<d.length;i+=30){
+   const v=[],w=[];let col=[d[i+6],d[i+7],d[i+8]],norm=[0,0,0],depth=0;
+   for(let q=0;q<3;q++){
+    let t=i+q*10,xx=d[t],yy=d[t+1],zz=d[t+2];
+    let nx=d[t+3],ny=d[t+4],nz=d[t+5];
+    if(rotate){let y=yy*cx-zz*sx,z=yy*sx+zz*cx;yy=y;zz=z;
+      let nY=ny*cx-nz*sx,nZ=ny*sx+nz*cx;ny=nY;nz=nZ}
+    let p=[xx+translation[0],yy+translation[1],zz+translation[2]];
+    let proj=projectCPU(vp,...p);if(!proj){v.length=0;break}
+    v.push(proj);w.push(p);norm[0]+=nx;norm[1]+=ny;norm[2]+=nz;depth+=proj[2]
+   }
+   if(v.length!==3)continue;
+   let p0=v[0],p1=v[1],p2=v[2];
+   if(Math.max(p0[0],p1[0],p2[0])<0||Math.min(p0[0],p1[0],p2[0])>W||
+      Math.max(p0[1],p1[1],p2[1])<0||Math.min(p0[1],p1[1],p2[1])>H)continue;
+   const area=(p1[0]-p0[0])*(p2[1]-p0[1])-(p1[1]-p0[1])*(p2[0]-p0[0]);
+   if(Math.abs(area)<.085)continue;
+   let center=mul(add(add(w[0],w[1]),w[2]),1/3);
+   let paint=cpuColor(col,unit(norm),eye,center,technical,line);
+   collection.push({p0,p1,p2,z:depth/3,paint})
+  }
+ };
+ appendMesh(airplane,[0,bob,0]);
+ for(let i=0;i<engineLocations.length;i++){
+  let e=engineLocations[i];appendMesh(fan,[e.x+.62,e.y+bob,e.z],state.turbineTime*((i%2===0)?1:-1))
+ }
+ if(state.gear>.1)appendMesh(wheels,[0,bob+(1-state.gear)*4.2,0]);
+ if(state.tech)appendMesh(wires,[0,bob,0],0,true,true);
+ collection.sort((a,b)=>b.z-a.z);
+ ctx.lineJoin='round';ctx.lineWidth=.67;
+ for(const t of collection){
+  ctx.fillStyle=t.paint;ctx.beginPath();ctx.moveTo(t.p0[0],t.p0[1]);
+  ctx.lineTo(t.p1[0],t.p1[1]);ctx.lineTo(t.p2[0],t.p2[1]);ctx.closePath();ctx.fill();ctx.strokeStyle=t.paint;ctx.stroke();
+ }
+ if(!state.tech)softwareDecals(vp,ctx,eye,bob);
+}
+
+function frame(ms){
+ let now=ms*.001,dt=state.last?Math.min(software?.15:.05,now-state.last):.016;state.last=now;
+ if(resizeFlag)resize();
+ if(state.playing)state.tyaw+=dt*.072*state.speed;
+ state.yaw+= (state.tyaw-state.yaw)*Math.min(1,dt*6.9);
+ state.pitch+=(state.tpitch-state.pitch)*Math.min(1,dt*6.9);
+ state.dist+=(state.tdist-state.dist)*Math.min(1,dt*6.0);
+ state.gear+=(state.targetGear-state.gear)*Math.min(1,dt*2.8);
+ if(!reduceMotion&&(!software||state.playing))state.flightTime+=dt;
+ if(!reduceMotion&&(!software||state.playing))state.turbineTime+=dt*(state.playing?7.5:2.4);
+ let aspect=canvas.width/canvas.height;
+ let portrait=aspect<1.02;
+ let effectiveDistance=state.dist*(portrait?1.54:aspect<1.3?1.31:1);
+ let eye=[Math.sin(state.yaw)*Math.cos(state.pitch)*effectiveDistance,
+  Math.sin(state.pitch)*effectiveDistance+1.4,Math.cos(state.yaw)*Math.cos(state.pitch)*effectiveDistance];
+ const view=M4.lookAt(eye,[0,1.5,0],[0,1,0]);
+ const proj=M4.perspective((portrait?50:36)*PI/180,aspect,.7,600);
+ const vp=M4.multiply(proj,view),bob=reduceMotion?0:.12*Math.sin(state.flightTime*.67);
+ if(software){if(!state.lastSoftwarePaint||now-state.lastSoftwarePaint>.11){state.lastSoftwarePaint=now;drawSoftware(vp,eye,bob)}readout.textContent='AZ '+String((Math.round(state.yaw*DEG)%360+360)%360).padStart(3,'0')+'°   EL '+String(Math.round(state.pitch*DEG)).padStart(2,'0')+'°';state.renderCount++;requestAnimationFrame(frame);return}
+ const model=M4.translation(0,bob,0);
+ gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ gl.useProgram(mainProgram);gl.uniformMatrix4fv(mainLoc.vp,false,vp);
+ gl.uniform3fv(mainLoc.eye,new Float32Array(eye));
+ renderMesh(airplane,model,1,state.tech);
+ for(let i=0;i<engineLocations.length;i++){
+  let e=engineLocations[i],rot=M4.rotationX(state.turbineTime*((i%2===0)?1:-1));
+  let rotorModel=M4.multiply(M4.translation(e.x+.62,e.y+bob,e.z),rot);
+  renderMesh(fan,rotorModel,1,state.tech)
+ }
+ if(state.gear>.012){
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  if(state.gear<.999)gl.depthMask(false);
+  let wheelModel=M4.translation(0,bob+(1-state.gear)*4.2,0);
+  renderMesh(wheels,wheelModel,Math.min(1,state.gear*1.4),state.tech);
+  gl.depthMask(true);gl.disable(gl.BLEND)
+ }
+ if(state.tech){renderMesh(wires,model,1,true,true)}
+ else drawDecals(vp,model);
+ readout.textContent='AZ '+String((Math.round(state.yaw*DEG)%360+360)%360).padStart(3,'0')+'°   EL '+String(Math.round(state.pitch*DEG)).padStart(2,'0')+'°';
+ state.renderCount++;requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame);
+setTimeout(()=>$('loading').classList.add('done'),250);
+window.addEventListener('webglcontextlost',e=>{e.preventDefault();toast('图形上下文已断开，请刷新页面')});
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"45c2bf8136a245cd97f1c2e9a96c0730","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
