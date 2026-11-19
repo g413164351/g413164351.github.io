@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f8f5ee">
+<title>后掠翼侧滑：为什么一侧 α 减小？｜交互式 3D 空气动力学</title>
+<style>
+/* Scene plan: a sunlit late-afternoon aerodynamics studio, warm ivory sky, slate ink, cobalt wind,
+   violet chord projection, teal span projection, vermilion vertical component, amber angle arcs.
+   Layers: quiet horizon grid, tailless swept wing, permanently identified wind V, continuous copies,
+   wing-anchored projection triangles, force arrows. One physical wind vector is used for all copies.
+   Contact: wing panels meet at the fuselage root; markers live at station points, arrows at true anchors. */
+:root{--bg:#f8f5ee;--card:#fffefb;--ink:#203b48;--muted:#607780;--line:#d9e4e3;--deep:#183d4e;--blue:#2874c4;--green:#279884;--purple:#7861b9;--teal:#128f96;--coral:#df785b;--gold:#be8c36;--left:#268e92;--right:#ae593f;--shadow:0 15px 38px rgba(31,62,72,.075)}
+*{box-sizing:border-box}[hidden]{display:none!important}html{color-scheme:light}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid rgba(40,116,196,.45);outline-offset:2px}
+.page{max-width:1490px;margin:auto;padding:22px 26px 35px}.mast{border-bottom:1px solid #cfdedc;display:flex;justify-content:space-between;align-items:center;padding:0 1px 12px;gap:10px;flex-wrap:wrap}.mark{font-size:12px;letter-spacing:.11em;font-weight:850}.edition{font-size:11px;letter-spacing:.07em;color:var(--muted)}
+h1{font-size:clamp(29px,3.05vw,46px);line-height:1.2;letter-spacing:-.025em;margin:18px 0 8px;font-weight:840}.intro{margin:0 0 17px;color:#59717a;font-size:15px;max-width:1080px}.intro strong{color:#a75e3b}
+.steps{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));border:1px solid var(--line);border-radius:13px;background:#fffefa;overflow:hidden;margin-bottom:15px}.step{min-width:0;background:transparent;border:0;border-right:1px solid var(--line);padding:11px 7px 12px;text-align:left;color:#68818a;line-height:1.35;font-weight:780;font-size:12px;position:relative}.step:last-child{border:0}.step .index{font-size:10px;letter-spacing:.11em;color:#83979c;display:block;padding-bottom:5px}.step.current{background:#e8f1f9;color:#214f75}.step.done{background:#f3f8f4;color:#29776a}.step:hover{background:#f1f6f8}.step.current .index{color:#3676ae}
+.layout{display:grid;grid-template-columns:minmax(0,1.56fr) minmax(340px,.82fr);align-items:start;gap:16px}.stagebox,.side,.underbox{background:var(--card);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow);overflow:hidden}
+.viewer-header{padding:11px 14px;min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fffefa;border-bottom:1px solid var(--line)}.viewer-title{font-size:14px;font-weight:840}.viewer-title small{display:block;font-size:11px;color:var(--muted);font-weight:530}.views{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.views button{border:1px solid #d1e0e1;background:#f3f8f7;color:#46616e;padding:7px 10px;border-radius:9px;font-size:12px;font-weight:780}.views button.active{background:var(--deep);color:white;border-color:var(--deep)}
+.canvas-wrap{height:clamp(430px,43vw,617px);position:relative;background:radial-gradient(ellipse at 36% 20%,#ffffff 1%,#f4f9f7 56%,#eaf3f1 100%);overflow:hidden}#scene{display:block;width:100%;height:100%;touch-action:none;overscroll-behavior:contain;cursor:grab;user-select:none}#scene:active,#scene.dragging{cursor:grabbing}
+.hud{position:absolute;top:13px;left:14px;display:flex;flex-wrap:wrap;gap:7px;pointer-events:none}.hud span{background:rgba(255,255,255,.88);border:1px solid rgba(204,221,222,.96);padding:5px 8px;font-size:11px;font-weight:780;border-radius:7px;box-shadow:0 2px 9px rgba(37,65,74,.03)}
+.corner-note{position:absolute;bottom:11px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:end;gap:5px;color:#738994;font-size:11px;pointer-events:none}.corner-note span{background:rgba(255,255,255,.77);border-radius:8px;padding:4px 7px}
+.timeline{background:#fffefa;border-top:1px solid var(--line);padding:11px 14px 12px}.progress-info{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#587680;font-size:12px;margin-bottom:7px}.progress-info strong{font-weight:800;color:#2c5b77}.timeline input{accent-color:var(--blue);width:100%;display:block;cursor:ew-resize;margin:0}.ends{display:flex;justify-content:space-between;color:#83969b;font-size:10px;margin-top:2px}
+.chain{padding:13px 14px;border-top:1px solid var(--line);background:#fcfdf9}.chain>strong{font-size:12px;color:#45636c;display:block;margin-bottom:9px}.nodes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.node{border:1px solid #dde8e7;background:#f3f6f3;color:#8b9b9b;padding:5px 7px;border-radius:7px;font-size:11px;font-weight:750;opacity:.73}.node.on{color:#265c74;background:#e8f3f7;border-color:#c7e0e9;opacity:1}.node.last{color:#96542d;background:#fff2e7;border-color:#efd2b6}.connector{color:#99aaad}
+.colors{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;color:#607983;font-size:11px}.colors span{white-space:nowrap}.sw{display:inline-block;width:13px;height:9px;border-radius:8px;margin-right:5px}
+.side{padding:20px}.eyebrow{font-size:11px;font-weight:860;letter-spacing:.13em;color:#81969e}.side h2{font-size:clamp(21px,2vw,26px);margin:8px 0 10px;line-height:1.3}.narration{font-size:14px;line-height:1.9;min-height:111px}.narration strong{color:#9e5434}.equation{padding:13px 14px;background:#f0f7fa;border-left:3px solid var(--blue);border-radius:0 10px 10px 0;margin:13px 0;font-weight:800;font-size:15px;line-height:1.85;min-height:76px;overflow-wrap:anywhere}.equation small{display:block;color:#607985;font-size:12px;line-height:1.7;font-weight:520}.equation .hl{color:#af5637}.equation .pur{color:#6753a2}.equation .te{color:#157f83}
+.step-nav{display:grid;grid-template-columns:.9fr 1.15fr;gap:9px}.step-nav button,.ctl button{border:1px solid #d3e0df;border-radius:10px;padding:10px 11px;background:#f5f9f8;color:#315361;font-size:13px;font-weight:780}.step-nav .primary{background:#234b68;color:#fff;border-color:#234b68}.step-nav button:disabled{opacity:.4;cursor:default}.ctl{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ctl button{padding:8px 11px;font-size:12px}.ctl .playing{background:#e7f1fa;color:#255f8e;border-color:#bfdaee}.ctl label{font-size:11px;color:var(--muted);font-weight:750;margin-left:auto;display:flex;gap:6px;align-items:center}.ctl input{width:65px;accent-color:var(--blue)}
+.sep{height:1px;background:var(--line);margin:17px 0}.param{margin-bottom:12px}.param-top{display:flex;align-items:baseline;justify-content:space-between;gap:9px;font-size:13px;font-weight:810}.param-top output{font-weight:900;color:#b36a44;font-size:14px}.param input{margin:4px 0 0;width:100%;accent-color:#bd7750}.param small{display:block;color:#788b92;font-size:11px;line-height:1.5}.parameter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px}
+.quick{display:flex;gap:7px;flex-wrap:wrap;margin:5px 0 0}.quick button{border:1px solid #d8e4e3;background:#f4f8f7;border-radius:8px;color:#426674;font-size:11px;padding:7px 8px;font-weight:820}
+.verdict{padding:13px 12px;margin-top:14px;border:1px solid #efdbcb;border-radius:10px;background:#fff8f0;font-size:12px;line-height:1.8}.verdict strong{color:#9e5933;font-size:13px}
+.proofs{display:grid;grid-template-columns:minmax(0,1.07fr) minmax(0,.93fr);gap:15px;margin-top:16px}.underbox{padding:17px 19px}.underbox h3{font-size:17px;line-height:1.4;margin:0 0 6px}.underbox .meta{color:#71858c;font-size:12px;line-height:1.7;margin:0 0 9px}.triangle-space{height:234px;border-radius:12px;background:#f7faf9;border:1px solid #e3edeb;position:relative}#triangles{width:100%;height:100%;display:block}.stats{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}.stats th{color:#617d88;background:#f3f7f7;font-weight:800;text-align:right;padding:6px;border-bottom:1px solid #dfebeb}.stats td{padding:7px 6px;text-align:right;border-bottom:1px solid #e5eded}.stats td:first-child,.stats th:first-child{text-align:left}.stats tr:last-child td{border-bottom:none}.stats .r{color:#a35536;font-weight:800}.stats .l{color:#1a8185;font-weight:800}.notes{font-size:12px;color:#546e78;line-height:1.85;margin-top:9px}.notes em{color:#a45b39;font-style:normal;font-weight:780}.later{border:1px dashed #dce8e8;color:#71878f;border-radius:10px;text-align:center;padding:19px 10px;font-size:13px;background:#f8fbfa;min-height:135px;display:flex;align-items:center;justify-content:center}.linkchain{margin-top:9px;border-top:1px solid #e0eae7;padding-top:10px;font-size:12px;line-height:1.8;color:#627985}.linkchain strong{color:#274f63}
+.fin{margin-top:16px;padding:13px 2px 0;border-top:1px solid #ccddda;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#72878d;font-size:11px}.fin strong{color:#4a6672}
+@media(max-width:1100px){.layout{grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr)}.canvas-wrap{height:520px}.steps{grid-template-columns:repeat(4,1fr)}.step:nth-child(4){border-right:0}.step:nth-child(n+5){border-top:1px solid var(--line)}}
+@media(max-width:810px){.page{padding:14px 12px 27px}.layout{grid-template-columns:1fr}.canvas-wrap{height:clamp(380px,68vw,600px)}.side{padding:15px}.narration{min-height:0}.proofs{grid-template-columns:1fr}.underbox{padding:15px}.triangle-space{height:220px}}
+@media(max-width:480px){.steps{grid-template-columns:repeat(4,minmax(0,1fr))}.step{font-size:11px;padding:8px 5px}.step .index{font-size:9px}.canvas-wrap{height:395px}.viewer-header{align-items:start}.viewer-title{font-size:12px}.viewer-title small{font-size:10px}.views{gap:4px}.views button{font-size:11px;padding:6px}.hud{top:8px;left:7px;gap:3px}.hud span{font-size:10px;padding:4px 5px}.corner-note{font-size:10px;bottom:7px}.parameter-grid{gap:10px}.progress-info{font-size:11px}.colors{gap:7px}.colors span{font-size:10px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="mast"><span class="mark">FLIGHT GEOMETRY · 飞行几何实验室</span><span class="edition">LAB NOTE 03 · 后掠翼 / 侧滑 / 稳定性</span></header>
+<h1>为什么右翼的 <span style="color:#a65e3e">α 变小</span>，升力却可能变大？</h1>
+<p class="intro">围绕课件上的 <strong>α<sub>局部</sub>≈V<sub>w</sub>/V<sub>c</sub></strong>、<strong>q<sub>c</sub>=½ρV<sub>c</sub>²</strong> 和 <strong>F<sub>x</sub>≈Lα−D</strong>，让同一股空气连续走过 <em>速度分解 → 后掠投影 → 迎角与动压 → 左右力差</em>。</p>
+<nav class="steps" aria-label="逐步学习">
+  <button class="step current" data-step="0"><span class="index">STEP 01</span>原始来流 V</button>
+  <button class="step" data-step="1"><span class="index">STEP 02</span>画出 α 和 β</button>
+  <button class="step" data-step="2"><span class="index">STEP 03</span>后掠与方向轴</button>
+  <button class="step" data-step="3"><span class="index">STEP 04</span>复制同一来流</button>
+  <button class="step" data-step="4"><span class="index">STEP 05</span>右翼逐项分解</button>
+  <button class="step" data-step="5"><span class="index">STEP 06</span>左翼同法分解</button>
+  <button class="step" data-step="6"><span class="index">STEP 07</span>α、动压与升力</button>
+  <button class="step" data-step="7"><span class="index">STEP 08</span>纵向力与偏航</button>
+</nav>
+<div class="layout">
+  <section class="stagebox" aria-label="机翼交互式三维示意">
+    <div class="viewer-header"><div class="viewer-title">同一架无尾后掠翼 · 可旋转 3D<small id="viewSubtitle">拖动画面转动相机，不会改变计算出的速度</small></div>
+      <div class="views"><button id="iso" class="active">3D 斜视</button><button id="top">俯视</button><button id="low">低角度</button><button id="resetCamera">复位</button></div>
+    </div>
+    <div class="canvas-wrap"><div class="hud"><span>机头：+x</span><span>机体左：+y</span><span>高度：+z</span><span id="windBadge">β&gt;0：风从右侧来</span></div>
+      <canvas id="scene" aria-label="能用手指或鼠标旋转的三维无尾后掠翼模型，来流及两翼速度分量由同一组参数计算"></canvas>
+      <div class="corner-note"><span>↔ 拖动旋转 · 滚轮缩放 · 按俯视看分量</span><span id="sceneReadout">右 α局部：— · 左 α局部：—</span></div>
+    </div>
+    <div class="timeline"><div class="progress-info"><strong id="phaseName">01 原始来流</strong><span id="phasePercent">75% · 可左右拖动逐帧查看</span></div>
+      <input id="progress" type="range" min="0" max="799" value="75" step="1" aria-label="全程逐帧进度，包含速度分解、原样复制和左右翼投影">
+      <div class="ends"><span>① V 的来源</span><span>④ 副本保持方向长度</span><span>⑧ Fx 与偏航</span></div>
+    </div>
+    <div class="chain"><strong>全程追踪同一批量：箭头不是凭空出现的</strong><div class="nodes" id="nodes"></div>
+      <div class="colors"><span><i class="sw" style="background:#2874c4"></i>蓝＝总来流 V</span><span><i class="sw" style="background:#7861b9"></i>紫＝有效弦向 Vc</span><span><i class="sw" style="background:#128f96"></i>青＝沿翼展 Vs</span><span><i class="sw" style="background:#df785b"></i>红橙＝竖直 Vw / 阻力 D（按文字区分）</span><span><i class="sw" style="background:#be8c36"></i>金＝角弧</span></div>
+    </div>
+  </section>
+  <aside class="side">
+    <div class="eyebrow" id="stepIndex">STEP 01 / 08</div><h2 id="stepTitle">先认清蓝色的 V</h2>
+    <div class="narration" id="stepBody"></div>
+    <div class="equation" id="formula"></div>
+    <div class="step-nav"><button id="prev" disabled>← 上一步</button><button class="primary" id="next">下一步 →</button></div>
+    <div class="ctl"><button id="play">▶ 自动讲解</button><button id="restart">↻ 从头重播</button><label>速度 <input id="speed" type="range" min="0.6" max="2.0" step="0.2" value="1" aria-label="播放速度"><span id="speedValue">1.0×</span></label></div>
+    <div class="sep"></div>
+    <div class="parameter-grid">
+      <div class="param"><div class="param-top"><label for="beta">侧滑 β</label><output id="betaOut">+8°</output></div><input type="range" id="beta" min="-16" max="16" value="8" step="1"><small>正：风从右翼吹向左翼</small></div>
+      <div class="param"><div class="param-top"><label for="sweep">后掠 Λ</label><output id="sweepOut">36°</output></div><input type="range" id="sweep" min="0" max="48" value="36" step="1"><small>0° 时左右对称无差异</small></div>
+      <div class="param"><div class="param-top"><label for="alpha">机体迎角 α</label><output id="alphaOut">7°</output></div><input type="range" id="alpha" min="0" max="14" value="7" step="1"><small>固定时两翼 Vw 相同</small></div>
+      <div class="param"><div class="param-top"><label for="V">来流速度 V</label><output id="VOut">70 m/s</output></div><input type="range" id="V" min="45" max="90" value="70" step="5"><small>会影响速度和动压</small></div>
+    </div>
+    <div class="quick"><button id="zeroBeta">β = 0°</button><button id="flipBeta">↔ 反向侧滑</button><button id="zeroSweep">Λ = 0°</button><button id="default">恢复默认</button></div>
+    <div class="verdict" id="verdict" aria-live="polite"></div>
+  </aside>
+</div>
+<section class="proofs">
+  <div class="underbox"><h3>局部二维截面：同一个 Vw，两条不同的 Vc</h3><p class="meta">两侧的速度三角形都从各自翼面测点来；水平边是 Vc，竖直边是 Vw。角度和长度按照同一比例绘制，不做夸大。</p>
+    <div class="triangle-space"><canvas id="triangles" aria-label="左右翼精确按比例绘制的迎角速度三角形，均展示 Vc、Vw 与局部迎角"></canvas></div>
+    <p class="notes" id="triangleHint">继续到第⑤步，右侧三角形将从 3D 右翼上的投影直接长出来。</p>
+  </div>
+  <div class="underbox"><h3>数值对照：为什么 α↓ 不等于 L↓</h3><p class="meta">所有数值都根据当前滑块实时计算；R 代表飞机自身的右翼，L 代表飞机自身的左翼。</p>
+    <div id="tablePlaceholder" class="later">完成两翼分解后，会出现 Vc、α局部、动压、升力、阻力及纵向力的逐项对照。</div>
+    <table class="stats" id="stats" hidden><thead><tr><th>同一物理量</th><th class="r">右翼 R</th><th class="l">左翼 L</th></tr></thead><tbody id="statRows"></tbody></table>
+    <div class="linkchain" id="linkExplanation">因果链：<strong>β、Λ</strong> → <strong>VcR / VcL</strong> → <strong>局部 α 与动压 q</strong> → <strong>L、D</strong> → <strong>Fx 与偏航</strong>。</div>
+  </div>
+</section>
+<footer class="fin"><span><strong>模型边界：</strong>均匀来流、水平无上反翼、准二维后掠流近似、对称翼型小迎角线性升力；与真实飞机的三维流动/干扰不完全相同。左右力差为教学演示。</span><span>单文件 · 离线运行 · 可拖动逐帧看推导</span></footer>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id),PI=Math.PI,RAD=PI/180;
+const C={ink:'#203b48',blue:'#2874c4',green:'#279884',purple:'#7861b9',teal:'#128f96',coral:'#df785b',gold:'#be8c36',pale:'#f9fcfb',left:'#22888b',right:'#b25c3d'};
+const body={sweep:36,beta:8,alpha:7,V:70,progress:75,playing:false,speed:1,az:0,el:1.18,zoom:1,drag:false,lastX:0,lastY:0};
+const scene=$('scene'),ctx=scene.getContext('2d'),triangles=$('triangles'),tctx=triangles.getContext('2d');
+// Persistent quantity identities and their exact parents in the derivation.
+const LEDGER={
+ V:{source:'V, α, β inputs',operation:'construct relative wind',unit:'m/s'},
+ Vh:{source:'V',operation:'horizontal projection',unit:'m/s'},
+ Vw:{source:'V',operation:'subtract horizontal projection',unit:'m/s'},
+ Vh_long:{source:'Vh',operation:'projection onto -x',unit:'m/s'},
+ Vh_lat:{source:'Vh',operation:'projection onto +y',unit:'m/s'},
+ 'V@R':{source:'V',operation:'copy unchanged V to right station',unit:'m/s'},
+ 'V@L':{source:'V',operation:'copy unchanged V to left station',unit:'m/s'},
+ VcR:{source:'V@R',operation:'dot with cR',unit:'m/s'},
+ VsR:{source:'V@R',operation:'dot with sR',unit:'m/s'},
+ VcL:{source:'V@L',operation:'dot with cL',unit:'m/s'},
+ VsL:{source:'V@L',operation:'dot with sL',unit:'m/s'},
+ alphaR:{source:'VcR,Vw',operation:'atan2(Vw,VcR)',unit:'radians'},
+ alphaL:{source:'VcL,Vw',operation:'atan2(Vw,VcL)',unit:'radians'},
+ qcR:{source:'VcR',operation:'0.5*rho*VcR^2',unit:'Pa'},
+ qcL:{source:'VcL',operation:'0.5*rho*VcL^2',unit:'Pa'},
+ FxR:{source:'qcR,alphaR',operation:'L*sin(alphaR)-D*cos(alphaR)',unit:'N'},
+ FxL:{source:'qcL,alphaL',operation:'L*sin(alphaL)-D*cos(alphaL)',unit:'N'}
+};
+
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],mul=(a,t)=>[a[0]*t,a[1]*t,a[2]*t],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const norm=a=>{let l=Math.hypot(...a);return l>1e-9?mul(a,1/l):[0,0,0]};
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const lerp=(a,b,t)=>a+(b-a)*t, mix=(a,b,t)=>a.map((v,i)=>lerp(v,b[i],t)), smooth=t=>t*t*(3-2*t),clamp=(v,l,r)=>Math.min(r,Math.max(l,v));
+const number=(v,n=1)=>Number(v).toLocaleString('zh-CN',{minimumFractionDigits:n,maximumFractionDigits:n});
+const sgndeg=x=>(x>0?'+':'')+x+'°';
+function stage(){return Math.min(7,Math.floor(body.progress/100))}
+function fraction(){return (body.progress%100)/100}
+function quant(){
+ const a=body.alpha*RAD,b=body.beta*RAD,Lambda=body.sweep*RAD, V=body.V, ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b);
+ const Vh=V*ca,Vw=V*sa, Vlong=Vh*cb,Vlat=Vh*sb;
+ const k=2.35/70, wind=[-Vlong*k,Vlat*k,Vw*k],H=[wind[0],wind[1],0],W=[0,0,wind[2]];
+ // Right-handed airplane axes: +x nose, +y airplane LEFT, +z up.
+ // beta>0: air goes toward +y, i.e. comes from the airplane's RIGHT side.
+ const flowDir={R:[-Math.cos(Lambda),+Math.sin(Lambda),0],L:[-Math.cos(Lambda),-Math.sin(Lambda),0]};
+ const spanDir={R:[-Math.sin(Lambda),-Math.cos(Lambda),0],L:[-Math.sin(Lambda),+Math.cos(Lambda),0]};
+ const mkWing=side=>{
+   const sign=side==='R'?-1:1;
+   const at=[0.15-1.97*Math.tan(Lambda),sign*1.97,.57];
+   const c=flowDir[side],s=spanDir[side];
+   const Vc=dot(H,c)/k,Vs=dot(H,s)/k;
+   const vChord=mul(c,Vc*k),vSpan=mul(s,Vs*k);
+   const alphaEff=Math.atan2(Vw,Vc),q=.5*1.225*Vc*Vc;
+   const CL=5.2*alphaEff,CD=.028+.035*CL*CL;
+   const Lift=q*8*CL,Drag=q*8*CD;
+   const LiftForward=Lift*Math.sin(alphaEff),Dback=Drag*Math.cos(alphaEff);
+   const Fx=LiftForward-Dback; // Slide's simplified chordwise force (ignoring the common cos Lambda factor)
+   return {side,at,c,s,Vc,Vs,vChord,vSpan,alphaEff,q,CL,CD,Lift,Drag,LiftForward,Dback,Fx};
+ };
+ const R=mkWing('R'),L=mkWing('L'),alpha0=Math.atan2(Vw,Vh*Math.cos(Lambda));
+ const yaw= (R.at[1]*(-1)*R.Fx + L.at[1]*(-1)*L.Fx);
+ return {a,b,Lambda,Vh,Vw,Vlong,Vlat,V,wind,H,W,k,R,L,alpha0,yaw};
+}
+const summaries=[
+  {name:'原始来流',title:'① 蓝色 V 究竟是谁？',body:'飞机不动，想象空气迎面吹向机尾：<strong>蓝色 V 是空气相对于飞机的速度矢量</strong>，单位 m/s。坐标始终固定在飞机上：+x 指机头，+y 指机体左侧，+z 向上。所有后续速度分量都来自这根 V。',formula:q=>`<span class="hl">V = ${number(q.V,0)} m/s</span><small>向量 V 的方向指向后方；速率 |V| 是它的长度，不是方向。</small>`},
+  {name:'来流分解与 α、β',title:'② 先找到 α 和 β 的两条边',body:'不移动蓝色 V。先把它投到水平面得到绿色 <strong>Vh</strong>，再从 Vh 的箭头尖端向上走到 V 的尖端，那就是红橙色 <strong>Vw</strong>。<strong>α 是在竖直平面里测的仰角，β 是 Vh 在水平面里相对机尾方向的偏角。</strong>两个角不在同一平面。',formula:q=>`V<sub>h</sub> = V cosα = ${number(q.Vh)} m/s<br><span class="hl">V<sub>w</sub> = V sinα = ${number(q.Vw)} m/s</span><small>直角三角形：V = Vh + Vw（向量相加）；β 的测角平面是水平面。</small>`},
+  {name:'后掠方向与 Vc、Vs 的来源',title:'③ 侧滑为何改变左右的“有效后掠”？',body:'现在把绿色 Vh 继续分成沿机头后方的速度和水平侧向速度。再画出两片机翼各自的<strong>后掠参考线 s</strong>与其垂直的<strong>有效弦向 c</strong>。同一来流遇到两个镜像的方向轴：右翼有效后掠 Λ−β，左翼 Λ+β。',formula:q=>`<span class="pur">V<sub>cR</sub> = V cosα cos(Λ−β)</span><br><span class="te">V<sub>cL</sub> = V cosα cos(Λ+β)</span><small>弦向 c 是水平面内垂直于后掠参考线的方向；不是额外的一股风。</small>`},
+  {name:'同一 V 原样复制',title:'④ 不许突然换一根风：先复制过去',body:'蓝色 V 留在原始位置；两根半透明蓝箭头沿虚线从同一个起点移动到左右翼测点。<strong>复制过程中它们的方向与长度完全不变</strong>。这是假设来流均匀时，同一矢量在两个位置的数学展示，不代表真的产生了两股不同的空气。把进度条拖到本阶段中间就能看到桥接。',formula:q=>`V@R = V@L = V（分量相同）<small>仅移动箭头起点 p(t)，终点始终等于 p(t)+V；等到抵达翼面后才分解。</small>`},
+  {name:'右翼的三个投影',title:'⑤ 右翼：V 怎样变成 VcR + VsR + Vw？',body:'蓝色副本到右翼后不再移动。先看右翼 R 的速度分解：紫色<strong>VcR</strong>沿右翼局部弦向，青色<strong>VsR</strong>沿右翼翼展方向，橙色<strong>Vw</strong>竖直向上。<br><br><strong>αR 具体是哪两根线？</strong>就在 R 测点，从同一个起点出发的两根短方向线：紫色 VcR，以及橙色合成方向 VcR+Vw。两线之间的圆弧就是 αR。它<strong>不是</strong>机翼前缘与后缘的夹角；青色 VsR 也不参与 αR。从紫箭头末端沿<strong style="color:#128f96">青色翼展方向 sR</strong>走 VsR；最后从这里<strong style="color:#df785b">竖直向上</strong>走 Vw，恰好抵达原蓝箭头尖端。三根分量首尾相接，证明没有任何箭头凭空出现。',formula:q=>`<span class="pur">V<sub>cR</sub> = ${number(q.R.Vc)} m/s</span><br><span class="te">V<sub>sR</sub> = ${number(q.R.Vs)} m/s</span>，V<sub>w</sub> = ${number(q.Vw)} m/s<small>右翼：V = VcR·cR + VsR·sR + Vw·k，三方向两两垂直。</small>`},
+  {name:'左翼重复同一种运算',title:'⑥ 左翼：同一 V，为什么投影不同？',body:'这一步<strong>完整保留第⑤步的右翼 R 结果</strong>（右侧紫色 VcR、青色 VsR、橙色 Vw 和 αR），再让左翼 L 的分解从同一蓝色 V 的副本逐渐显现。左翼使用自己的局部轴，所以新出现 VcL、VsL；竖直分量仍是同一个 Vw。<br><br><strong>αL 具体是哪两根线？</strong>在 L 测点，从同一个起点出发的紫色 VcL 与橙色合成方向 VcL+Vw 之间的夹角。不是机翼前缘/后缘，也不是 VcL 与青色 VsL 的夹角。',formula:q=>`<span class="pur">V<sub>cR</sub> = ${number(q.R.Vc)} m/s</span>　/　<span class="te">V<sub>cL</sub> = ${number(q.L.Vc)} m/s</span><br><span class="hl">V<sub>w,R</sub> = V<sub>w,L</sub> = ${number(q.Vw)} m/s</span><small>变化的是局部坐标投影，不是风速 V，也不是整机 α。</small>`},
+  {name:'迎角、动压与升力',title:'⑦ 为什么 αR ↓，升力 LR 反而 ↑？',body:'两翼 Vw 相同。<strong>右翼 Vc 增大，使 tan(αR)=Vw/VcR 变小</strong>；左翼相反。但弦向有效动压正比 Vc²：右翼 q 增大更多。采用小迎角线性升力 C<sub>L</sub>≈aα 后，<strong>LR∝VcR²·αR≈VcR·Vw</strong>，于是迎风侧反而升力更大。',formula:q=>`β = 0° 时：<strong>α<sub>0,loc</sub> = ${number(q.alpha0/RAD,2)}°</strong><br>当前 α<sub>R</sub> = <span class="hl">${number(q.R.alphaEff/RAD,2)}°</span>，α<sub>L</sub> = <span class="te">${number(q.L.alphaEff/RAD,2)}°</span><small>右 qc = ${number(q.R.q,0)} Pa，左 qc = ${number(q.L.q,0)} Pa；整机迎角 α=${body.alpha}° 恒定。</small>`},
+  {name:'纵向力 Fx 与恢复偏航',title:'⑧ 把圈出的 Fx = Lα − D 接回前面',body:'局部升力方向与弦向来流垂直，其<strong>向前分量约为 Lα<sub>局部</sub></strong>；阻力沿来流向后，其弦向分量约为 D。于是讲义写 F<sub>x</sub>≈Lα−D。小迎角模型下 Lα 两侧近似相同，<strong>右翼阻力较大，右侧向前的合力就更小</strong>，造成朝来风方向的恢复偏航趋势（还有左右升力差带来的滚转趋势）。',formula:q=>`<span class="hl">F<sub>xR</sub>≈L<sub>R</sub>α<sub>R</sub>−D<sub>R</sub></span><br>F<sub>xL</sub>≈L<sub>L</sub>α<sub>L</sub>−D<sub>L</sub><small>更准确的截面表达式是 Fxc=Lsinα−Dcosα；讲义采用小角度近似，并省略两翼相同的机身纵向投影因子。</small>`}
+];
+function setupNodes(){const names=['V','α / β','后掠 c、s','V 的平移副本','右翼投影','左翼投影','α 与 q、L','Fx / 偏航'];$('nodes').innerHTML=names.map((n,i)=>`<span class="node" data-node="${i}">${n}</span>${i<names.length-1?'<span class="connector">→</span>':''}`).join('')}
+setupNodes();
+function resultLine(q){
+  const dif=q.R.Vc-q.L.Vc;
+  if(Math.abs(dif)<.00001) return '<strong>目前左右完全对称。</strong> 两侧 Vc、局部迎角和动压相同，纯后掠引起的差异为零。试把 β 或 Λ 调成非零。';
+  const hi=dif>0?'右翼 R':'左翼 L',low=dif>0?'左翼 L':'右翼 R';
+  const alphaDesc=body.alpha===0?'（整机 α=0°，因此两侧局部迎角都为 0°）':'，对应的局部迎角反而较小';
+  const yawSide= dif>0?'向右翼来风方向':'向左翼来风方向';
+  return `<strong>${hi} 的 Vc 更大 ${number(Math.abs(dif),1)} m/s</strong>${alphaDesc}。<br>但其有效动压和升力（α&gt;0 时）通常更大；阻力也更大。<br>简化模型预测偏航趋势：<strong>${yawSide}</strong>。`;
+}
+function updateUI(){
+ let q=quant(),s=stage(),f=fraction();
+ document.querySelectorAll('.step').forEach((e,i)=>{e.classList.toggle('current',i===s);e.classList.toggle('done',i<s);e.setAttribute('aria-current',i===s?'step':'false')});
+ document.querySelectorAll('.node').forEach((e,i)=>{e.classList.toggle('on',i<=s);e.classList.toggle('last',i===s)});
+ $('stepIndex').textContent=`STEP ${String(s+1).padStart(2,'0')} / 08`;
+ $('stepTitle').textContent=summaries[s].title;$('stepBody').innerHTML=summaries[s].body;$('formula').innerHTML=summaries[s].formula(q);
+ if(s===6){
+  const d=q.R.Vc-q.L.Vc, windward=d>1e-5?'右翼 R':d< -1e-5?'左翼 L':null;
+  $('stepBody').innerHTML=windward?`两翼的 <strong>Vw 完全相同</strong>。${windward} 在侧滑后有效后掠较小，弦向速度 Vc 较大，因此与 β=0° 时相比局部迎角下降。另一翼相反。<strong>但 qc=½ρVc² 会增大</strong>；小迎角线性模型 L≈qcSaα局部，所以 ${body.alpha===0?'当前整体 α=0°，两翼升力均为零':'局部迎角较小的那片翼，升力反而较大'}。`: 'β=0° 或 Λ=0° 时，两侧 <strong>Vc 相等、局部迎角相等、qc 相等</strong>；因此不存在由后掠与侧滑耦合造成的左右升力差。你可以把 β 和 Λ 调成非零来比较。';
+ }
+ if(s===7){const d=q.R.Vc-q.L.Vc,windward=d>1e-5?'右翼':d< -1e-5?'左翼':null;
+ $('stepBody').innerHTML=windward?`局部升力与有效来流垂直：其弦向向前分量是 <strong>Lsinα局部≈Lα局部</strong>；阻力的弦向向后分量是 Dcosα局部≈D，所以讲义得 Fx≈Lα−D。在线性小迎角模型中，两翼的 <strong>Lα 近似相同</strong>，${windward}的有效动压更大、阻力更大，弦向净向前力较小，从而产生朝来风方向的恢复偏航趋势；两翼升力不等还会产生滚转趋势。`: '两翼纵向力可以写成 Fx≈Lα局部−D；当 β=0° 或 Λ=0° 时左右几何投影相同，纯后掠侧滑引起的力差和相应偏航趋势为零。';
+ }
+
+ $('phaseName').textContent=`${String(s+1).padStart(2,'0')} · ${summaries[s].name}`;
+ $('phasePercent').textContent=`本步 ${Math.round(f*100)}% · 可双向拖动`;
+ $('prev').disabled=s===0;$('next').disabled=s===7;$('next').textContent=s===7?'已到结论 ✓':'下一步 →';
+ $('play').textContent=body.playing?'❚❚ 暂停讲解':'▶ 自动讲解';$('play').classList.toggle('playing',body.playing);
+ for(const name of ['beta','sweep','alpha','V']){$(name+'Out').textContent=name==='V'?body[name]+' m/s':(name==='beta'?sgndeg(body.beta):body[name]+'°')}
+ $('speedValue').textContent=body.speed.toFixed(1)+'×';
+ $('windBadge').textContent=body.beta>0?'β>0：风从右侧来':body.beta<0?'β<0：风从左侧来':'β=0：无侧滑';
+ $('sceneReadout').textContent=`R 局部α：${number(q.R.alphaEff/RAD,2)}° · L 局部α：${number(q.L.alphaEff/RAD,2)}°`;
+ $('verdict').innerHTML=resultLine(q);
+ // The numerical table is introduced only after the wing projections exist.
+ $('tablePlaceholder').hidden=s>=5;$('stats').hidden=s<5;
+ if(s>=5){
+  const diff=(r,l)=>r>l+1e-4?'↑':r<l-1e-4?'↓':'＝';
+  const rows=[
+   ['有效后掠', (body.sweep-body.beta)+'°',(body.sweep+body.beta)+'°'],
+   ['弦向 Vc (m/s)',number(q.R.Vc,2)+' '+diff(q.R.Vc,q.L.Vc),number(q.L.Vc,2)],
+   ['展向 Vs (m/s)',number(q.R.Vs,2),number(q.L.Vs,2)],
+   ['共同竖向 Vw (m/s)',number(q.Vw,2),number(q.Vw,2)],
+   ['β=0 参考局部α (°)',number(q.alpha0/RAD,3),number(q.alpha0/RAD,3)],
+   ['局部迎角 α (°)',number(q.R.alphaEff/RAD,3)+' '+diff(q.R.alphaEff,q.L.alphaEff),number(q.L.alphaEff/RAD,3)],
+   ['有效动压 qc (Pa)',number(q.R.q,0)+' '+diff(q.R.q,q.L.q),number(q.L.q,0)],
+   ['升力 L (N)',number(q.R.Lift,0)+' '+diff(q.R.Lift,q.L.Lift),number(q.L.Lift,0)],
+   ['阻力 D (N)',number(q.R.Drag,0)+' '+diff(q.R.Drag,q.L.Drag),number(q.L.Drag,0)],
+   ['Lα (N)',number(q.R.Lift*q.R.alphaEff,0),number(q.L.Lift*q.L.alphaEff,0)],
+   ['纵向力 Fx (N)',number(q.R.Fx,0),number(q.L.Fx,0)]
+  ];
+  $('statRows').innerHTML=rows.filter((r,i)=>s===5?i<=6:s===6?i<=8:true).map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td><td class="l">${r[2]}</td></tr>`).join('');
+ }
+ $('triangleHint').textContent=s<4?'继续到第⑤步，三维右翼的速度投影会在这里变成同一状态的二维截面。':s===4?'右翼三角形已经出现；左翼还未分解。右侧 Vw 是从第②步同一根竖直分量复制来的。':s===5?'同一个 Vw 保持不变，紫色 Vc 的长度不同，所以蓝色斜边与水平线的真实夹角不同。':s===6?'注意：α_R 较小，并不代表 L_R 较小；看看右表中动压 qc 与升力 L。':'图中的局部 α 是速度夹角；圈出的 Lα、D 和 Fx 是下一层的力学模型，不能直接把 α 当成力。';
+ $('linkExplanation').innerHTML=s===7?`<strong>力的大小从哪里来：</strong>L=q<sub>c</sub>S(5.2α<sub>局部</sub>)；D=q<sub>c</sub>S[0.028+0.035(5.2α<sub>局部</sub>)²]。示例取 ρ=1.225 kg/m³、每侧 S=8 m²、α 用弧度。<br><strong>近似消去：</strong>Lα≈½ρSaV<sub>w</sub>²（两侧近似相同）。<strong>差别主要出现在 D</strong>；最终偏航仍需乘力臂求矩。`:`因果链：<strong>β、Λ</strong> → <strong>VcR / VcL</strong> → <strong>局部 α 与动压 q</strong> → <strong>L、D</strong> → <strong>Fx 与偏航</strong>。`;
+}
+function resizeCanvas(canvas,context){const w=canvas.clientWidth||400,h=canvas.clientHeight||300,dpr=Math.min(2,window.devicePixelRatio||1);if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}context.setTransform(dpr,0,0,dpr,0,0);return [w,h]}
+let W=750,H=540,cam,boxes=[];
+function camera(){
+ const e=[Math.cos(body.el)*Math.cos(body.az),Math.cos(body.el)*Math.sin(body.az),Math.sin(body.el)];
+ const r=[Math.sin(body.az),-Math.cos(body.az),0],up=norm(cross(r,e));
+ const target=[-.9,0,.25];let scale=Math.min(W/8.9,H/6.55)*body.zoom;
+ return {e,r,up,target,scale,dist:12.5};
+}
+function projection(p){const rel=sub(p,cam.target),near=dot(rel,cam.e);const fac=cam.dist/(cam.dist-near);return {x:W/2+dot(rel,cam.r)*cam.scale*fac,y:H*.54-dot(rel,cam.up)*cam.scale*fac,d:near,fac}}
+function line2(a,b,color='#ddd',width=1,opacity=1,dashed=[]){ctx.save();ctx.globalAlpha=opacity;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dashed);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}
+function worldLine(a,b,color,width=1,opacity=1,dashed=[]){line2(projection(a),projection(b),color,width,opacity,dashed)}
+function poly(points,fill,stroke='#abc',width=1,alpha=1){const pts=points.map(projection);ctx.save();ctx.globalAlpha=alpha;ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.lineWidth=width;ctx.strokeStyle=stroke;ctx.stroke()}ctx.restore()}
+function dotWorld(pos,r,color){const p=projection(pos);ctx.save();ctx.fillStyle=color;ctx.strokeStyle='#fff';ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(p.x,p.y,r,0,PI*2);ctx.fill();ctx.stroke();ctx.restore()}
+function arrow(a,b,color,width=3,opacity=1,head=11,dashed=[],halo=true){let A=projection(a),B=projection(b),dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy);if(len<1)return;let ux=dx/len,uy=dy/len;ctx.save();ctx.globalAlpha=opacity;ctx.lineCap='round';ctx.lineJoin='round';if(halo){ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=width+3;ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
+ ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dashed);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.setLineDash([]);
+ const hs=Math.min(head,Math.max(5,len*.28));ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(B.x,B.y);ctx.lineTo(B.x-ux*hs-uy*hs*.40,B.y-uy*hs+ux*hs*.40);ctx.lineTo(B.x-ux*hs+uy*hs*.40,B.y-uy*hs-ux*hs*.40);ctx.closePath();ctx.fill();ctx.restore()}
+function angleArc(origin,fromDir,toDir,theta,r,color=C.gold,alpha=1){
+  const n=Math.max(9,Math.ceil(Math.abs(theta)*22));ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2.3;ctx.globalAlpha=alpha;ctx.beginPath();
+  for(let i=0;i<=n;i++){const t=theta*i/n,d=add(mul(fromDir,Math.cos(t)),mul(toDir,Math.sin(t))),p=projection(add(origin,mul(d,r)));i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)}ctx.stroke();ctx.restore();
+}
+function label(pt,text,color='#304d59',dx=0,dy=0,filled=true){let p=projection(pt),fontsize=11;ctx.save();ctx.font='750 '+fontsize+'px system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';let wid=ctx.measureText(text).width+13,hei=19,x=clamp(p.x+dx-wid/2,4,W-wid-4),y=clamp(p.y+dy-hei/2,6,H-hei-6);let attempts=0;while(attempts<7 && boxes.some(b=>x<b.x+b.w+2&&x+wid>b.x-2&&y<b.y+b.h+1&&y+hei>b.y-1)){y=clamp(y+22,6,H-hei-5);attempts++}boxes.push({x,y,w:wid,h:hei});if(filled){ctx.fillStyle='rgba(255,255,255,.93)';ctx.strokeStyle='rgba(205,221,220,.91)';ctx.lineWidth=.8;ctx.beginPath();ctx.roundRect(x,y,wid,hei,6);ctx.fill();ctx.stroke()}ctx.fillStyle=color;ctx.textBaseline='middle';ctx.fillText(text,x+6.5,y+10);ctx.restore()}
+function airframe(q){
+ const sweep=q.Lambda,tip=3.72,ref=(y)=>.15-Math.abs(y)*Math.tan(sweep), z=.12;
+ function wing(sign){let yy=sign*tip;return [[1.06,0,z],[ref(yy)+.43,yy,z],[ref(yy)-.70,yy,z],[-1.48,0,z]]}
+ // The wing is flat and tailless: no dihedral and no tail fin.
+ // Draw the far panel first, then the near panel, using actual 3D camera depth.
+ const halves=[{p:wing(1),sign:1},{p:wing(-1),sign:-1}];
+ halves.sort((a,b)=>a.p.reduce((v,p)=>v+projection(p).d,0)-b.p.reduce((v,p)=>v+projection(p).d,0));
+ for(const {p,sign} of halves){
+   const zlow=p.map(v=>[v[0],v[1],-.035]);poly([p[1],p[2],zlow[2],zlow[1]],sign===1?'#a6c8cf':'#93b7bc','#6d929c',1,.76);
+   poly(p,sign===1?'#c1d9d6':'#b2d0ce','#527f89',1.9);
+   let rib1=[[ref(sign*1.15)+.68,sign*1.15,.135],[ref(sign*1.15)-1.02,sign*1.15,.135]];
+   let rib2=[[ref(sign*2.35)+.56,sign*2.35,.135],[ref(sign*2.35)-.85,sign*2.35,.135]];
+   worldLine(rib1[0],rib1[1],'rgba(59,117,130,.36)',1.15);worldLine(rib2[0],rib2[1],'rgba(59,117,130,.30)',1.05);
+   worldLine([ref(0)+.05,0,z+.025],[ref(sign*tip)+.05,sign*tip,z+.025],'rgba(248,250,245,.94)',2.4);
+   label([ref(3.05),sign*3.05,.23],sign===-1?'右翼 R':'左翼 L',sign===-1?C.right:C.left,sign===-1?4:-7,sign===-1?17:-15);
+ }
+ // Central no-tail fuselage with a low-poly canopy seated directly on the wing.
+ poly([[2.02,0,.12],[.99,-.28,.15],[-1.43,-.31,.14],[-1.97,0,.13],[-1.43,.31,.14],[.99,.28,.15]],'#dbe8e7','#5c8992',1.6);
+ poly([[1.62,0,.20],[.80,-.22,.21],[-.55,-.24,.23],[-.97,0,.25],[-.55,.24,.23],[.80,.22,.21]],'#eff5ef','#a0bbb9',1);
+ poly([[.93,0,.31],[.53,-.19,.295],[-.17,-.17,.27],[-.36,0,.29],[-.17,.17,.27],[.53,.19,.295]],'#527e93','#e7f2f0',1);
+ worldLine([1.88,0,.22],[.96,0,.32],'#f8ffff',2.2);
+}
+function backdrop(){ctx.clearRect(0,0,W,H);let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#fbfdfb');g.addColorStop(.66,'#f1f8f6');g.addColorStop(1,'#e9f2ef');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ // Spatial grid is deliberately pale and below the wings.
+ for(let x=-5.5;x<=3.5;x+=.75){worldLine([x,-4.8,-.42],[x,4.8,-.42],'rgba(91,139,146,.13)',.9)}
+ for(let y=-4.5;y<=4.5;y+=.75){worldLine([-5.7,y,-.42],[3.6,y,-.42],'rgba(91,139,146,.11)',.9)}
+ // Short right-handed body coordinate rays, at a consistent fuselage-fixed origin.
+ arrow([.4,0,-.28],[1.28,0,-.28],'#b57564',1.4,.75,6,[],false);
+ arrow([.4,0,-.28],[.4,.85,-.28],'#699f98',1.4,.75,6,[],false);
+ arrow([.4,0,-.28],[.4,0,.62],'#6f83a9',1.4,.65,6,[],false);
+}
+function localBasis(q,s){const r=[.16,0,.27];const show=s<=3;
+ for(const w of [q.R,q.L]){
+   const sg=w.side==='R'?-1:1;
+   worldLine([.15,sg*.12,.30],add([.15,sg*.12,.30],[0,sg*.96,0]),'#96b6b8',1.2,.7,[3,4]);
+   worldLine(r,add(r,mul(w.s,2.95)),w.side==='R'?C.right:C.left,show?2:1,show?.85:.24,[5,3]);
+   // local perpendiculars are born at the same wing station used by later V projections.
+   if(show)arrow(w.at,add(w.at,mul(w.c,.95)),C.purple,2.2,.88,8);
+   if(show)arrow(w.at,add(w.at,mul(w.s,.95)),C.teal,2.2,.88,8);
+   if(show)label(add(w.at,mul(w.c,.98)),w.side==='R'?'cR ⟂ sR':'cL ⟂ sL',C.purple,5,-17);
+ }
+ if(show&&body.sweep>1){
+  angleArc([.15,-.2,.34],[0,-1,0],[-1,0,0],q.Lambda,.78,C.gold,.88);
+  angleArc([.15,+.2,.34],[0,1,0],[-1,0,0],q.Lambda,.78,C.gold,.88);
+ }
+ if(show)label([-.53,-.18,.32],`Λ = ${body.sweep}°`,C.gold,0,-25);
+}
+function windSource(q,s){const P=[1.32,0,.93],T=add(P,q.wind),HP=add(P,q.H);
+ arrow(P,T,C.blue,s>=4?3:4.5,s>=4?.62:1,12);if(s<=3)label(T,`V = ${body.V} m/s`,C.blue,12,-18);
+ if(s>=1){
+  arrow(P,HP,C.green,2.8,s>=4?.20:.94,9);arrow(HP,T,C.coral,3.8,s>=4?.20:.96,10);
+  if(s<4){label(HP,'Vh 水平',C.green,-6,17);label(mix(HP,T,.6),'Vw 垂直',C.coral,23,-5)}
+  let vdir=norm(q.H), alpha=q.a, beta=q.b;
+  worldLine(P,add(P,[-1.3,0,0]),'#9cb0b7',1.15,.87,[4,4]);
+  if(s<4&&Math.abs(beta)>.001){const toward=[0,beta>=0?1:-1,0];angleArc(P,[-1,0,0],toward,Math.abs(beta),.66,C.gold);label(add(P,mul(norm(add([-1,0,0],vdir)),.91)),`β ${sgndeg(body.beta)}`,C.gold,-11,-21)}
+  if(s<4&&alpha>.001){angleArc(P,vdir,[0,0,1],alpha,.93,C.gold);label(add(P,mul(norm(add(norm(q.H),[0,0,.16])),1.08)),`α ${body.alpha}°`,C.gold,14,-21)}
+ }
+ if(s>=2&&s<=3){
+  const back=[q.H[0],0,0],lateral=[0,q.H[1],0],mid=add(P,back);
+  arrow(P,mid,C.green,2,.52,7);arrow(mid,add(mid,lateral),C.coral,3,.90,9);
+  label(mid,'Vh cosβ',C.green,-8,32);
+  if(Math.abs(q.Vlat)>1)label(add(mid,lateral),'Vh sinβ',C.coral,-3,30);
+ }
+ return P;
+}
+function copied(q,P,s,f){if(s<3)return;
+ const amt=s===3?smooth(f):1;
+ for(const w of [q.R,q.L]){
+   const p=mix(P,w.at,amt),tip=add(p,q.wind);
+   worldLine(P,w.at,w.side==='R'?'rgba(166,92,68,.6)':'rgba(33,139,142,.56)',1.4,.69,[3,6]);
+   arrow(p,tip,C.blue,3.2,s===3?.83:s>=4?.18:.85,10,s>=4?[6,4]:[]);
+   dotWorld(w.at,4.1,w.side==='R'?C.right:C.left);
+   if(s===3){label(tip,w.side==='R'?'V@R 同方向同长度':'V@L 同方向同长度',C.blue,6,w.side==='R'?-16:18)}
+ }
+}
+function rightMark(origin,u,v,scale=.14,color='#b8ccd0'){
+ const e1=norm(u),e2=norm(v);if(Math.hypot(...e1)<.1||Math.hypot(...e2)<.1)return;
+ const a=add(origin,mul(e1,scale)),b=add(a,mul(e2,scale)),c=add(origin,mul(e2,scale));
+ worldLine(a,b,color,1.2,.9);worldLine(b,c,color,1.2,.9);
+}
+function wingSplit(q,w,opacity,showLabels=true){
+ const p=w.at,A=add(p,w.vChord),B=add(A,w.vSpan),T=add(B,q.W);
+ // Both local decompositions are computed by the same operations and actually rejoin original V.
+ arrow(p,A,C.purple,4.0,opacity,10);
+ arrow(A,B,C.teal,3.6,opacity,9);
+ arrow(B,T,C.coral,3.3,opacity,9);
+ rightMark(A,w.vChord,w.vSpan,.13,'#738fa1');rightMark(B,q.H,q.W,.12,'#738fa1');
+ worldLine(p,B,'#819ba6',1,.6*opacity,[3,4]);
+ if(showLabels)label(mix(p,A,.76),w.side==='R'?'VcR':'VcL',C.purple,w.side==='R'?-4:10,-17);
+ if(showLabels&&Math.abs(w.Vs)>1.7)label(mix(A,B,.6),w.side==='R'?'VsR':'VsL',C.teal,8,15);
+ if(showLabels)label(mix(B,T,.55),q.Vw<.01?'Vw = 0':'Vw',C.coral,-15,-4);
+}
+// Draw the actual local incidence angle at each wing station.
+function drawLocalAlphaPanel(q,stageIndex){
+ // The section inset is anchored to the actual wing measurement point.
+ // Its two rays are exactly: Vc and (Vc + Vw); Vs is deliberately excluded.
+ const items=stageIndex===4?[q.R]:[q.R,q.L];
+ const bw=Math.min(176,Math.max(148,(W-40)/items.length)),bh=112;
+ ctx.save();
+ items.forEach((item,i)=>{
+  const right=item.side==='R',col=right?C.right:C.left;
+  const worldAnchor=add(item.at,[0,0,.22]);
+  const anchor=projection(worldAnchor);
+  // On the aircraft itself, draw the two actual angle rays from one common
+  // wing station: purple Vc and orange (Vc + Vw). The short display rays are
+  // equal-length direction markers; the inset below explains their identity.
+  const a=item.alphaEff;
+  const chordDir=item.c;
+  const resultantDir=norm(add(mul(item.c,Math.cos(a)),[0,0,Math.sin(a)]));
+  const rayLen=.82;
+  arrow(worldAnchor,add(worldAnchor,mul(chordDir,rayLen)),C.purple,3.4,1,8);
+  arrow(worldAnchor,add(worldAnchor,mul(resultantDir,rayLen)),C.coral,3.4,1,8);
+  worldLine(add(worldAnchor,mul(chordDir,rayLen)),
+            add(worldAnchor,mul(resultantDir,rayLen)),'#d58a42',1.8,.95,[3,3]);
+  angleArc(worldAnchor,chordDir,[0,0,1],a,.38,col,1);
+  let bx=right?anchor.x+18:anchor.x-bw-18;
+  bx=clamp(bx,8,W-bw-8);
+  let by=clamp(anchor.y-bh*.60,8,H-bh-8);
+  // leader and numbered pin identify the exact wing station
+  ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(anchor.x,anchor.y);
+  ctx.lineTo(right?bx:bx+bw,by+25);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#fff';ctx.strokeStyle=col;ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(anchor.x,anchor.y,8,0,2*Math.PI);ctx.fill();ctx.stroke();
+  ctx.fillStyle=col;ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(right?'R':'L',anchor.x,anchor.y);
+
+  // inset frame
+  ctx.fillStyle='rgba(255,255,255,.98)';ctx.strokeStyle=col;ctx.lineWidth=1.8;
+  ctx.beginPath();ctx.roundRect(bx,by,bw,bh,9);ctx.fill();ctx.stroke();
+  ctx.fillStyle=col;ctx.font='bold 13px system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText((right?'αR 右翼 ':'αL 左翼 ')+number(item.alphaEff/RAD,2)+'°',bx+9,by+14);
+
+  // Magnified chord-vertical section, drawn from one common origin.
+  const ox=bx+17,oy=by+82,len=bw-58;
+  const ang=item.alphaEff;
+  const rise=Math.max(7,Math.min(22,Math.tan(ang)*len*2.0));
+  const ex=ox+len,ey=oy-rise;
+  // Ray 1: chordwise component Vc.
+  ctx.strokeStyle=C.purple;ctx.lineWidth=3.4;
+  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ex,oy);ctx.stroke();
+  // Ray 2: resultant Vc + Vw.
+  ctx.strokeStyle=C.coral;ctx.lineWidth=3.4;
+  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ex,ey);ctx.stroke();
+  // Vw is the vertical difference between the two rays' endpoints.
+  ctx.strokeStyle='#d58a42';ctx.lineWidth=2;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(ex,oy);ctx.lineTo(ex,ey);ctx.stroke();ctx.setLineDash([]);
+  // Angle arc between the two rays, visibly enlarged for teaching.
+  ctx.strokeStyle=col;ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.arc(ox,oy,18,-Math.atan2(rise,len),0);ctx.stroke();
+  ctx.fillStyle=col;ctx.font='bold 11px system-ui';ctx.fillText('α',ox+20,oy-12);
+  ctx.fillStyle=C.purple;ctx.font='10px system-ui';ctx.fillText('Vc',ox+len-25,oy+12);
+  ctx.fillStyle=C.coral;ctx.fillText('Vc + Vw',ox+len-48,ey-9);
+  ctx.fillStyle='#b97735';ctx.fillText('Vw',ex+3,(oy+ey)/2);
+ });
+ ctx.restore();
+}
+function forceArrows(q){
+ for(const w of [q.R,q.L]){
+  const p=add(w.at,[0,0,.20]);
+  const top=add(p,[0,0,w.Lift>1?.30+w.Lift/20000:0]);
+  if(w.Lift>1){arrow(p,top,C.green,4.3,.90,11);label(top,w.side==='R'?'LR':'LL',C.green,6,-10)}
+  const dLength=.65+w.Drag/1300;
+  const back=add(add(p,[0,0,-.20]),[-dLength,0,0]);
+  arrow(add(p,[0,0,-.20]),back,C.coral,4.4,.9,12);label(back,w.side==='R'?'DR 向后':'DL 向后',C.coral,-6,18);
+  // Forward axial component Lsin(alpha) shown separately: diagrammatic normalized length.
+  const fin=add(p,[w.LiftForward>1?.18+w.LiftForward/2600:0,0,.10]);
+  if(w.LiftForward>1){arrow(add(p,[0,0,.10]),fin,C.gold,2.7,.83,8);label(fin,w.side==='R'?'LR sinαR':'LL sinαL',C.gold,2,-18)}
+ }
+ const spot=[-1.2,0,1.7];
+ if(Math.abs(q.R.Fx-q.L.Fx)>1){
+  // yaw arrow at the aircraft centroid: curve shows trend, not an actual instantaneous rotation.
+  const sg=Math.sign(q.R.Fx-q.L.Fx),rad=.85;
+  const pts=[];for(let i=0;i<=18;i++){const t=(i/18)*1.15;pts.push([spot[0]+rad*Math.cos(PI*.35+sg*t),spot[1]+rad*Math.sin(PI*.35+sg*t),spot[2]])}
+  for(let i=0;i<pts.length-1;i++)worldLine(pts[i],pts[i+1],C.gold,2.8,.87);
+  const a=pts[pts.length-2],b=pts[pts.length-1];arrow(a,b,C.gold,2.2,.95,10);
+  label(spot,'恢复偏航方向（示意）',C.gold,-5,-34);
+ }
+}
+function drawStepBridge(s){
+ if(s!==4 && s!==5)return;
+ const compact=W<700;
+ const text=s===4?'⑤ 右翼 R：先做一次分解':'⑥ 保留 R，新增 L：同一 V 换左翼局部轴';
+ const w=Math.min(W-24,compact?360:390),h=26,x=(W-w)/2,y=compact?48:12;
+ ctx.save();ctx.fillStyle='rgba(255,255,255,.94)';ctx.strokeStyle=s===4?C.right:C.left;ctx.lineWidth=1.2;
+ ctx.beginPath();ctx.roundRect(x,y,w,h,8);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#294d5c';ctx.font='bold '+(compact?10:11)+'px system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+ ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x+w/2,y+h/2);ctx.restore();
+}
+function sceneDraw(){[W,H]=resizeCanvas(scene,ctx);boxes=[];cam=camera();const q=quant(),s=stage(),f=fraction();backdrop();airframe(q);drawStepBridge(s);
+ if(s>=2)localBasis(q,s);
+ const P=windSource(q,s);
+ if(s>=3)copied(q,P,s,f);
+ if(s>=4){wingSplit(q,q.R,s===7?.18:1,s<=5)}
+ if(s>=5){wingSplit(q,q.L,s===7?.18:smooth(f),s<=5)}
+ // Step 6 already shows both wing projections, so both local angles
+ // must be visible together here (not deferred to the next step).
+ if(s===4 || s===5){drawLocalAlphaPanel(q,s)}
+ if(s>=6 && s<7){
+  for(const w of [q.R,q.L]){
+    const p=add(w.at,[0,0,.13]),top=add(p,[0,0,w.Lift>1?.26+w.Lift/23000:0]);
+    if(w.Lift>1){arrow(p,top,C.green,4,.85,10);label(top,w.side==='R'?`LR ${number(w.Lift,0)}N`:`LL ${number(w.Lift,0)}N`,C.green,2,-14)}
+  }
+ }
+ if(s===7)forceArrows(q);
+}
+function draw2dArrow(c,x1,y1,x2,y2,col,width=2.4){let dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);if(L<1)return;c.save();c.strokeStyle=col;c.fillStyle=col;c.lineWidth=width;c.lineCap='round';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();let a=8,b=3.8;let u=dx/L,v=dy/L;c.beginPath();c.moveTo(x2,y2);c.lineTo(x2-u*a-v*b,y2-v*a+u*b);c.lineTo(x2-u*a+v*b,y2-v*a-u*b);c.closePath();c.fill();c.restore()}
+function diagramDraw(){const [w,h]=resizeCanvas(triangles,tctx),c=tctx;const q=quant(),s=stage();c.clearRect(0,0,w,h);
+ if(s<4){c.fillStyle='#6d8790';c.textAlign='center';c.font='650 13px system-ui';c.fillText('请先跟随上方 3D：V → α、β → 后掠局部轴 → 复制',w/2,h/2-10);c.font='12px system-ui';c.fillText('到第⑤步再展示机翼原位的两个速度三角形',w/2,h/2+19);return}
+ const row=[q.R,q.L],each=w/2-13,maxVc=Math.max(q.R.Vc,q.L.Vc);
+ for(let i=0;i<2;i++){
+  const wing=row[i],sx=each*i+10;
+  c.save();if(s===4&&i===1)c.globalAlpha=.20;
+  c.fillStyle=i===0?'#b25c3d':'#23888c';c.font='800 13px system-ui';c.textAlign='left';c.fillText(i===0?'右翼 R':'左翼 L',sx+7,23);
+  const origin=[sx+18,h-47],scale=Math.min((each-53)/maxVc,(h-82)/Math.max(q.Vw*1.7,1)),Hlen=wing.Vc*scale,Vlen=q.Vw*scale;
+  const ox=origin[0],oy=origin[1],endx=ox+Hlen,endy=oy-Vlen;
+  // axes and orthogonality, shared scalar scale for both triangles.
+  c.strokeStyle='#bfcfce';c.lineWidth=1;c.setLineDash([3,4]);c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+Hlen+15,oy);c.stroke();c.setLineDash([]);
+  draw2dArrow(c,ox,oy,endx,oy,C.purple,3);
+  draw2dArrow(c,endx,oy,endx,endy,C.coral,3);
+  draw2dArrow(c,ox,oy,endx,endy,C.blue,2.9);
+  c.strokeStyle='#849fa6';c.lineWidth=1.3;c.strokeRect(endx-8,oy-8,8,8);
+  c.fillStyle=C.purple;c.font='750 11px system-ui';c.textAlign='center';c.fillText(`Vc ${number(wing.Vc,1)}`,ox+Hlen*.52,oy+22);
+  c.fillStyle=C.coral;c.textAlign='left';c.fillText(`Vw ${number(q.Vw,1)}`,endx+3,Math.max(45,endy-6));
+  c.fillStyle=C.blue;c.font='790 13px system-ui';c.textAlign='left';c.fillText(`α${i===0?'R':'L'} = ${number(wing.alphaEff/RAD,2)}°`,sx+7,43);
+  // The numeric angle is real, arc is small for small alpha, and geometrically proportional.
+  const ra=Math.min(32,Hlen*.27);if(ra>6 && Math.abs(wing.alphaEff)>.003){c.beginPath();c.strokeStyle=C.gold;c.lineWidth=2;c.arc(ox,oy,ra,-wing.alphaEff,0);c.stroke()}
+  c.restore();
+ }
+ c.save();c.strokeStyle='#deebeb';c.setLineDash([4,5]);c.beginPath();c.moveTo(w/2,14);c.lineTo(w/2,h-10);c.stroke();c.restore();
+ if(s===4){c.fillStyle='#7c979b';c.textAlign='center';c.font='12px system-ui';c.fillText('第⑥步将复制同一 Vw 来分解左翼',w*.76,h*.55)}
+}
+function redraw(){sceneDraw();diagramDraw()}
+function chooseStage(n){const old=stage();body.playing=false;body.progress=clamp(n,0,7)*100+(n===3?38:90);$('progress').value=body.progress;updateUI();redraw()}
+$('prev').addEventListener('click',()=>chooseStage(stage()-1));$('next').addEventListener('click',()=>chooseStage(stage()+1));
+document.querySelectorAll('.step').forEach(b=>b.addEventListener('click',()=>chooseStage(Number(b.dataset.step))));
+$('progress').addEventListener('input',e=>{body.progress=+e.target.value;body.playing=false;updateUI();redraw()});
+$('play').addEventListener('click',()=>{if(body.progress>=799)body.progress=0;body.playing=!body.playing;updateUI()});
+$('restart').addEventListener('click',()=>{body.progress=0;body.playing=true;updateUI()});
+$('speed').addEventListener('input',e=>{body.speed=+e.target.value;updateUI()});
+for(let name of ['beta','sweep','alpha','V'])$(name).addEventListener('input',e=>{body[name]=+e.target.value;updateUI();redraw()});
+function setValues(vals){Object.assign(body,vals);for(let k of ['beta','sweep','alpha','V'])$(k).value=body[k];updateUI();redraw()}
+$('zeroBeta').addEventListener('click',()=>setValues({beta:0}));$('flipBeta').addEventListener('click',()=>setValues({beta:body.beta===0?-8:-body.beta}));$('zeroSweep').addEventListener('click',()=>setValues({sweep:0}));$('default').addEventListener('click',()=>setValues({beta:8,sweep:36,alpha:7,V:70}));
+function setView(type){const modes={iso:[0,1.18,1],top:[0,PI/2-.015,1.03],low:[-.85,.31,.96]};if(type==='resetCamera')type='iso';[body.az,body.el,body.zoom]=modes[type];document.querySelectorAll('.views button').forEach(b=>b.classList.toggle('active',b.id===type));redraw()}
+for(const mode of ['iso','top','low','resetCamera'])$(mode).addEventListener('click',()=>setView(mode));
+// Continuous orbit controls: yaw wraps without a visible stop; pitch reaches
+// almost both poles, avoiding only the exact singularity of the camera basis.
+scene.addEventListener('pointerdown',e=>{
+ if(e.button!==0)return;
+ body.drag=true;body.lastX=e.clientX;body.lastY=e.clientY;
+ scene.classList.add('dragging');
+ try{scene.setPointerCapture(e.pointerId)}catch(_){}
+ e.preventDefault();
+});
+scene.addEventListener('pointermove',e=>{
+ if(!body.drag)return;
+ const dx=e.clientX-body.lastX,dy=e.clientY-body.lastY;
+ body.lastX=e.clientX;body.lastY=e.clientY;
+ body.az=(body.az-dx*.0075)%(2*PI);
+ body.el=clamp(body.el+dy*.0075,-PI/2+.012,PI/2-.012);
+ document.querySelectorAll('.views button').forEach(b=>b.classList.remove('active'));
+ redraw();
+});
+function stopOrbit(){body.drag=false;scene.classList.remove('dragging')}
+scene.addEventListener('pointerup',stopOrbit);
+scene.addEventListener('pointercancel',stopOrbit);
+scene.addEventListener('lostpointercapture',stopOrbit);
+scene.addEventListener('wheel',e=>{
+ e.preventDefault();
+ body.zoom=clamp(body.zoom*Math.exp(-e.deltaY*.001),.30,3.0);
+ redraw();
+},{passive:false});
+window.addEventListener('resize',redraw);
+let last=performance.now();function frame(now){let dt=Math.min(80,now-last);last=now;if(body.playing){body.progress=Math.min(799,body.progress+dt*.032*body.speed);$('progress').value=body.progress;if(body.progress>=799)body.playing=false;updateUI();redraw()}requestAnimationFrame(frame)}
+if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){body.playing=false;}
+updateUI();redraw();requestAnimationFrame(frame);
+// geometry consistency checks in console for zero/reversed scenarios
+for(const [beta,sweep,alpha] of [[8,36,7],[-8,36,7],[0,36,7],[8,0,7],[8,36,0]]){
+ const old={beta:body.beta,sweep:body.sweep,alpha:body.alpha};Object.assign(body,{beta,sweep,alpha});let q=quant();
+ for(const wing of [q.R,q.L]){
+  const reconstructed=add(add(wing.vChord,wing.vSpan),q.W),res=Math.hypot(...sub(reconstructed,q.wind));
+  if(res>1e-9)console.error('局部投影未闭合',beta,sweep,alpha,wing.side,res);
+ }
+ Object.assign(body,old);
+}
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
