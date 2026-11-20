@@ -1,0 +1,1013 @@
+<!doctype html>
+<!--
+纵向空气动力学教学。坐标 +X 从机头到机尾、+Z 向上，固定 y 的 X–Z 面测角。
+已读 SKILL.md 及 continuity-protocol、quality-checks、angle-evidence、
+verification-workflow、camera-controls、transition-patterns。采用原位共顶点、
+同源角度账本、纯平移接局部转向、保留此前证据、视角及关键帧复核。
+交接:
+1→2 保留飞机、来流箭头和机身基准；蓝箭头副本移动到 W，同长同向，加入翼弦与 αw。
+2→3 保留 W 和来流；副本移动到 C，再绕 C 转到局部方向，加入翼弦、αc、εu。
+3→4 保留 C、W 和来流；同一原始方向再复制到 T，转到当地方向，加入 αt、ε。
+角度身份证由 buildLedger 生成：各自前缘顶点、两条实际射线、X–Z 平面、
+法线与正号、真实圆弧半径、实际度数和同源放大剖面。气流曲线是定性外移的
+示意线，按四个站位的切向由分段积分生成，不计算气动力。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101f31">
+<title>迎角与洗流 · 三翼面 3D 图解</title>
+<style>
+:root{color-scheme:light;--paper:#f7f4ed;--ink:#182c3b;--muted:#536570;--hair:#d8ddd7;--navy:#101f31;--white:#f3f7ef;--line:#2d4051;--free:#8bc2fd;--local:#83e6d0;--chord:#f6ead6;--alpha:#ffd27d;--eps:#fca8a0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;font-size:14px;line-height:1.55}
+button,input,summary{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible,canvas:focus-visible,a:focus-visible{outline:2px solid #159b90;outline-offset:3px}
+main{width:min(1340px,calc(100% - 64px));margin:0 auto}
+.mast{padding:21px 0 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--hair);padding-bottom:12px;gap:10px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:750;letter-spacing:.1em}
+.brand svg{width:25px;height:25px;background:var(--ink);border-radius:50%;padding:5px}
+.issue,.overline,.mono,.stage-num,.numbers,output{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums}
+.issue,.overline{font-size:11px;letter-spacing:.12em;font-weight:750}
+.issue{color:var(--muted)}
+.intro{padding:19px 0 19px;display:flex;justify-content:space-between;align-items:end;gap:16px}
+h1,h2,h3,p{margin:0}
+h1{font-size:clamp(35px,5vw,65px);line-height:1.11;letter-spacing:-.045em;font-weight:800}
+.intro p{color:var(--muted);font-size:14px;margin-top:8px}
+.example{font-family:ui-monospace,monospace;display:flex;align-items:center;gap:7px;margin-bottom:4px;white-space:nowrap;font-size:13px;color:var(--muted)}
+.example b{background:#e2ebe3;color:#274f4a;padding:8px 11px;border-radius:5px}
+.workspace{display:grid;grid-template-columns:minmax(0,2.55fr) minmax(296px,1fr);background:var(--navy);color:var(--white);border-radius:16px;overflow:hidden;box-shadow:0 13px 33px #2230451b}
+.mainview{min-width:0;position:relative;border-right:1px solid var(--line)}
+.scene-bar,.control-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.scene-bar strong{font-size:12px;white-space:nowrap}
+.camera-buttons,.playback,.presets{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dark-button{color:#e3efef;background:#1b3041;border:1px solid #375063;border-radius:6px;padding:4px 9px;font-size:12px;white-space:nowrap}
+.dark-button:hover,.dark-button[aria-pressed="true"]{background:#305767;border-color:#6ea59f}
+.scene{position:relative;background:radial-gradient(ellipse at 46% 25%,#20384b,#101f31 76%);overflow:hidden}
+canvas{display:block;width:100%;height:clamp(300px,34vw,445px);touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+.scene-hint{position:absolute;margin:0;left:15px;bottom:9px;color:#b1c3ce;font-size:11px;pointer-events:none}
+.flow-toggle{position:absolute;top:10px;right:13px}
+.legend{display:flex;gap:8px 15px;flex-wrap:wrap;align-items:center;padding:8px 16px;color:#c6d4da;font-size:11px;border-top:1px solid var(--line)}
+.legend span,.ray-key{display:flex;align-items:center;gap:5px}
+.swatch{display:inline-block;width:18px;border-top:2px solid var(--swatch);flex:none}
+.swatch.dash{border-top-style:dashed}
+.control-bar{border-top:1px solid var(--line);border-bottom:0;flex-wrap:wrap}
+.progress{width:100%;min-width:56px;accent-color:#83e6d0}
+.progress-wrap{flex:1;min-width:84px;display:flex;align-items:center;gap:7px;color:#c6d4da;font-size:11px;white-space:nowrap}
+.side{min-width:0;padding:15px 16px 13px;background:#132638;display:flex;flex-direction:column}
+.side .overline{color:#9ac6cb;font-size:10px}
+.side h2{font-size:23px;line-height:1.15;margin:7px 0 8px}
+.inspect-actions{display:flex;gap:5px;margin-top:2px}
+.inspect-actions button{flex:1;padding-inline:4px}
+.section{width:100%;height:auto;display:block;margin:10px auto 1px;border:1px solid #31485a;border-radius:8px;background:#122234}
+.measurements{display:grid;gap:4px;margin-top:8px}
+.reading{border:1px solid #405567;border-radius:6px;background:#172d40;color:var(--white);padding:5px 7px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:11px;line-height:1.3}
+.reading b{white-space:nowrap;color:var(--mark);font-size:15px;font-family:ui-monospace,monospace}
+.reading span{color:#cfdce2}
+.reading[aria-pressed="true"]{border-color:var(--mark);background:#243b50}
+.insight{color:#d1dfe3;font-size:12px;margin-top:8px;min-height:3em}
+.stepdeck{margin:12px 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.step{position:relative;display:flex;align-items:center;text-align:left;gap:8px;color:var(--ink);border:1px solid #ccd7d1;background:#fbf9f2;border-radius:8px;padding:9px 10px;min-width:0}
+.step[aria-current="step"]{background:#e0ede5;border-color:#68a097}
+.step:hover{border-color:#579687}
+.step-num{font-size:11px;color:#436c62;font-weight:750}
+.step-name{font-size:13px;font-weight:720}
+.compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:10px}
+.surface{border:1px solid var(--hair);border-top:3px solid var(--accent);border-radius:8px;padding:10px 11px;text-align:left;color:var(--ink);background:#fffdf7;min-width:0}
+.surface:hover,.surface[aria-pressed="true"]{background:#e9f1eb;border-bottom-color:#72978c}
+.surface-top{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.surface-top strong{font-size:15px}
+.surface-top b{font-family:ui-monospace,monospace;font-size:clamp(14px,2.1vw,24px);line-height:1.2;white-space:nowrap}
+.surface p{font-size:12px;color:var(--muted);margin-top:4px}.surface .equation{color:#264a48;font-size:13px;font-weight:650;line-height:1.2}
+.relation{padding:8px 0 13px;color:#344e59;border-bottom:1px solid var(--hair);font-size:13px}
+.relation b{font-family:ui-monospace,monospace;color:#225950;margin-right:6px}
+.lab{margin-top:13px;border:1px solid var(--hair);background:#fbf9f2;border-radius:10px;padding:12px 14px}
+.lab .head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.lab h2{font-size:18px}
+.light-button{color:#234d46;border:1px solid #a7bcb2;background:#e8f0e8;padding:4px 8px;border-radius:5px;font-size:12px}
+.light-button:hover{background:#d9e8e0}
+.sliders{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 18px;margin-top:10px}
+.slider{display:grid;grid-template-columns:1fr auto;gap:0 6px;color:#344e59;font-size:13px}
+.slider input{grid-column:1/-1;width:100%;margin:4px 0;accent-color:#23786a}
+.slider output{color:#23574d;font-size:13px;font-weight:750}
+.lab details{border-top:1px solid var(--hair);margin-top:8px;padding-top:6px}
+summary{cursor:pointer;color:#345d57;font-weight:650}
+.note{font-size:12px;color:var(--muted);margin-top:6px}
+footer{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:13px 0 22px;color:var(--muted);font-size:12px}
+footer details{max-width:620px}
+footer a{color:#2c625b}
+footer ul{margin:4px 0 0;padding-left:18px}
+@media(max-width:900px){main{width:calc(100% - 40px)}.workspace{grid-template-columns:minmax(0,1fr) 288px}.side{padding-inline:12px}.scene-bar,.control-bar{padding-inline:10px}.scene-hint{left:10px}}
+@media(max-width:680px){main{width:calc(100% - 24px)}.intro{display:block;padding:15px 0}.example{display:none}.mast{padding-top:12px}.workspace{display:block;border-radius:11px}.mainview{border:0}.side{border-top:1px solid var(--line)}canvas{height:310px}.section{margin-top:8px;max-width:480px}.stepdeck{grid-template-columns:repeat(2,minmax(0,1fr))}.step{padding:7px 8px}.compare{gap:5px}.surface{padding:7px 5px}.surface-top{align-items:flex-start;flex-direction:column;gap:0}.surface p{font-size:11px}.sliders{grid-template-columns:1fr;gap:6px}.sliders .slider{grid-template-columns:1fr auto}.lab{padding-inline:10px}footer{display:block}.brand{font-size:12px}.flow-toggle{right:7px;top:7px}}
+@media(max-width:370px){.camera-buttons{gap:3px}.dark-button{padding-inline:6px}.scene-bar strong{font-size:11px}.legend{gap:4px 9px}}
+</style>
+</head>
+<body>
+<main>
+  <div class="mast">
+    <div class="brand"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M1 14L18 5 12 15 8 12 5 16Z" fill="none" stroke="#e8eee3" stroke-width="1.5" stroke-linejoin="round"/></svg> 飞行图解</div>
+    <div class="issue">AERODYNAMICS / LONGITUDINAL FLOW</div>
+  </div>
+  <header class="intro">
+    <div><h1>迎角与洗流</h1><p>从机头到机尾，看三个翼面怎样遇到不同方向的气流。</p></div>
+    <div class="example"><span>当前局部迎角</span><b id="topComparison">12° › 8° › 3°</b></div>
+  </header>
+
+  <section class="workspace" aria-label="三翼面互动图解">
+    <div class="mainview">
+      <div class="scene-bar">
+        <strong>三翼面模型</strong>
+        <div class="camera-buttons" aria-label="视角">
+          <button class="dark-button" data-view="iso" aria-pressed="true">斜视</button>
+          <button class="dark-button" data-view="side" aria-pressed="false">侧视</button>
+          <button class="dark-button" data-view="top" aria-pressed="false">俯视</button>
+          <button class="dark-button" id="resetView">复位</button>
+        </div>
+      </div>
+      <div class="scene">
+        <canvas id="world" tabindex="0" aria-label="三维飞机与气流。鼠标或触摸拖动旋转，方向键转动，滚轮或加减键缩放，Home 复位。"></canvas>
+        <button class="dark-button flow-toggle" id="flowToggle" aria-pressed="true">流线动效</button>
+        <p class="scene-hint">拖动旋转 · 滚轮或双指缩放</p>
+      </div>
+      <div class="legend" aria-label="三维图例">
+        <span><i class="swatch dash" style="--swatch:var(--free)"></i>远处来流 V∞</span>
+        <span><i class="swatch" style="--swatch:var(--local)"></i>局部气流</span>
+        <span><i class="swatch" style="--swatch:var(--chord)"></i>翼弦 / 机身基准</span>
+        <span><i class="swatch" style="--swatch:var(--alpha)"></i>迎角</span>
+        <span><i class="swatch" style="--swatch:var(--eps)"></i>洗流角</span>
+      </div>
+      <div class="control-bar">
+        <div class="playback">
+          <button class="dark-button" id="play">▶ 播放讲解</button>
+          <button class="dark-button" id="restart">↺ 从头看</button>
+        </div>
+        <label class="progress-wrap" for="progress">讲解进度<input class="progress" id="progress" type="range" min="0" max="3" step=".005" value="3"></label>
+      </div>
+    </div>
+
+    <aside class="side" aria-label="原位测角剖面">
+      <div class="overline" id="sectionOrigin">T / X–Z SECTION</div>
+      <h2 id="sectionTitle">平尾的两种角</h2>
+      <div class="inspect-actions" aria-label="查看测点">
+        <button class="dark-button" data-inspect="c">C 鸭翼</button>
+        <button class="dark-button" data-inspect="w">W 主翼</button>
+        <button class="dark-button" data-inspect="t" aria-pressed="true">T 平尾</button>
+      </div>
+      <svg id="section" class="section" viewBox="0 0 330 178" role="img" aria-labelledby="sectionAlt"></svg>
+      <div class="measurements" id="measurements"></div>
+      <p class="insight" id="insight"></p>
+    </aside>
+  </section>
+
+  <nav class="stepdeck" aria-label="讲解步骤">
+    <button class="step" data-step="0"><span class="stage-num step-num">01</span><span class="step-name">构型与来流</span></button>
+    <button class="step" data-step="1"><span class="stage-num step-num">02</span><span class="step-name">主翼迎角</span></button>
+    <button class="step" data-step="2"><span class="stage-num step-num">03</span><span class="step-name">鸭翼上洗</span></button>
+    <button class="step" data-step="3" aria-current="step"><span class="stage-num step-num">04</span><span class="step-name">平尾下洗</span></button>
+  </nav>
+
+  <section class="compare" aria-label="翼面对照" id="compare">
+    <button class="surface" data-inspect="c" style="--accent:#b97c49"><div class="surface-top"><strong>C · 鸭翼</strong><b id="card-c">12°</b></div><p class="equation">α<sub>c</sub> = α + i<sub>c</sub> + ε<sub>u</sub></p><p>主翼前方的小翼，可参与升力与俯仰控制。</p></button>
+    <button class="surface" data-inspect="w" style="--accent:#438e83"><div class="surface-top"><strong>W · 主翼</strong><b id="card-w">8°</b></div><p class="equation">α<sub>w</sub> = α + i<sub>w</sub></p><p>主要产生升力。本例以远处来流为其局部基准。</p></button>
+    <button class="surface" data-inspect="t" style="--accent:#6b78a2"><div class="surface-top"><strong>T · 平尾</strong><b id="card-t">3°</b></div><p class="equation">α<sub>t</sub> = α + i<sub>t</sub> − ε</p><p>主翼后方的水平翼面，参与配平和纵向稳定。</p></button>
+  </section>
+
+  <p class="relation"><b id="relationMath">αc &gt; αw &gt; αt</b><span id="relationNote">等安装角、鸭翼受上洗、平尾受下洗时成立。</span></p>
+
+  <section class="lab" aria-label="调节角度">
+    <div class="head">
+      <h2>改变来流和安装角</h2>
+      <div class="presets">
+        <button class="light-button" data-preset="default">恢复示例</button>
+        <button class="light-button" data-preset="zero">洗流归零</button>
+        <button class="light-button" data-preset="reverse">洗流反向</button>
+      </div>
+    </div>
+    <div class="sliders">
+      <label class="slider">机身迎角 α <output id="value-alpha" for="param-alpha">8°</output><input id="param-alpha" data-parameter="alpha" type="range" min="-12" max="16" step="1" value="8"></label>
+      <label class="slider">鸭翼上洗量 εu（向上为正） <output id="value-u" for="param-u">4°</output><input id="param-u" data-parameter="u" type="range" min="-10" max="10" step="1" value="4"></label>
+      <label class="slider">平尾下洗量 ε（向下为正） <output id="value-d" for="param-d">5°</output><input id="param-d" data-parameter="d" type="range" min="-10" max="10" step="1" value="5"></label>
+    </div>
+    <details>
+      <summary>翼面安装角 i</summary>
+      <p class="note">翼弦是连接翼型前缘和后缘的直线。相对机身基准线，翼弦前缘抬起时安装角为正。安装角的基准是机身，迎角的基准是气流。</p>
+      <div class="sliders">
+        <label class="slider">鸭翼 i<sub>c</sub> <output id="value-ic" for="param-ic">0°</output><input id="param-ic" data-parameter="ic" type="range" min="-8" max="8" step="1" value="0"></label>
+        <label class="slider">主翼 i<sub>w</sub> <output id="value-iw" for="param-iw">0°</output><input id="param-iw" data-parameter="iw" type="range" min="-8" max="8" step="1" value="0"></label>
+        <label class="slider">平尾 i<sub>t</sub> <output id="value-it" for="param-it">0°</output><input id="param-it" data-parameter="it" type="range" min="-8" max="8" step="1" value="0"></label>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p>气流方向为定性示意。主翼局部流角取零，洗流角可独立调节。实机翼面之间会相互干扰，流场随构型、位置与飞行状态变化。</p>
+    <details><summary>参考资料</summary><ul>
+      <li><a href="https://www.grc.nasa.gov/WWW/K-12/WindTunnel/WTExpKids/tsld006.htm">NASA Glenn · 翼弦和迎角</a></li>
+      <li><a href="https://gymkhana.iitb.ac.in/~scp/scp/ocw/aerospace/AE-717-Aircraft%20flight%20dynamics/%5BMichael_V._Cook%5D_Flight_Dynamics_Principles.pdf">Michael V. Cook · 平尾的下洗角和安装角，图 3.9</a></li>
+      <li><a href="https://ntrs.nasa.gov/citations/19790007731">NASA TP-1355 · 鸭翼与主翼的相互干扰</a></li>
+    </ul></details>
+  </footer>
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const canvas = $("world");
+const ctx = canvas.getContext("2d");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+const C = {free:"#8bc2fd", local:"#83e6d0", chord:"#f6ead6", alpha:"#ffd27d", eps:"#fca8a0", grid:"#314859", soft:"#bfd3dc"};
+const TAU = 2 * Math.PI;
+const rad = (deg) => deg * Math.PI / 180;
+const deg = (radians) => radians * 180 / Math.PI;
+const clamp = (v,min,max) => Math.min(max,Math.max(min,v));
+const mix = (a,b,t) => a+(b-a)*t;
+const ease = (x) => { const t=clamp(x,0,1); return t*t*(3-2*t); };
+const add = (a,b) => a.map((v,i) => v+b[i]);
+const sub = (a,b) => a.map((v,i) => v-b[i]);
+const mul = (a,s) => a.map(v => v*s);
+const lerp = (a,b,t) => a.map((v,i) => mix(v,b[i],t));
+const dot = (a,b) => a.reduce((sum,v,i) => sum+v*b[i],0);
+const cross = (a,b) => [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const norm = a => mul(a,1/Math.hypot(...a));
+const direction = angle => [Math.cos(angle),0,Math.sin(angle)];
+const angle = v => Math.atan2(v[2],v[0]);
+const signed = (a,b) => Math.atan2(dot([0,-1,0],cross(a,b)),dot(a,b));
+const clean = n => Math.abs(n)<1e-7 ? 0 : Math.round(n*10)/10;
+const fmt = n => `${clean(n)}°`;
+const compare = (a,b) => clean(a-b)>0 ? ">" : clean(a-b)<0 ? "<" : "=";
+const defaults = {alpha:8,u:4,d:5,ic:0,iw:0,it:0};
+const views = {iso:{yaw:-.36,pitch:.48,zoom:1},side:{yaw:0,pitch:0,zoom:1},top:{yaw:0,pitch:Math.PI/2,zoom:1}};
+const definitions = {
+  c:{id:"c",tag:"C",name:"鸭翼",nameEn:"CANARD",stage:2,span:2.52,z:.30,x:-4.68,sweep:.75,rootChord:1.85,tip:.66,thick:.17,dihedral:.09,color:"#dba987",dark:"#805c54",rail:"#f0b991",asym:"αc",esym:"εu"},
+  w:{id:"w",tag:"W",name:"主翼",nameEn:"MAIN WING",stage:1,span:5.45,z:-.28,x:-1.35,sweep:2.45,rootChord:4.06,tip:.88,thick:.26,dihedral:.45,color:"#7fb7ae",dark:"#476d73",rail:"#a1e3d3",asym:"αw"},
+  t:{id:"t",tag:"T",name:"平尾",nameEn:"HORIZONTAL TAIL",stage:3,span:2.72,z:.09,x:4.23,sweep:.93,rootChord:1.93,tip:.60,thick:.16,dihedral:.13,color:"#a7b4d3",dark:"#566a89",rail:"#c4cff9",asym:"αt",esym:"ε"}
+};
+const sampleY = -1.24;
+const ids = ["c","w","t"];
+const byStage = ["ref","w","c","t"];
+const state = {params:{...defaults},camera:{...views.iso},view:"iso",progress:3,focus:"t",highlight:null,playing:false,flow:!reduced.matches,clock:0};
+const raySize = 2.83;
+let ledger, airframe, guides, uiKey="", dirty=true, width=0, height=0, density=1;
+let cameraMotion=null, tween=null, previousTime=0;
+
+function inWindFrame(point, pitch) {
+  const [x,y,z]=point;
+  return [x*Math.cos(pitch)+z*Math.sin(pitch),y,z*Math.cos(pitch)-x*Math.sin(pitch)];
+}
+function surfacePoint(surface, y, fraction, thickness=0) {
+  const k=Math.abs(y)/surface.span;
+  const run=mix(surface.rootChord,surface.tip,k)*fraction;
+  return [surface.x+surface.sweep*k+run*Math.cos(surface.incidence),y,
+    surface.z+surface.dihedral*k-run*Math.sin(surface.incidence)+thickness];
+}
+function recordAngle(id, vertex, a, b, radius, label, polarity=1) {
+  return {id,vertex,a,b,radius,label,normal:[0,-1,0],plane:"X–Z",unit:"deg",value:clean(deg(signed(a,b))*polarity)};
+}
+function buildLedger(p) {
+  const inputPitch=rad(p.alpha);
+  const free={id:"V∞",anchor:[-9.64,sampleY,1.62],vector:direction(0),unit:"direction",source:"远处来流"};
+  const body=direction(-inputPitch);
+  const parts={};
+  for(const id of ids){
+    const def=definitions[id], incidence=rad(p["i"+id]);
+    const spec={...def,incidence};
+    const point=inWindFrame(surfacePoint(spec,sampleY,0),inputPitch);
+    const chord=direction(-inputPitch-incidence);
+    const delta=rad(id==="c"?p.u:id==="t"?-p.d:0);
+    const local=direction(delta);
+    parts[id]={...spec,point,chord,delta,local,source:free.id,
+      alpha:recordAngle("alpha-"+id,point,chord,local,1.57,def.asym),
+      epsilon:def.esym?recordAngle("epsilon-"+id,point,free.vector,local,2.4,def.esym,id==="t"?-1:1):null
+    };
+  }
+  return {pitch:inputPitch,free,parts,body,reference:recordAngle("alpha-body",free.anchor,body,free.vector,1.83,"α")};
+}
+function rebuild(){
+  ledger=buildLedger(state.params);
+  airframe=makeAirframe(ledger);
+  guides=makeGuides(ledger);
+  dirty=true;
+}
+function rgba(hex,opacity){
+  const h=hex.slice(1), value=parseInt(h,16);
+  return `rgba(${value>>16},${(value>>8)&255},${value&255},${opacity})`;
+}
+function shade(hex,m){
+  const h=parseInt(hex.slice(1),16);
+  return `rgb(${[h>>16,(h>>8)&255,h&255].map(n=>Math.round(clamp(n*m,0,255))).join(",")})`;
+}
+function makeAirframe(model){
+  const faces=[], lines=[];
+  const world=q=>inWindFrame(q,model.pitch);
+  const put=(points, color, brightness=1)=>faces.push({
+    points:points.map(world), color:shade(color,brightness)
+  });
+  const line=(points,color,weight=1)=>lines.push({points:points.map(world),color,weight});
+  const hull=[
+    [-7.25,.017,.025,.13],[-7.1,.17,.16,.16],[-6.76,.33,.30,.19],
+    [-6.22,.51,.43,.22],[-5.57,.66,.55,.22],[-4.72,.77,.65,.19],
+    [-3.70,.83,.69,.15],[-2.55,.86,.68,.08],[-1.30,.90,.68,.02],
+    [.12,.88,.68,-.03],[1.42,.78,.62,-.10],[2.67,.65,.54,-.09],
+    [3.80,.54,.45,-.01],[4.84,.44,.37,.12],[5.65,.31,.26,.19],
+    [6.32,.19,.18,.23],[6.82,.020,.032,.25]
+  ];
+  const N=34;
+  const hullAt=(r,a)=>[r[0],Math.cos(a)*r[1],r[3]+Math.sin(a)*r[2]];
+  for(let i=0;i<hull.length-1;i++){
+    for(let j=0;j<N;j++){
+      const a=j*TAU/N,b=(j+1)*TAU/N,t=(a+b)/2;
+      const light=.74+.30*(.50+.50*Math.sin(t))-.11*Math.cos(t);
+      const r=hull[i],s=hull[i+1];
+      put([hullAt(r,a),hullAt(r,b),hullAt(s,b),hullAt(s,a)],"#a9bbc8",light);
+    }
+  }
+  for(const a of [2.09,3.02,4.02,1.02,.22]){
+    line(hull.map(r=>hullAt([r[0],r[1]+.007,r[2]+.007,r[3]],a)),
+      a===3.02?"#d0dcd9":"#7894a5",a===3.02?1.5:.7);
+  }
+
+  const canopy=[
+    [-6.02,.12,.015,.57],[-5.63,.31,.14,.66],[-5.21,.43,.31,.69],[-4.71,.48,.40,.69],
+    [-4.20,.49,.37,.71],[-3.73,.44,.27,.73],[-3.28,.34,.13,.75],[-2.93,.15,.012,.77]
+  ];
+  const windowPoint=(r,a)=>[r[0],Math.cos(a)*r[1],r[3]+Math.sin(a)*r[2]];
+  for(let i=0;i<canopy.length-1;i++){
+    const r=canopy[i],s=canopy[i+1];
+    for(let j=0;j<18;j++){
+      const a=j*Math.PI/18,b=(j+1)*Math.PI/18;
+      const tone=.62+.48*Math.sin((a+b)/2);
+      put([windowPoint(r,a),windowPoint(s,a),windowPoint(s,b),windowPoint(r,b)],"#2d6278",tone);
+    }
+  }
+  for(const a of [.22,.6,2.18,2.88]){
+    line(canopy.map(r=>windowPoint(r,a)),"#6c9fa8",.86);
+  }
+  for(const i of [2,5]){
+    line(Array.from({length:19},(_,j)=>windowPoint(canopy[i],j*Math.PI/18)),"#839e9e",.85);
+  }
+
+  const fractions=[0,.055,.15,.29,.47,.68,.85,1];
+  const thickness=f=>Math.sin(Math.PI*f)**.82;
+  for(const id of ids){
+    const spec=model.parts[id];
+    for(const side of [-1,1]){
+      const stations=[0,.19,.48,.72,.92,1].map(f=>side*spec.span*f);
+      for(let i=0;i<stations.length-1;i++){
+        for(let j=0;j<fractions.length-1;j++){
+          const y0=stations[i],y1=stations[i+1],a=fractions[j],b=fractions[j+1];
+          for(const skin of [1,-1]){
+            const p=(y,f)=>surfacePoint(spec,y,f,
+              skin*thickness(f)*spec.thick*(1-.65*Math.abs(y)/spec.span)*(skin>0?1:.54));
+            const light=skin>0?1.15-.31*b-.07*i/5:.97+.13*b;
+            put([p(y0,a),p(y1,a),p(y1,b),p(y0,b)],skin>0?spec.color:spec.dark,light);
+          }
+        }
+      }
+      line(stations.map(y=>surfacePoint(spec,y,0,.01)),spec.rail,1.2);
+      line(stations.map(y=>surfacePoint(spec,y,1,.005)),spec.dark,1);
+      line(fractions.map(f=>surfacePoint(spec,side*spec.span,f,thickness(f)*spec.thick*.35)),spec.rail,.85);
+      for(const [j,k] of id==="w"?[[.30,.62],[.66,.94]]:[[.43,.95]]){
+        const q=spec.span*side;
+        const at=(y,f)=>surfacePoint(spec,y,f,.008+thickness(f)*spec.thick*(1-.65*Math.abs(y)/spec.span));
+        line([at(q*j,1),at(q*j,.77),at(q*k,.77),at(q*k,1)],spec.dark,.9);
+      }
+      if(id==="w"){
+        const q=side*spec.span*.91;
+        line([surfacePoint(spec,q,.08,.032),surfacePoint(spec,side*spec.span,.08,.032)],side>0?"#abdfb3":"#f2b48e",2.2);
+      }
+    }
+  }
+  const fin=[[3.17,0,.23],[4.67,0,2.27],[5.36,0,2.32],[5.67,0,.60],[6.36,0,.25]];
+  for(const side of [-1,1]){
+    const edge=fin.map(([x,y,z],i)=>[x,y+side*[.096,.039,.037,.074,.05][i],z]);
+    put(edge,side<0?"#8aa2b7":"#607b93");
+    line(edge,"#acc0cf",.96);
+    line([[4.95,side*.041,2.20],[5.18,side*.057,1.17],[5.40,side*.082,.55]],"#506b81",.85);
+  }
+
+  return {faces,lines};
+}
+function makeGuides(model){
+  const {parts}=model;
+  const knots=[
+    {x:-10.8,slope:0},{x:-7.2,slope:0},
+    ...ids.map(id=>({x:parts[id].point[0],slope:Math.tan(parts[id].delta)})),
+    {x:9.4,slope:Math.tan(parts.t.delta)*.55},{x:11.1,slope:Math.tan(parts.t.delta)*.28}
+  ];
+  knots[0].z=0;
+  for(let i=1;i<knots.length;i++){
+    const a=knots[i-1],b=knots[i];
+    b.z=a.z+(b.x-a.x)*(a.slope+b.slope)/2;
+  }
+  const flowZ=x=>{
+    const i=Math.max(1,knots.findIndex(k=>k.x>=x));
+    const a=knots[i-1],b=knots[i];
+    const dx=b.x-a.x;
+    const t=clamp((x-a.x)/dx,0,1);
+    return a.z+dx*(a.slope*t+(b.slope-a.slope)*(t**3-.5*t**4));
+  };
+  const tracks=[[-5.3,2.17,.28],[-3.27,2.65,.52],[-1.55,3.30,.78],
+    [1.55,3.30,.78],[3.27,2.65,.48],[5.3,2.17,.25],[-2.96,-3.42,.39],[2.96,-3.42,.30]];
+  return tracks.map(([y,z,intensity],id)=>{
+    const point=x=>[x,y,z+flowZ(x)];
+    return {id,point,intensity,points:Array.from({length:66},(_,i)=>point(mix(-10.8,11.1,i/65)))};
+  });
+}
+
+function projector(camera){
+  const {yaw,pitch,zoom}=camera;
+  const backward=[Math.sin(yaw)*Math.cos(pitch),-Math.cos(yaw)*Math.cos(pitch),Math.sin(pitch)];
+  const right=[Math.cos(yaw),Math.sin(yaw),0],up=cross(backward,right);
+  const size=Math.min(width/23.8,height/(9.0+3.8*Math.abs(Math.sin(pitch))))*zoom;
+  const target=[0,0,.28];
+  return point=>{
+    const relative=sub(point,target);
+    return [width*.50+size*dot(relative,right),height*.49-size*dot(relative,up),dot(relative,backward)];
+  };
+}
+function stroke(points,color,weight,opacity=1,dashes=[]){
+  if(opacity<=0||!points.length)return;
+  ctx.globalAlpha=opacity;
+  ctx.strokeStyle=color;
+  ctx.lineWidth=weight;
+  ctx.setLineDash(dashes);
+  ctx.beginPath();
+  ctx.moveTo(points[0][0],points[0][1]);
+  for(const [x,y] of points.slice(1))ctx.lineTo(x,y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha=1;
+}
+function fillPoly(points,color,opacity=1){
+  ctx.globalAlpha=opacity;
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(points[0][0],points[0][1]);
+  for(const [x,y] of points.slice(1))ctx.lineTo(x,y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha=1;
+}
+function roundPath(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.roundRect(x,y,w,h,r);
+}
+function label(text,point,color,opacity=1){
+  ctx.globalAlpha=opacity;
+  ctx.font="600 11px system-ui, sans-serif";
+  ctx.textBaseline="middle";
+  ctx.textAlign="left";
+  ctx.lineWidth=3.5;
+  ctx.strokeStyle="#102033";
+  ctx.strokeText(text,point[0],point[1]);
+  ctx.fillStyle=color;
+  ctx.fillText(text,point[0],point[1]);
+  ctx.globalAlpha=1;
+}
+function arrow(a,b,color,weight,opacity=1,dash=[],head=6){
+  if(opacity<=0)return;
+  const distance=Math.hypot(b[0]-a[0],b[1]-a[1]);
+  if(distance<1)return;
+  const theta=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  const back=Math.min(head,distance*.39);
+  const end=[b[0]-back*.60*Math.cos(theta),b[1]-back*.60*Math.sin(theta)];
+  stroke([a,end],color,weight,opacity,dash);
+  fillPoly([b,[b[0]-back*Math.cos(theta-.46),b[1]-back*Math.sin(theta-.46)],
+    [b[0]-back*Math.cos(theta+.46),b[1]-back*Math.sin(theta+.46)]],color,opacity);
+}
+function dotAt([x,y],color,r=3.5,opacity=1){
+  ctx.globalAlpha=opacity;
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,TAU);
+  ctx.fill();
+  ctx.globalAlpha=1;
+}
+function activeProgress(part){
+  const progress=clamp(state.progress-(part.stage-1),0,1);
+  return {progress,move:ease(progress/.54),turn:ease((progress-.54)/.31),reveal:ease((progress-.56)/.34)};
+}
+function activeFocus(){return state.focus?ledger.parts[state.focus]:null;}
+function worldArc(entry,project,color,opacity){
+  if(!entry||Math.abs(entry.value)<.001||opacity<=0)return;
+  const start=angle(entry.a),delta=signed(entry.a,entry.b);
+  const path=Array.from({length:18},(_,i)=>project(add(entry.vertex,mul(direction(start+delta*i/17),entry.radius))));
+  stroke(path,color,2,opacity);
+  if(Math.hypot(path[0][0]-path[17][0],path[0][1]-path[17][1])>8 && width>460){
+    const mid=path[8];
+    label(entry.label,[mid[0]+4,mid[1]-7],color,opacity);
+  }
+}
+function drawGrid(project){
+  for(let x=-10;x<=10;x+=2)stroke([project([x,-6.6,-4.4]),project([x,6.6,-4.4])],C.grid,.72,.47);
+  for(let y=-6;y<=6;y+=2)stroke([project([-10,y,-4.4]),project([10,y,-4.4])],C.grid,.72,y===0?.75:.45);
+  for(const x of [-8,-4,0,4,8])for(const y of [-6,0,6]){
+    dotAt(project([x,y,-4.4]),"#648293",1.4,.54);
+  }
+}
+function drawGuide(track,project,time){
+  const motionOpacity=track.intensity;
+  stroke(track.points.map(project),C.local,1.02,motionOpacity*.77);
+  for(let i=0;i<3;i++){
+    const boundary=(time*.166+i/3+track.id*.103)%1;
+    const x=mix(-10.75,10.98,boundary);
+    const opacity=motionOpacity*clamp(Math.min(boundary,1-boundary)*11,0,1);
+    const a=project(track.point(x-.34)),b=project(track.point(x+.32));
+    arrow(a,b,C.local,1.45,opacity,[],6);
+  }
+}
+function drawCompass(project){
+  const P=project([0,0,0]), x=project([1.14,0,0]), z=project([0,0,1.14]), y=project([0,1.14,0]);
+  const anchor=[width-42,height-44];
+  function glyph(p,name,color){
+    const tip=[anchor[0]+p[0]-P[0],anchor[1]+p[1]-P[1]];
+    if(Math.hypot(tip[0]-anchor[0],tip[1]-anchor[1])<8)return;
+    arrow(anchor,tip,color,1.05,.86,[],4.2);
+    label(name,[clamp(tip[0]+3,10,width-13),clamp(tip[1]+(name==="Z"?-5:8),10,height-9)],color,.9);
+  }
+  glyph(y,"Y","#afbed8");glyph(z,"Z","#efbd87");glyph(x,"X","#99cfd5");
+  dotAt(anchor,"#cad5d7",2.25);
+}
+function drawModel(project){
+  const labels=[...airframe.faces.map(item=>({...item,face:true})),...airframe.lines];
+  const objects=labels.map(object=>{
+    const projected=object.points.map(project);
+    const depth=projected.reduce((n,p)=>n+p[2],0)/projected.length;
+    return {...object,projected,depth:depth+(object.face?0:.025)};
+  }).sort((a,b)=>a.depth-b.depth);
+  for(const object of objects){
+    const {projected,color}=object;
+    if(object.face){
+      fillPoly(projected,color);
+      stroke([...projected,projected[0]],color,.65);
+    }else stroke(projected,color,object.weight,.88);
+  }
+}
+function drawPlane(part,project){
+  if(!part)return;
+  const [x,y,z]=part.point, p=activeProgress(part);
+  const opacity=.10+.90*p.reveal;
+  const poly=[[x-.40,y,z-.86],[x+3.03,y,z-.86],[x+3.03,y,z+.86],[x-.40,y,z+.86]];
+  const corners=poly.map(project);
+  fillPoly(corners,"#8bd4d2",.1*opacity);
+  stroke([...corners,corners[0]],"#8bd4d2",.8,.53*opacity,[3,4]);
+}
+function drawReference(project){
+  const {free,body,reference}=ledger;
+  const a=project(free.anchor);
+  const b=project(add(free.anchor,mul(free.vector,raySize)));
+  const c=project(add(free.anchor,mul(body,raySize*.92)));
+  arrow(a,c,C.chord,1.35,.91);
+  arrow(a,b,C.free,1.72,1,[4,3],7.5);
+  dotAt(a,"#e0eff9",2.8);
+  worldArc(reference,project,C.alpha,state.focus? .69:1);
+  const labelX=clamp(a[0]-9,9,width-50);
+  label("V∞",[labelX,clamp(a[1]-13,12,height-9)],C.free);
+}
+function drawParts(project){
+  const focus=activeFocus();
+  drawPlane(focus,project);
+  for(const id of ids){
+    const part=ledger.parts[id], {point,chord,local,delta}=part;
+    const p=activeProgress(part);
+    if(p.progress<=0)continue;
+    const selected=focus?.id===id, quiet=selected?1:.59;
+    const a=project(point);
+    const b=project(add(point,mul(ledger.free.vector,raySize)));
+    const c=project(add(point,mul(chord,raySize*.84)));
+    const d=project(add(point,mul(local,raySize)));
+    const washHighlight=selected&&state.highlight==="wash", alphaHighlight=selected&&state.highlight==="alpha";
+    if(p.progress<.995 && p.move<.996){
+      stroke([project(ledger.free.anchor),a],C.free,.8,.45,[2,4]);
+      const origin=lerp(ledger.free.anchor,point,p.move);
+      const end=add(origin,mul(ledger.free.vector,raySize));
+      arrow(project(origin),project(end),C.free,2.5,.95,[5,3],8);
+    }else{
+      const common=project(add(point,mul(direction(delta*p.turn),raySize)));
+      if(Math.abs(delta)>1e-9){
+        arrow(a,b,C.free,washHighlight?2.5:1.5,quiet,[4,3]);
+        if(p.turn<.999)arrow(a,common,C.local,2.1,p.turn*quiet,[],7);
+      }else{
+        arrow(a,b,C.free,3.3,quiet,[3,4],8);
+      }
+      if(p.reveal>0){
+        arrow(a,c,C.chord,alphaHighlight?2.55:1.35,quiet*p.reveal,[],5.4);
+        if(p.turn>=.999 || delta===0)arrow(a,d,C.local,selected?1.95:1.45,quiet*p.reveal,Math.abs(delta)<1e-9?[10,4]:[],6.1);
+        worldArc(part.alpha,project,C.alpha,(washHighlight?.39:quiet)*p.reveal);
+        worldArc(part.epsilon,project,C.eps,(alphaHighlight?.39:quiet)*p.reveal);
+      }
+    }
+  }
+}
+function drawCallouts(project){
+  const entries=ids.map(id=>{
+    const part=ledger.parts[id], p=project(part.point), wide=width>575;
+    const word=wide?`${part.tag}  ${part.name}`:part.tag;
+    const w=wide?62:22;
+    return {id,part,p,word,w,selected:state.focus===id};
+  }).sort((a,b)=>a.p[0]-b.p[0]);
+  const lower=height-39,upper=26;
+  const placed=[];
+  for(const entry of entries){
+    const {part,p,w,selected}=entry;
+    const above=p[1]>height*.69;
+    let y=clamp(p[1]+(above?-42:40),upper,lower);
+    let x=clamp(p[0]-w/2+2,7,width-w-8);
+    const conflict=(nx,ny)=>placed.some(b=>nx<b.x+b.w+6&&nx+w+6>b.x&&Math.abs(ny-b.y)<26);
+    if(conflict(x,y))y=clamp(y+29,upper,lower);
+    if(conflict(x,y))x=clamp(x-w-9,7,width-w-8);
+    if(conflict(x,y))y=clamp(y-62,upper,lower);
+    placed.push({x,y,w});
+    if(selected){
+      dotAt(p,rgba(part.rail,.25),9);
+      ctx.beginPath();
+      ctx.arc(p[0],p[1],7.1,0,TAU);
+      ctx.strokeStyle=part.rail;ctx.lineWidth=1.05;ctx.stroke();
+      if(width>680){
+        const endY=clamp(p[1]-54,61,height-85);
+        const endX=width-16, startX=p[0]+10;
+        if(endX-startX>62){
+          stroke([[startX,p[1]-7],[startX+24,endY],[endX-10,endY]],part.rail,.8,.61,[3,4]);
+          label(part.tag,[endX-4,endY],part.rail,.93);
+        }
+      }
+    }
+    stroke([p,[x+w/2,y+(above?10:-10)]],part.rail,1,selected?.93:.57);
+    dotAt(p,part.rail,selected?3.8:2.5);
+    roundPath(x,y-10,w,20,5);
+    ctx.fillStyle=selected?"#2d4b58":"#192c3d";
+    ctx.fill();
+    ctx.strokeStyle=rgba(part.rail,selected?.81:.42);
+    ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle=selected?"#f9f2e8":part.rail;
+    ctx.font="700 11px system-ui,sans-serif";ctx.textBaseline="middle";ctx.textAlign="center";
+    ctx.fillText(entry.word,x+w*.5,y+.4);
+  }
+}
+function drawWorld(){
+  if(!width||!height)return;
+  const project=projector(state.camera);
+  ctx.setTransform(density,0,0,density,0,0);
+  ctx.clearRect(0,0,width,height);
+  ctx.lineCap="round";
+  ctx.lineJoin="round";
+  drawGrid(project);
+  for(const track of guides)drawGuide(track,project,state.clock);
+  drawModel(project);
+  drawReference(project);
+  drawParts(project);
+  drawCallouts(project);
+  drawCompass(project);
+}
+const svgStroke=(a,b,color,w=1,extra="")=>
+  `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${color}" stroke-width="${w}" ${extra}/>`;
+const svgText=(x,y,text,color="#bfced8",size=10,extra="")=>
+  `<text x="${x}" y="${y}" fill="${color}" font-size="${size}" ${extra}>${text}</text>`;
+const tiltedSvg=(a,r,center)=>[center[0]+Math.cos(a)*r,center[1]-Math.sin(a)*r];
+function svgArrow(origin,end,color,weight=2,dash="",opacity=1){
+  const t=Math.atan2(end[1]-origin[1],end[0]-origin[0]);
+  const wing=(f)=>[end[0]-8*Math.cos(t+f),end[1]-8*Math.sin(t+f)];
+  const points=[end,wing(.47),wing(-.47)].map(p=>p.join(",")).join(" ");
+  return `<g opacity="${opacity}">${svgStroke(origin,end,color,weight,dash?'stroke-dasharray="5 4"':"")}<polygon points="${points}" fill="${color}"/></g>`;
+}
+function svgArc(entry,r,center,color,currentB,opacity){
+  const phi=angle(entry.a);
+  const arcAngle=signed(entry.a,currentB);
+  if(Math.abs(arcAngle)<1e-7 || opacity<=0)return "";
+  const path=Array.from({length:25},(_,i)=>tiltedSvg(2*(phi+arcAngle*i/24),r,center));
+  const d=path.map((q,i)=>`${i?"L":"M"}${q[0].toFixed(2)} ${q[1].toFixed(2)}`).join(" ");
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.8" opacity="${opacity}" stroke-linecap="round"/>`;
+}
+function sectionDrawing(focus,partProgress){
+  const v=ledger.free.vector;
+  const chord=focus?focus.chord:ledger.body;
+  const origin=[48,86];
+  const show=focus?partProgress.reveal:1;
+  const turn=focus?partProgress.turn:1;
+  const flow=focus?direction(focus.delta*turn):v;
+  const planeName=focus?`${focus.tag} / X–Z SECTION`:"FREESTREAM / X–Z SECTION";
+  const washActive=state.highlight==="wash";
+  const alphaActive=state.highlight==="alpha";
+  const chordAngle=angle(chord);
+  const chordScale=Math.min(167,56/Math.max(.001,Math.abs(Math.sin(chordAngle*2))));
+  const flowScale=Math.min(202,56/Math.max(.001,Math.abs(Math.sin(angle(flow)*2))));
+  const chordTail=tiltedSvg(chordAngle*2,chordScale,origin);
+  const aTip=tiltedSvg(angle(flow)*2,flowScale,origin);
+  const farTip=tiltedSvg(angle(v)*2,233,origin);
+  const sameFlow=Math.abs(angle(flow))<1e-7;
+  const glif=(symbol, x, y, color)=>svgText(x,y,symbol,color,11,'font-weight="700"');
+  let content=`<title id="sectionAlt">${focus?focus.name:"机身"}的 X–Z 测角剖面。虚线为远处来流，浅色线为${focus?"翼弦":"机身基准"}，绿线为局部气流。角形放大两倍。</title>
+    <defs><pattern id="section-grid" width="18" height="18" patternUnits="userSpaceOnUse"><path d="M 18 0 L 0 0 0 18" fill="none" stroke="#2b4253" stroke-width=".5"/></pattern>
+    <clipPath id="sectionClip"><rect x="1" y="23" width="328" height="129"/></clipPath></defs>
+    <rect x="0" y="0" width="330" height="178" rx="8" fill="url(#section-grid)"/>
+    ${svgText(12,17,planeName,"#91adbf",9,'font-family="monospace" letter-spacing="1"')}
+    <g clip-path="url(#sectionClip)">`;
+  if(focus&&show>.01){
+    content+=`<path d="M 48 86 C 79 65 136 68 215 86 C 155 92 87 98 48 86 Z" transform="translate(48 86) rotate(${-deg(chordAngle*2)}) scale(${chordScale/167} 1) translate(-48 -86)" fill="${focus.color}" fill-opacity=".23" stroke="${focus.rail}" stroke-opacity=".44" opacity="${show}"/>`;
+  }
+  if(show>.001){
+    content+=svgArrow(origin,chordTail,C.chord,alphaActive?3.4:1.8,"",show);
+  }
+  if(focus&&show>.001){
+    content+=svgArrow(origin,aTip,C.local,(alphaActive||washActive)?3.4:2.05,"",show);
+  }
+  content+=svgArrow(origin,farTip,C.free,sameFlow?1.4:(washActive?3.2:1.75),"dash",1);
+  if(focus){
+    content+=svgArc(focus.alpha,Math.min(79,chordScale*.85),origin,C.alpha,flow,show*(washActive?.36:1));
+    if(focus.epsilon)content+=svgArc(focus.epsilon,Math.min(128,flowScale*.9),origin,C.eps,flow,show*(alphaActive?.36:1));
+  }else{
+    content+=svgArc(ledger.reference,Math.min(91,chordScale*.87),origin,C.alpha,v,1);
+  }
+  content+=`<circle cx="${origin[0]}" cy="${origin[1]}" r="4.1" fill="${focus?focus.rail:C.chord}" stroke="#122234" stroke-width="1"/>
+    </g>`;
+  content+=glif(focus?focus.tag:"O",28,90,focus?focus.rail:C.chord);
+  content+=glif("V∞",287,90,C.free);
+  if(focus&&show>.98&&Math.abs(angle(flow))>rad(1.1)){
+    content+=glif(`V${focus.id}`,clamp(aTip[0]+7,198,310),clamp(aTip[1]+(aTip[1]>86?10:-5),29,152),C.local);
+  }
+  content+=svgText(12,169,"角形 ×2 · 数值按真实角度","#b1c5ce",10);
+  content+=svgText(317,169,"NOSE → TAIL","#91adbf",9,'text-anchor="end" font-family="monospace"');
+  $("section").innerHTML=content;
+}
+function reading(key,labelText,values,color){
+  return `<button class="reading" style="--mark:${color}" data-highlight="${key}" aria-pressed="${state.highlight===key}"><span>${labelText}</span><b>${values}</b></button>`;
+}
+const explanations={
+  ref:"蓝箭头表示空气相对飞机的流动，始终从机头流向机尾。α 量的是机身基准线与远处来流的夹角。",
+  w:"本例主翼的局部流向和远处来流重合，蓝、绿两线叠在一起。",
+  c:"沿气流方向看，局部气流相对远处来流向上偏，和翼弦之间的夹角随之增大。",
+  t:"沿气流方向看，局部气流相对远处来流向下偏，和翼弦之间的有向夹角随之减小。"
+};
+function explanationFor(focus){
+  if(!focus)return explanations.ref;
+  if(focus.id==="w")return explanations.w;
+  if(focus.delta===0)return "局部气流和远处来流重合，洗流角为 0°。";
+  if((focus.id==="c"&&focus.delta<0)||(focus.id==="t"&&focus.delta>0)){
+    return focus.delta<0?"此时气流向下偏，鸭翼的局部迎角减小。":"此时气流向上偏，平尾的局部迎角增大。";
+  }
+  return explanations[focus.id];
+}
+function updateUI(){
+  const current=Math.ceil(state.progress-1e-8);
+  const focus=activeFocus();
+  const p=focus?activeProgress(focus):null;
+  $("progress").value=state.progress;
+  $("progress").setAttribute("aria-valuetext",`步骤 ${current+1}，总进度 ${Math.round(state.progress/3*100)}%`);
+  const key=[state.progress.toFixed(3),state.focus,state.highlight,state.playing,state.flow,state.view,...Object.values(state.params)].join("|");
+  if(key===uiKey)return;
+  uiKey=key;
+  $("play").textContent=state.playing?"Ⅱ 暂停讲解":"▶ 播放讲解";
+  $("play").setAttribute("aria-label",state.playing?"暂停讲解":"播放讲解");
+  $("flowToggle").setAttribute("aria-pressed",state.flow);
+  document.querySelectorAll("[data-step]").forEach(btn=>{
+    if(+btn.dataset.step===current)btn.setAttribute("aria-current","step");
+    else btn.removeAttribute("aria-current");
+  });
+  document.querySelectorAll("[data-inspect]").forEach(btn=>btn.setAttribute("aria-pressed",btn.dataset.inspect===state.focus));
+  document.querySelectorAll("[data-view]").forEach(btn=>btn.setAttribute("aria-pressed",btn.dataset.view===state.view));
+  $("sectionOrigin").textContent=focus?`原位 ${focus.tag} · 纵向 X–Z 剖面`:"来流参考 · 纵向 X–Z 剖面";
+  $("sectionTitle").textContent=focus?(focus.id==="w"?"主翼的局部迎角":`${focus.name}的两种角`):"机身迎角";
+  const closeUp=focus&&p.progress<.995;
+  sectionDrawing(focus,p);
+  let readings;
+  if(!focus){
+    readings=reading("alpha","机身基准线 ↔ 远处来流",`α = ${fmt(ledger.reference.value)}`,C.alpha);
+  }else if(closeUp && p.reveal<.97){
+    readings=reading("source",p.move<.996?"平移远处来流的参考副本":"比较远处与局部来流","V∞",C.free);
+  }else{
+    readings=reading("alpha","翼弦 ↔ 局部气流",`${focus.asym} = ${fmt(focus.alpha.value)}`,C.alpha);
+    if(focus.epsilon){
+      readings+=reading("wash","远处来流 ↔ 局部气流",`${focus.esym} = ${fmt(focus.epsilon.value)}`,C.eps);
+    }
+  }
+  if($("measurements").innerHTML!==readings)$("measurements").innerHTML=readings;
+  
+  $("insight").textContent=closeUp&&p.reveal<.97
+    ?(p.move<.996?"蓝箭头副本的长度和方向保持不变。":"局部气流方向绕测点与蓝箭头分开。")
+    :explanationFor(focus);
+
+  const {c,w,t}=ledger.parts;
+  const amounts=ids.map(id=>ledger.parts[id].alpha.value);
+  const first=compare(amounts[0],amounts[1]),second=compare(amounts[1],amounts[2]);
+  $("topComparison").textContent=`${fmt(amounts[0])} ${first} ${fmt(amounts[1])} ${second} ${fmt(amounts[2])}`;
+  for(const part of [c,w,t])$("card-"+part.id).textContent=fmt(part.alpha.value);
+  $("relationMath").textContent=`αc ${first} αw ${second} αt`;
+  $("relationNote").textContent=state.params.ic===state.params.iw&&state.params.iw===state.params.it&&state.params.u>0&&state.params.d>0
+    ?"在等安装角、鸭翼受上洗、平尾受下洗的示例中成立。"
+    :"翼弦安装角和当地流向共同决定这三个迎角的大小关系。";
+  for(const input of document.querySelectorAll("[data-parameter]")){
+    const id=input.dataset.parameter;
+    input.value=state.params[id];
+    $("value-"+id).textContent=fmt(state.params[id]);
+  }
+}
+function saveCamera(camera,view){
+  state.camera={...camera};
+  state.view=view;
+  dirty=true;
+}
+function chooseView(view,immediate=false){
+  const goal={...views[view]}, origin={...state.camera};
+  goal.yaw=origin.yaw+Math.atan2(Math.sin(goal.yaw-origin.yaw),Math.cos(goal.yaw-origin.yaw));
+  state.view=view;
+  if(immediate||reduced.matches){cameraMotion=null;saveCamera(goal,view);}
+  else cameraMotion={origin,goal,time:performance.now(),view};
+  dirty=true;
+}
+function focusAt(p){
+  const k=byStage[Math.ceil(p-1e-8)];
+  return k==="ref"?null:k;
+}
+function setProgress(n,forceFocus=true){
+  state.progress=clamp(n,0,3);
+  if(forceFocus)state.focus=focusAt(state.progress);
+  state.highlight=null;
+  dirty=true;
+}
+function gotoStep(n){
+  state.playing=false;
+  tween=null;
+  if(reduced.matches||Math.abs(n-state.progress)<.01){
+    setProgress(n);
+  }else if(n===Math.ceil(state.progress)||n===Math.ceil(state.progress)+1){
+    tween={from:state.progress,to:n,start:performance.now(),length:2000};
+    if(state.progress===0&&n===1)state.focus="w";
+  }else{
+    setProgress(n);
+  }
+}
+function pick(id){
+  if(definitions[id].stage>state.progress)setProgress(definitions[id].stage);
+  state.playing=false;tween=null;state.focus=id;
+  state.highlight=null;dirty=true;
+}
+
+const pointerMap=new Map();
+let pinchStart=null;
+function pinchDistance(){
+  const [a,b]=[...pointerMap.values()];
+  return Math.hypot(a.x-b.x,a.y-b.y);
+}
+function zoomBy(factor){
+  cameraMotion=null;
+  state.camera.zoom=clamp(state.camera.zoom*factor,.72,2.2);
+  state.view=null;dirty=true;
+}
+canvas.addEventListener("pointerdown",event=>{
+  if(event.button!==0||pointerMap.size>=2)return;
+  canvas.setPointerCapture(event.pointerId);
+  pointerMap.set(event.pointerId,{x:event.clientX,y:event.clientY});
+  cameraMotion=null;
+  if(pointerMap.size===2)pinchStart={distance:Math.max(12,pinchDistance()),zoom:state.camera.zoom};
+});
+canvas.addEventListener("pointermove",event=>{
+  const point=pointerMap.get(event.pointerId);
+  if(!point)return;
+  const dx=event.clientX-point.x, dy=event.clientY-point.y;
+  pointerMap.set(event.pointerId,{x:event.clientX,y:event.clientY});
+  if(pointerMap.size===2){
+    state.camera.zoom=clamp(pinchStart.zoom*pinchDistance()/pinchStart.distance,.72,2.2);
+  }else{
+    state.camera.yaw-=dx*.008;
+    state.camera.pitch=clamp(state.camera.pitch+dy*.008,-1.42,Math.PI/2);
+  }
+  state.view=null;dirty=true;
+});
+function release(event){
+  pointerMap.delete(event.pointerId);
+  if(pointerMap.size<2)pinchStart=null;
+}
+for(const evt of ["pointerup","pointercancel","lostpointercapture"])canvas.addEventListener(evt,release);
+canvas.addEventListener("wheel",event=>{
+  event.preventDefault();
+  zoomBy(Math.exp(-event.deltaY*.0012));
+},{passive:false});
+canvas.addEventListener("keydown",event=>{
+  const directions={ArrowLeft:[.14,0],ArrowRight:[-.14,0],ArrowUp:[0,-.12],ArrowDown:[0,.12]};
+  if(directions[event.key]){
+    const [x,y]=directions[event.key];
+    state.camera.yaw+=x;
+    state.camera.pitch=clamp(state.camera.pitch+y,-1.42,Math.PI/2);
+    cameraMotion=null;state.view=null;dirty=true;
+  }else if(event.key==="+"||event.key==="=")zoomBy(1.15);
+  else if(event.key==="-")zoomBy(1/1.15);
+  else if(event.key==="Home")chooseView("iso");
+  else return;
+  event.preventDefault();
+});
+
+document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>chooseView(btn.dataset.view)));
+document.querySelectorAll("[data-step]").forEach(btn=>btn.addEventListener("click",()=>gotoStep(+btn.dataset.step)));
+document.querySelectorAll("[data-inspect]").forEach(btn=>btn.addEventListener("click",()=>pick(btn.dataset.inspect)));
+document.querySelectorAll("[data-parameter]").forEach(input=>input.addEventListener("input",()=>{
+  state.params[input.dataset.parameter]=+input.value;
+  rebuild();
+}));
+document.querySelectorAll("[data-preset]").forEach(btn=>btn.addEventListener("click",()=>{
+  const type=btn.dataset.preset;
+  if(type==="default")state.params={...defaults};
+  else if(type==="zero")Object.assign(state.params,{u:0,d:0});
+  else Object.assign(state.params,{u:-Math.abs(state.params.u||defaults.u),d:-Math.abs(state.params.d||defaults.d)});
+  rebuild();
+}));
+$("measurements").addEventListener("click",event=>{
+  const button=event.target.closest("[data-highlight]");
+  if(!button)return;
+  const key=button.dataset.highlight;
+  if(key==="source")return;
+  state.highlight=state.highlight===key?null:key;
+  dirty=true;
+  updateUI();
+  $("measurements").querySelector(`[data-highlight="${key}"]`)?.focus();
+});
+$("resetView").addEventListener("click",()=>chooseView("iso"));
+$("flowToggle").addEventListener("click",()=>{state.flow=!state.flow;dirty=true;});
+$("play").addEventListener("click",()=>{
+  tween=null;
+  if(state.playing)state.playing=false;
+  else{
+    if(state.progress>=2.999)setProgress(0);
+    state.playing=true;
+  }
+  dirty=true;
+});
+$("restart").addEventListener("click",()=>{
+  state.playing=false;tween=null;setProgress(0);
+});
+$("progress").addEventListener("input",event=>{
+  state.playing=false;tween=null;setProgress(+event.target.value);
+});
+reduced.addEventListener("change",event=>{
+  if(event.matches){state.flow=false;state.playing=false;cameraMotion=null;tween=null;dirty=true;}
+});
+
+function resize(){
+  const rect=canvas.getBoundingClientRect();
+  width=rect.width;height=rect.height;density=Math.min(devicePixelRatio||1,2);
+  canvas.width=Math.round(width*density);canvas.height=Math.round(height*density);
+  dirty=true;
+}
+new ResizeObserver(resize).observe(canvas);
+function animate(time){
+  const dt=Math.min(.05,Math.max(0,(time-previousTime)/1000));
+  previousTime=time;
+  if(state.flow){state.clock+=dt;dirty=true;}
+  if(state.playing){
+    setProgress(state.progress+dt/4.4);
+    if(state.progress>=3)state.playing=false;
+  }
+  if(tween){
+    const t=clamp((time-tween.start)/tween.length,0,1);
+    setProgress(mix(tween.from,tween.to,ease(t)));
+    if(t>=1)tween=null;
+  }
+  if(cameraMotion){
+    const {origin,goal,view}=cameraMotion;
+    const t=clamp((time-cameraMotion.time)/540,0,1);
+    const now=Object.fromEntries(Object.keys(goal).map(key=>[key,mix(origin[key],goal[key],ease(t))]));
+    saveCamera(now,view);
+    if(t>=1)cameraMotion=null;
+  }
+  if(dirty){
+    updateUI();
+    drawWorld();
+    dirty=false;
+  }
+  requestAnimationFrame(animate);
+}
+rebuild();
+resize();
+requestAnimationFrame(animate);
+
+window.lessonTest={
+  set(progress,view="iso"){
+    state.playing=false;state.flow=false;state.clock=.6;tween=null;setProgress(progress);chooseView(view,true);
+  },
+  setFlowTime(t){state.clock=t;state.flow=false;dirty=true;},
+  setParams(p){Object.assign(state.params,p);rebuild();},
+  get(){
+    return {progress:state.progress,view:state.view,focus:state.focus,params:{...state.params},
+      camera:{...state.camera},ledger,projected:Object.fromEntries(ids.map(id=>[id,projector(state.camera)(ledger.parts[id].point)])),
+      guides:guides.map(track=>[track.point(-4),track.point(0),track.point(4)])};
+  },
+  mesh(){
+    return airframe.faces.map(face=>face.points);
+  },
+  chordEndpoints(id){
+    const part=ledger.parts[id];
+    return [0,1].map(fraction=>inWindFrame(surfacePoint(part,sampleY,fraction),ledger.pitch));
+  },
+  guideTangent(id,part){
+    const x=ledger.parts[part].point[0], e=.0001;
+    return sub(guides[id].point(x+e),guides[id].point(x-e));
+  },
+  copy(part,t){
+    const origin=lerp(ledger.free.anchor,ledger.parts[part].point,ease(t/.54));
+    return {origin,end:add(origin,mul(ledger.free.vector,raySize))};
+  }
+};
+</script>
+</body>
+</html>
